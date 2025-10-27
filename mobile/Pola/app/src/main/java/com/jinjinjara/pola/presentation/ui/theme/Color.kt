@@ -1,4 +1,4 @@
-package com.jinjinjara.pola.ui.theme
+package com.jinjinjara.pola.presentation.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

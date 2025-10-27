@@ -7,7 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import com.jinjinjara.pola.presentation.ui.screen.MainScreen
-import com.jinjinjara.pola.ui.theme.PolaTheme
+import com.jinjinjara.pola.presentation.ui.theme.PolaTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
