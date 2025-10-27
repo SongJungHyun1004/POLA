@@ -4,7 +4,7 @@ export default function LandingPage() {
   return (
     <main className="flex flex-col items-center justify-center min-h-screen bg-[#FFFEF8]">
       <Image
-        src="/image/POLA_logo_1.png"
+        src="/images/POLA_logo_1.png"
         alt="Pola Logo"
         width={360}
         height={360}
