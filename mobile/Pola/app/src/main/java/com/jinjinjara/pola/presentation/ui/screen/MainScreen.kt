@@ -1,7 +1,10 @@
 package com.jinjinjara.pola.presentation.ui.screen
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -11,6 +14,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -38,41 +42,49 @@ fun MainScreen(
     Scaffold(
         modifier = modifier,
         bottomBar = {
-            NavigationBar {
-                BottomNavItem.items.forEach { item ->
-                    val selected = currentDestination?.hierarchy?.any {
-                        it.route == item.route
-                    } == true
+            Column {
+                HorizontalDivider(
+                    thickness = 1.dp,
+                    color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f)
+                )
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.background
+                ) {
+                    BottomNavItem.items.forEach { item ->
+                        val selected = currentDestination?.hierarchy?.any {
+                            it.route == item.route
+                        } == true
 
-                    NavigationBarItem(
-                        icon = {
-                            Icon(
-                                painter = painterResource(
-                                    id = if (selected) item.selectedIcon else item.icon
-                                ),
-                                contentDescription = item.title,
-                                tint = Color.Unspecified
-                            )
-                        },
-                        selected = selected,
-                        onClick = {
-                            navController.navigate(item.route) {
-                                // 시작 destination으로 팝업하여 스택 관리
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+                        NavigationBarItem(
+                            icon = {
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (selected) item.selectedIcon else item.icon
+                                    ),
+                                    contentDescription = item.title,
+                                    tint = Color.Unspecified
+                                )
+                            },
+                            selected = selected,
+                            onClick = {
+                                navController.navigate(item.route) {
+                                    // 시작 destination으로 팝업하여 스택 관리
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    // 같은 아이템을 다시 선택했을 때 중복 방지
+                                    launchSingleTop = true
+                                    // 이전 상태 복원
+                                    restoreState = true
                                 }
-                                // 같은 아이템을 다시 선택했을 때 중복 방지
-                                launchSingleTop = true
-                                // 이전 상태 복원
-                                restoreState = true
-                            }
-                        },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Color.Unspecified,
-                            unselectedIconColor = Color.Unspecified,
-                            indicatorColor = Color.Transparent
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = Color.Unspecified,
+                                unselectedIconColor = Color.Unspecified,
+                                indicatorColor = Color.Transparent
+                            )
                         )
-                    )
+                    }
                 }
             }
         }
