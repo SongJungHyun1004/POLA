@@ -4,11 +4,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -49,10 +50,10 @@ fun MainScreen(
                                 painter = painterResource(
                                     id = if (selected) item.selectedIcon else item.icon
                                 ),
-                                contentDescription = item.title
+                                contentDescription = item.title,
+                                tint = Color.Unspecified
                             )
                         },
-                        label = { Text(item.title) },
                         selected = selected,
                         onClick = {
                             navController.navigate(item.route) {
@@ -65,7 +66,12 @@ fun MainScreen(
                                 // 이전 상태 복원
                                 restoreState = true
                             }
-                        }
+                        },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = Color.Unspecified,
+                            unselectedIconColor = Color.Unspecified,
+                            indicatorColor = Color.Transparent
+                        )
                     )
                 }
             }
