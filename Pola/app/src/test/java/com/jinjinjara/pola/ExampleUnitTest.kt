@@ -1,4 +1,4 @@
-package com.starforce.pola
+package com.jinjinjara.pola
 
 import org.junit.Test
 

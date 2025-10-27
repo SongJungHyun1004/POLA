@@ -1,4 +1,4 @@
-package com.starforce.pola.ui.theme
+package com.jinjinjara.pola.ui.theme
 
 import android.app.Activity
 import android.os.Build

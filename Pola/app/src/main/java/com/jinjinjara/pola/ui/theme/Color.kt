@@ -1,4 +1,4 @@
-package com.starforce.pola.ui.theme
+package com.jinjinjara.pola.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

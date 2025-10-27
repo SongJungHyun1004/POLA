@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.starforce.pola"
+    namespace = "com.jinjinjara.pola"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.starforce.pola"
+        applicationId = "com.jinjinjara.pola"
         minSdk = 24
         targetSdk = 35
         versionCode = 1

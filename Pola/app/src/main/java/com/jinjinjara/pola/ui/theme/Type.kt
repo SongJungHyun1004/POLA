@@ -1,4 +1,4 @@
-package com.starforce.pola.ui.theme
+package com.jinjinjara.pola.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle

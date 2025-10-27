@@ -1,4 +1,4 @@
-package com.starforce.pola
+package com.jinjinjara.pola
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -11,7 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import com.starforce.pola.ui.theme.PolaTheme
+import com.jinjinjara.pola.ui.theme.PolaTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
