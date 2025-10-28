@@ -433,20 +433,39 @@ sketch
 pyvenv.cfg
 pip-selfcheck.json
 
-### Web ###
-*.asp
+### Web (정적/빌드 산출물만 무시) ###
+
+# 인증서 및 민감 파일
 *.cer
 *.csr
-*.css
-*.htm
-*.html
-*.js
-*.jsp
-*.php
-*.rss
+
+# WebAssembly 빌드 결과물
 *.wasm
 *.wat
-*.xhtml
+
+# RSS/피드 자동 생성 파일
+*.rss
+
+# 정적 리소스 빌드 결과물 (예: frontend/out, frontend/dist)
+# — 단, 전역 *.js / *.html / *.css 등은 절대 무시하지 말 것 —
+#   → 원본 코드까지 Git 추적에서 빠지는 문제 방지
+/web/pola/out/
+/web/pola/dist/
+/web/pola/.next/
+/web/pola/build/
+
+# 일반적으로 백엔드 템플릿(JSP, PHP 등)을 코드로 관리한다면 무시하지 않음
+# 만약 외부 생성 결과물이라면 필요시 개별 프로젝트 .gitignore에서 제외 처리
+# 예)
+/back/pola/src/main/webapp/WEB-INF/views/*.jsp
+!**/*.jsp
+!**/*.php
+
+# 임시 캐시나 IDE가 생성하는 HTML/CSS 임시파일 무시
+*.tmp.html
+*.tmp.css
+*.tmp.js
+
 
 ### Gradle ###
 .gradle
