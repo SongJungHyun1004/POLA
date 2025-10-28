@@ -1,0 +1,73 @@
+"use client";
+
+import Image from "next/image";
+import { useEffect, useRef } from "react";
+
+export default function Timeline() {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const scrollContainer = scrollRef.current;
+    if (!scrollContainer) return;
+
+    let scrollPosition = 0;
+
+    const scroll = () => {
+      if (!scrollContainer) return;
+      scrollPosition += 0.2; // ← 스크롤 속도 (0.1~1 사이로 조정 가능)
+
+      // 무한 루프 효과
+      if (scrollPosition >= scrollContainer.scrollWidth / 2) {
+        scrollPosition = 0;
+      }
+
+      scrollContainer.scrollLeft = scrollPosition;
+      requestAnimationFrame(scroll);
+    };
+
+    requestAnimationFrame(scroll);
+  }, []);
+
+  const filmCount = 10;
+
+  return (
+    <div className="w-4/5 flex justify-center py-8 overflow-hidden">
+      {/* 타임라인 전체 너비 줄이기 */}
+      <div
+        ref={scrollRef}
+        className="flex overflow-hidden whitespace-nowrap max-w-full rounded-md"
+      >
+        {/* 무한 루프를 위한 2세트 */}
+        {[...Array(2)].map((_, setIdx) => (
+          <div key={setIdx} className="flex">
+            {[...Array(filmCount)].map((_, i) => (
+              <div
+                key={i}
+                className="relative w-33 h-40 flex-shrink-0 overflow-hidden"
+              >
+                {/* 필름 배경 */}
+                <Image
+                  src="/images/plim2.png"
+                  alt="film"
+                  fill
+                  className="object-cover select-none pointer-events-none"
+                />
+
+                {/* 중앙 이미지 */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Image
+                    src="/images/POLA_logo_1.png"
+                    alt="pola"
+                    width={110}
+                    height={110}
+                    className="object-cover rounded-md select-none pointer-events-none bg-[#FFFEF8]"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
