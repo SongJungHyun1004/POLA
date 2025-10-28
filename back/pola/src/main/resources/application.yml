@@ -1,0 +1,58 @@
+spring:
+  application:
+    name: pola
+
+  # ===============================
+  # DB Setting (제공된 yml 기준으로 병합)
+  # ===============================
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    # [주의] localhost -> postgres (Docker 내부 통신용)
+    url: jdbc:postgresql://postgres:5432/pola_db
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  # ===============================
+  # JPA Setting
+  # ===============================
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+
+    # ===============================
+    # Redis Setting
+    # ===============================
+    data:
+      redis:
+        host: redis  # docker-compose의 컨테이너 이름
+        port: 6379
+        password: ${REDIS_PASSWORD} # .env 파일에서 읽어올 변수
+
+# ===============================
+# Server Setting
+# ===============================
+server:
+  port: 8080
+
+# ===============================
+# logging
+# ===============================
+logging:
+  level:
+    org.springframework: INFO
+    com.jinjinjara: DEBUG
+
+# ===============================
+# Swagger
+# ===============================
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
