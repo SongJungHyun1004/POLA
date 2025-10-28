@@ -1,6 +1,7 @@
 package com.jinjinjara.pola.presentation.ui.screen.home
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -9,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -28,6 +30,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -47,7 +51,6 @@ data class Category(
     val imageRes: Int
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen() {
     val recentItems = remember {
@@ -67,80 +70,108 @@ fun HomeScreen() {
         )
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Search Bar
-                        var searchText by remember { mutableStateOf("") }
+    var searchText by remember { mutableStateOf("") }
 
-                        PolaSearchBar(
-                            searchText = searchText,
-                            onValueChange = { searchText = it },
-                            modifier = Modifier.weight(1f)
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        // Star Icon
-                        Icon(
-                            painter = painterResource(R.drawable.star),
-                            contentDescription = "Favorites",
-                            tint = MaterialTheme.colorScheme.tertiary,
-                            modifier = Modifier
-                                .clickable {
-                                    // 즐겨찾기 이동
-                                }
-                                .size(30.dp)
-                        )
-                        Spacer(Modifier.width(8.dp))
-                    }
-                },
-            )
-        },
-    ) { paddingValues ->
+    Column(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        // Top Bar
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp),
+            color = MaterialTheme.colorScheme.surface,
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(64.dp)
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                PolaSearchBar(
+                    searchText = searchText,
+                    onValueChange = { searchText = it },
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(Modifier.width(8.dp))
+                Icon(
+                    painter = painterResource(R.drawable.star),
+                    contentDescription = "Favorites",
+                    tint = MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier
+                        .clickable {
+                            // 즐겨찾기 이동
+                        }
+                        .size(30.dp)
+                )
+            }
+        }
+
+        // Content
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
         ) {
             // Recents Section
             Text(
                 text = "Recents",
                 fontSize = 24.sp,
+                fontFamily = FontFamily.Default,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
+                modifier = Modifier.padding(16.dp)
             )
 
             // Film Strip Style Recent Items
-            Surface(
+
+            Row(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(8.dp),
-                color = Color.Black
+                    .horizontalScroll(rememberScrollState())
             ) {
-                Column {
-                    // Film perforations top
-                    FilmPerforations()
-
-                    LazyRow(
-                        modifier = Modifier.padding(vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp)
+                // 스크롤되는 아이템들
+                Spacer(Modifier.width(16.dp))
+                repeat(10) {
+                    Box(
+                        modifier = Modifier
+                            .height(120.dp)
                     ) {
-                        items(recentItems) { item ->
-                            RecentItemCard(item)
-                        }
+                        Image(
+                            painter = painterResource(id = R.drawable.film),
+                            contentDescription = "Film decoration",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Fit // 또는 ContentScale.Crop
+                        )
                     }
-
-                    // Film perforations bottom
-                    FilmPerforations()
                 }
+                Spacer(Modifier.width(16.dp))
             }
+
+
+//            Surface(
+//                modifier = Modifier
+//                    .fillMaxWidth(),
+//                shape = RoundedCornerShape(8.dp),
+//                color = Color.Black
+//            ) {
+//                Column {
+//                    // Film perforations top
+//                    FilmPerforations()
+//
+//                    LazyRow(
+//                        modifier = Modifier.padding(vertical = 8.dp),
+//                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+//                        contentPadding = PaddingValues(horizontal = 8.dp)
+//                    ) {
+//                        items(recentItems) { item ->
+//                            RecentItemCard(item)
+//                        }
+//                    }
+//
+//                    // Film perforations bottom
+//                    FilmPerforations()
+//                }
+//            }
 
             Spacer(modifier = Modifier.height(24.dp))
 
