@@ -43,7 +43,7 @@ export default function Timeline() {
             {[...Array(filmCount)].map((_, i) => (
               <div
                 key={i}
-                className="relative w-32 h-40 flex-shrink-0 overflow-hidden"
+                className="relative w-[129px] h-40 flex-shrink-0 overflow-hidden"
               >
                 {/* 필름 배경 */}
                 <Image
