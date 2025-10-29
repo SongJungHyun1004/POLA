@@ -7,7 +7,7 @@ export default function Header() {
   const [query, setQuery] = useState("");
 
   return (
-    <header className="flex justify-between items-center w-full mb-8">
+    <header className="flex justify-between items-center w-full pb-12 px-8 pt-6">
       {/* 왼쪽 - 로고 */}
       <Image
         src="/images/POLA_logo_2.png"
