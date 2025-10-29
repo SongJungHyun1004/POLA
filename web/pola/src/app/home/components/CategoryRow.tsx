@@ -1,12 +1,6 @@
 import PolaroidCard from "./PolaroidCard";
 
-export default function CategoryRow({
-  title,
-  imgSrc,
-}: {
-  title: string;
-  imgSrc: string;
-}) {
+export default function CategoryRow({ imgSrc }: { imgSrc: string }) {
   const rotations = Array.from({ length: 6 }, () => {
     const deg = Math.random() * 12 - 6;
     return `rotate(${deg}deg)`;
@@ -14,8 +8,6 @@ export default function CategoryRow({
 
   return (
     <div className="flex flex-col mb-4 w-full overflow-visible">
-      <h3 className="font-semibold text-2xl mb-3 text-[#4C3D25]">{title}</h3>
-
       <div
         className="
           grid 
