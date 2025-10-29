@@ -11,21 +11,21 @@ export default function HomePage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-20">
         {/* 좌측 영역 */}
-        <div className="flex flex-col items-center justify-start gap-12 w-full mt-12">
+        <div className="flex flex-col items-center justify-start gap-12 w-full mt-16">
           <div className="flex justify-center gap-10 w-full">
             <CategoryBox text="Favorite" />
             <div className="flex w-8" />
             <CategoryBox text="Remind" />
           </div>
 
-          <div className="flex flex-col items-center justify-center w-full">
+          <div className="flex flex-col items-center justify-center w-full mt-8">
             <Timeline />
             <TextLink text="Timeline" />
           </div>
         </div>
 
         {/* 우측 영역 */}
-        <div className="flex flex-col gap-8 overflow-x-hidden overflow-y-auto max-h-[80vh] pr-2 w-full">
+        <div className="flex flex-col gap-8 overflow-x-hidden overflow-y-auto max-h-[76vh] pr-2 w-full">
           {["Travel", "Food", "Daily", "Friends", "Memories"].map(
             (category) => {
               const randomNum = Math.floor(Math.random() * 3) + 1;
