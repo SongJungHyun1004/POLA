@@ -13,6 +13,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -26,8 +27,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -38,6 +42,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jinjinjara.pola.R
+import com.jinjinjara.pola.presentation.ui.component.PolaCard
 import com.jinjinjara.pola.presentation.ui.component.PolaSearchBar
 
 data class RecentItem(
@@ -64,10 +69,14 @@ fun HomeScreen() {
 
     val categories = remember {
         listOf(
-            Category("소펀", 0),
-            Category("창소", 0),
+            Category("쇼핑", 0),
+            Category("장소", 0),
             Category("인물", 0),
-            Category("간식", 0)
+            Category("간식", 0),
+            Category("쇼핑", 0),
+            Category("장소", 0),
+            Category("인물", 0),
+            Category("간식", 0),
         )
     }
 
@@ -109,171 +118,203 @@ fun HomeScreen() {
             }
         }
 
-        // Content
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+        // Content - LazyColumn으로 전체 변경
+        LazyColumn(
+            modifier = Modifier.fillMaxSize()
         ) {
             // Recents Section
-            Text(
-                text = "Recents",
-                fontSize = 24.sp,
-                fontFamily = FontFamily.Default,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(16.dp)
-            )
+            item {
+                Text(
+                    text = "Recents",
+                    fontSize = 24.sp,
+                    fontFamily = FontFamily.Default,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
 
             // Film Strip Style Recent Items
-
-            Row(
-                modifier = Modifier
-                    .horizontalScroll(rememberScrollState())
-            ) {
-                // 스크롤되는 아이템들
-                Spacer(Modifier.width(16.dp))
-                repeat(10) {
-                    Box(
-                        modifier = Modifier
-                            .height(120.dp)
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.film),
-                            contentDescription = "Recents Film",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Fit
-                        )
+            item {
+                Row(
+                    modifier = Modifier
+                        .horizontalScroll(rememberScrollState())
+                ) {
+                    Spacer(Modifier.width(16.dp))
+                    // 추후 recent 리스트로 변경
+                    repeat(10) {
+                        val painter = painterResource(R.drawable.film)
+                        val ratio = painter.intrinsicSize.width / painter.intrinsicSize.height
                         Box(
                             modifier = Modifier
-                                .size(88.dp)
-                                .clip(RoundedCornerShape(5.dp))
-                                .align(Alignment.Center)
+                                .height(150.dp)
+                                .aspectRatio(ratio)
                         ) {
                             Image(
-                                painter = painterResource(id = R.drawable.temp_image),
-                                contentDescription = "Content",
+                                painter = painter,
+                                contentDescription = "Recents Film",
                                 modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
+                                contentScale = ContentScale.Fit
                             )
+                            Box(
+                                modifier = Modifier
+                                    .size(110.dp)
+                                    .clip(RoundedCornerShape(5.dp))
+                                    .align(Alignment.Center)
+                            ) {
+                                Image(
+                                    painter = painterResource(id = R.drawable.temp_image),
+                                    contentDescription = "Content",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
                         }
                     }
+                    Spacer(Modifier.width(16.dp))
                 }
-                Spacer(Modifier.width(16.dp))
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            item {
+                Spacer(modifier = Modifier.height(24.dp))
+            }
 
-            // Categories Section
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Categories",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                TextButton(onClick = {}) {
+            // Categories Section Header
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
-                        text = "전체보기",
-                        color = Color.Gray,
-                        fontSize = 14.sp
+                        text = "Categories",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold
                     )
+                    TextButton(onClick = {}) {
+                        Text(
+                            text = "전체보기",
+                            color = Color.Gray,
+                            fontSize = 14.sp
+                        )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
+            }
 
-            // Categories Grid
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
+            // Categories Grid - LazyColumn items로 변경
+            items(categories.chunked(2)) { rowItems ->
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    CategoryCard(categories[0], Modifier.weight(1f))
-                    CategoryCard(categories[1], Modifier.weight(1f))
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    CategoryCard(categories[2], Modifier.weight(1f))
-                    CategoryCard(categories[3], Modifier.weight(1f))
+                    for (item in rowItems) {
+                        CategoryCard(item, Modifier.weight(1f))
+                    }
+
+                    // 홀수 개일 경우 오른쪽 칸 비워주기
+                    if (rowItems.size == 1) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            item {
+                Spacer(modifier = Modifier.height(24.dp))
+            }
         }
     }
 }
 
 @Composable
 fun CategoryCard(category: Category, modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier.aspectRatio(1f),
-        shape = RoundedCornerShape(12.dp),
-        color = Color(0xFFF5F5F5),
-        shadowElevation = 2.dp
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // 카드 스택 영역
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxWidth(),
             contentAlignment = Alignment.Center
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                // Card stack effect
-                Box(
-                    modifier = Modifier
-                        .size(100.dp)
-                        .padding(8.dp)
-                ) {
-                    // Back cards
-                    repeat(3) { index ->
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .offset(
-                                    x = (index * 4).dp,
-                                    y = (index * 4).dp
-                                ),
-                            shape = RoundedCornerShape(8.dp),
-                            color = Color.White,
-                            shadowElevation = (3 - index).dp
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(Color(0xFFF0F0F0))
-                            )
-                        }
-                    }
-                }
+            // 뒤에서부터 3장의 카드를 겹쳐서 표시
+            // 오른쪽 뒤 카드
+            PolaCard(
+                modifier = Modifier
+                    .height(100.dp)
+                    .graphicsLayer {
+                        rotationZ = 20f
+                        translationX = 55f
+                        translationY = -15f
+                        shadowElevation = 8.dp.toPx()
+                    },
+                ratio = 0.7816f,
+                paddingValues = PaddingValues(
+                    top = 8.dp,
+                    start = 8.dp,
+                    end = 8.dp
+                ),
+                imageResId = R.drawable.temp_image
+            )
 
-                Spacer(modifier = Modifier.height(8.dp))
+            // 왼쪽 뒤 카드
+            PolaCard(
+                modifier = Modifier
+                    .height(100.dp)
 
-                Text(
-                    text = category.name,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+                    .graphicsLayer {
+                        rotationZ = -25f
+                        translationX = -45f
+                        translationY = -15f
+                        shadowElevation = 8.dp.toPx()
+                    },
+                ratio = 0.7816f,
+                paddingValues = PaddingValues(
+                    top = 8.dp,
+                    start = 8.dp,
+                    end = 8.dp
+                ),
+                imageResId = R.drawable.temp_image
+            )
+
+            // 중간 카드
+            PolaCard(
+                modifier = Modifier
+                    .height(100.dp)
+                    .shadow(elevation = 8.dp),
+                ratio = 0.7816f,
+                paddingValues = PaddingValues(
+                    top = 8.dp,
+                    start = 8.dp,
+                    end = 8.dp
+                ),
+                imageResId = R.drawable.temp_image
+            )
         }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // 카테고리 이름
+        Text(
+            text = category.name,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF333333)
+        )
     }
 }
 
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
-fun BlogHomeScreenPreview() {
+fun HomeScreenPreview() {
     MaterialTheme {
         HomeScreen()
     }
