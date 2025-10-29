@@ -1,7 +1,8 @@
-package com.jinjinjara.pola.auth;
+package com.jinjinjara.pola.auth.jwt;
 
 import com.jinjinjara.pola.auth.exception.InvalidTokenException;
-import com.jinjinjara.pola.dto.response.TokenDto;
+import com.jinjinjara.pola.auth.redis.RedisUtil;
+import com.jinjinjara.pola.auth.dto.response.TokenDto;
 import io.jsonwebtoken.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -27,15 +28,24 @@ public class TokenProvider {
 
     private static final String AUTHORITIES_KEY = "auth";
     private static final String BEARER_TYPE = "Bearer";
-    private static final long ACCESS_TOKEN_EXPIRE_TIME = 1000 * 60 * 30;            // 30분
-    private static final long REFRESH_TOKEN_EXPIRE_TIME = 1000 * 60 * 60 * 24 * 7;  // 7일
+
     private final Key key;
     private final RedisUtil redisUtil;
 
-    public TokenProvider(@Value("${custom.jwt.secret}") String secretKey, RedisUtil redisUtil) {
+    private final long accessExpireMs;
+    private final long refreshExpireMs;
+
+    public TokenProvider(
+            @Value("${jwt.secret}") String secretKey,
+            @Value("${jwt.access-token-expire-time}")  long accessExpireMs,
+            @Value("${jwt.refresh-token-expire-time}") long refreshExpireMs,
+            RedisUtil redisUtil
+    ) {
         byte[] keyBytes = Decoders.BASE64.decode(secretKey);
         this.key = Keys.hmacShaKeyFor(keyBytes);
         this.redisUtil = redisUtil;
+        this.accessExpireMs = accessExpireMs;
+        this.refreshExpireMs = refreshExpireMs;
     }
 
     public TokenDto generateTokenDto(Authentication authentication) {
@@ -52,7 +62,7 @@ public class TokenProvider {
         return TokenDto.builder()
                 .grantType(BEARER_TYPE)
                 .accessToken(accessToken)
-                .accessTokenExpiresIn(new Date(now + ACCESS_TOKEN_EXPIRE_TIME).getTime())
+                .accessTokenExpiresIn(new Date(now + accessExpireMs).getTime())
                 .refreshToken(refreshToken)
                 .build();
     }
@@ -73,20 +83,20 @@ public class TokenProvider {
         String newAccessToken = generateAccessToken(email, authorities);
         String newRefreshToken = generateRefreshToken(email, authorities);
 
-        redisUtil.save(email, newRefreshToken, REFRESH_TOKEN_EXPIRE_TIME);
+        redisUtil.save(email, newRefreshToken, refreshExpireMs);
         log.info("[REDIS] saved refresh for {}: {}...", email, newRefreshToken.substring(0,16));
 
         return TokenDto.builder()
                 .grantType(BEARER_TYPE)
                 .accessToken(newAccessToken)
-                .accessTokenExpiresIn(new Date((new Date()).getTime() + ACCESS_TOKEN_EXPIRE_TIME).getTime())
+                .accessTokenExpiresIn(new Date((new Date()).getTime() + accessExpireMs).getTime())
                 .refreshToken(newRefreshToken)
                 .build();
     }
 
     private String generateAccessToken(String email, String authorities) {
         long now = (new Date()).getTime();
-        Date accessTokenExpiresIn = new Date(now + ACCESS_TOKEN_EXPIRE_TIME);
+        Date accessTokenExpiresIn = new Date(now + accessExpireMs);
         return Jwts.builder()
                 .setSubject(email)
                 .claim(AUTHORITIES_KEY, authorities)
@@ -100,7 +110,7 @@ public class TokenProvider {
         return Jwts.builder()
                 .setSubject(email)
                 .claim(AUTHORITIES_KEY, authorities)
-                .setExpiration(new Date(now + REFRESH_TOKEN_EXPIRE_TIME))
+                .setExpiration(new Date(now + refreshExpireMs))
                 .claim("isRefreshToken", true) // refreshToken 임을 나타내는 클레임 추가
                 .signWith(key, SignatureAlgorithm.HS512)
                 .compact();
@@ -142,6 +152,7 @@ public class TokenProvider {
         return false;
     }
 
+    //JWT 내부의 payload(=claims) 를 꺼내서 정보를 파싱
     private Claims parseClaims(String accessToken) {
         try {
             return Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(accessToken).getBody();

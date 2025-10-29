@@ -1,4 +1,4 @@
-package com.jinjinjara.pola.auth;
+package com.jinjinjara.pola.auth.jwt;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

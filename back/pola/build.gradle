@@ -19,26 +19,38 @@ repositories {
 }
 
 dependencies {
+    // --- Spring Boot 기본 ---
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    // --- Swagger (API 문서) ---
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
-    implementation 'com.auth0:java-jwt:4.2.1'
+
+    // --- OAuth2 (Google 로그인용) ---
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
 
-    runtimeOnly 'org.postgresql:postgresql'
-    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    // --- Google ID Token 검증용 ---
+    implementation 'com.google.api-client:google-api-client:2.6.0'
 
-    compileOnly 'org.projectlombok:lombok'
-    annotationProcessor 'org.projectlombok:lombok'
-
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-
+    // --- JWT (Json Web Token) ---
     implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
     runtimeOnly   'io.jsonwebtoken:jjwt-impl:0.11.5'
     runtimeOnly   'io.jsonwebtoken:jjwt-jackson:0.11.5'
+
+    // --- DB ---
+    runtimeOnly 'org.postgresql:postgresql'
+
+    // --- Lombok ---
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // --- Test ---
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 tasks.named('test') {

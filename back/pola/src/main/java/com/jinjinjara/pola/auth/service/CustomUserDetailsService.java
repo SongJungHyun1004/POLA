@@ -1,15 +1,15 @@
-package com.jinjinjara.pola.service;
+package com.jinjinjara.pola.auth.service;
 
 import com.jinjinjara.pola.auth.exception.InvalidRefreshTokenException;
 import com.jinjinjara.pola.auth.exception.MultipleLoginException;
-import com.jinjinjara.pola.auth.RedisUtil;
-import com.jinjinjara.pola.auth.TokenProvider;
-import com.jinjinjara.pola.dto.common.Role;
-import com.jinjinjara.pola.dto.request.SignInDto;
-import com.jinjinjara.pola.dto.request.SignUpDto;
-import com.jinjinjara.pola.dto.response.TokenDto;
-import com.jinjinjara.pola.entity.Users;
-import com.jinjinjara.pola.repository.UsersRepository;
+import com.jinjinjara.pola.auth.redis.RedisUtil;
+import com.jinjinjara.pola.auth.jwt.TokenProvider;
+import com.jinjinjara.pola.auth.dto.common.Role;
+import com.jinjinjara.pola.auth.dto.request.SignInDto;
+import com.jinjinjara.pola.auth.dto.request.SignUpDto;
+import com.jinjinjara.pola.auth.dto.response.TokenDto;
+import com.jinjinjara.pola.user.entity.Users;
+import com.jinjinjara.pola.user.repository.UsersRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;

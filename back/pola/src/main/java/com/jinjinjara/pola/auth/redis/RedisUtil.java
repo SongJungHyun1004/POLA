@@ -1,4 +1,4 @@
-package com.jinjinjara.pola.auth;
+package com.jinjinjara.pola.auth.redis;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -12,8 +12,8 @@ public class RedisUtil {
 
     private final RedisTemplate<String, String> redisTemplate;
 
-    public void save(String key, String value, long ttlSeconds) {
-        redisTemplate.opsForValue().set(key, value, Duration.ofSeconds(ttlSeconds));
+    public void save(String key, String value, long ttlMillis) {
+        redisTemplate.opsForValue().set(key, value, Duration.ofMillis(ttlMillis));
     }
 
     public String get(String key) {
