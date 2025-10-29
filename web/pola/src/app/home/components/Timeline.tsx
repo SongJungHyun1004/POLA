@@ -47,7 +47,7 @@ export default function Timeline() {
               >
                 {/* 필름 배경 */}
                 <Image
-                  src="/images/plim2.png"
+                  src="/images/flim.png"
                   alt="film"
                   fill
                   className="object-cover select-none pointer-events-none"
