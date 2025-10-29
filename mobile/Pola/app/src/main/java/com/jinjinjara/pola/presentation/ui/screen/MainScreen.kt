@@ -45,60 +45,69 @@ fun MainScreen(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
+    val showBottomBar = currentDestination?.route in listOf(
+        BottomNavItem.Home.route,
+        BottomNavItem.Timeline.route,
+//        BottomNavItem.Upload.route,
+        BottomNavItem.Remind.route,
+        BottomNavItem.My.route
+    )
     Scaffold(
         modifier = modifier,
         bottomBar = {
-            Column(
-                modifier = Modifier.navigationBarsPadding()
-            ) {
-                HorizontalDivider(
-                    thickness = 1.dp,
-                    color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f)
-                )
-                NavigationBar(
-                    modifier = Modifier.height(64.dp),
-                    containerColor = MaterialTheme.colorScheme.background
+            if (showBottomBar) {
+                Column(
+                    modifier = Modifier.navigationBarsPadding()
                 ) {
-                    BottomNavItem.items.forEach { item ->
-                        val selected = currentDestination?.hierarchy?.any {
-                            it.route == item.route
-                        } == true
+                    HorizontalDivider(
+                        thickness = 1.dp,
+                        color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f)
+                    )
+                    NavigationBar(
+                        modifier = Modifier.height(64.dp),
+                        containerColor = MaterialTheme.colorScheme.background
+                    ) {
+                        BottomNavItem.items.forEach { item ->
+                            val selected = currentDestination?.hierarchy?.any {
+                                it.route == item.route
+                            } == true
 
-                        NavigationBarItem(
-                            icon = {
-                                Box(
-                                    modifier = Modifier.size(24.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        painter = painterResource(
-                                            id = if (selected) item.selectedIcon else item.icon
-                                        ),
-                                        contentDescription = item.title,
-                                        tint = Color.Unspecified,
-                                        modifier = Modifier.fillMaxSize()
-                                    )
-                                }
-                            },
-                            selected = selected,
-                            onClick = {
-                                navController.navigate(item.route) {
-                                    // 시작 destination으로 팝업하여 스택 관리
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
+                            NavigationBarItem(
+                                icon = {
+                                    Box(
+                                        modifier = Modifier.size(24.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(
+                                                id = if (selected) item.selectedIcon else item.icon
+                                            ),
+                                            contentDescription = item.title,
+                                            tint = Color.Unspecified,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
                                     }
-                                    // 같은 아이템을 다시 선택했을 때 중복 방지
-                                    launchSingleTop = true
-                                    // 이전 상태 복원
-                                    restoreState = true
-                                }
-                            },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = Color.Unspecified,
-                                unselectedIconColor = Color.Unspecified,
-                                indicatorColor = Color.Transparent
+                                },
+                                selected = selected,
+                                onClick = {
+                                    navController.navigate(item.route) {
+                                        // 시작 destination으로 팝업하여 스택 관리
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            saveState = true
+                                        }
+                                        // 같은 아이템을 다시 선택했을 때 중복 방지
+                                        launchSingleTop = true
+                                        // 이전 상태 복원
+                                        restoreState = true
+                                    }
+                                },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = Color.Unspecified,
+                                    unselectedIconColor = Color.Unspecified,
+                                    indicatorColor = Color.Transparent
+                                )
                             )
-                        )
+                        }
                     }
                 }
             }
