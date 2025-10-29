@@ -9,6 +9,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -138,40 +139,27 @@ fun HomeScreen() {
                     ) {
                         Image(
                             painter = painterResource(id = R.drawable.film),
-                            contentDescription = "Film decoration",
+                            contentDescription = "Recents Film",
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Fit // 또는 ContentScale.Crop
+                            contentScale = ContentScale.Fit
                         )
+                        Box(
+                            modifier = Modifier
+                                .size(88.dp)
+                                .clip(RoundedCornerShape(5.dp))
+                                .align(Alignment.Center)
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.temp_image),
+                                contentDescription = "Content",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
                     }
                 }
                 Spacer(Modifier.width(16.dp))
             }
-
-
-//            Surface(
-//                modifier = Modifier
-//                    .fillMaxWidth(),
-//                shape = RoundedCornerShape(8.dp),
-//                color = Color.Black
-//            ) {
-//                Column {
-//                    // Film perforations top
-//                    FilmPerforations()
-//
-//                    LazyRow(
-//                        modifier = Modifier.padding(vertical = 8.dp),
-//                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-//                        contentPadding = PaddingValues(horizontal = 8.dp)
-//                    ) {
-//                        items(recentItems) { item ->
-//                            RecentItemCard(item)
-//                        }
-//                    }
-//
-//                    // Film perforations bottom
-//                    FilmPerforations()
-//                }
-//            }
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -223,82 +211,6 @@ fun HomeScreen() {
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-        }
-    }
-}
-
-@Composable
-fun FilmPerforations() {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(12.dp)
-            .background(Color.Black),
-        horizontalArrangement = Arrangement.SpaceEvenly
-    ) {
-        repeat(20) {
-            Box(
-                modifier = Modifier
-                    .width(8.dp)
-                    .height(12.dp)
-                    .background(Color.White)
-            )
-        }
-    }
-}
-
-@Composable
-fun RecentItemCard(item: RecentItem) {
-    Surface(
-        modifier = Modifier
-            .width(120.dp)
-            .height(160.dp),
-        shape = RoundedCornerShape(4.dp),
-        color = Color.White
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(8.dp)
-        ) {
-            // Placeholder for image
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp)
-                    .background(Color(0xFFF0F0F0), RoundedCornerShape(4.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                if (item.type == "NOTE") {
-                    Icon(
-                        imageVector = Icons.Default.Star,
-                        contentDescription = null,
-                        tint = Color(0xFFFFD700),
-                        modifier = Modifier.size(40.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = item.type,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Gray
-            )
-            Text(
-                text = item.title,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1
-            )
-            Text(
-                text = item.subtitle,
-                fontSize = 10.sp,
-                color = Color.Gray,
-                maxLines = 2
-            )
         }
     }
 }
