@@ -28,13 +28,10 @@ export default function HomePage() {
         <div className="flex flex-col gap-8 overflow-x-hidden overflow-y-auto max-h-[76vh] pr-2 w-full">
           {["Travel", "Food", "Daily", "Friends", "Memories"].map(
             (category) => {
-              const randomNum = Math.floor(Math.random() * 3) + 1;
-              const imgSrc = `/images/dummy_image_${randomNum}.png`;
-
               return (
                 <div key={category} className="w-full">
                   <TextLink text={category} />
-                  <CategoryRow imgSrc={imgSrc} />
+                  <CategoryRow imgSrc="/images/POLA_logo_1.png" />
                 </div>
               );
             }
