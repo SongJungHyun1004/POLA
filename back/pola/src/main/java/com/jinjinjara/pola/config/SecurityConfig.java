@@ -46,7 +46,8 @@ public class SecurityConfig {
                                 "/api/auth/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
-                                "/api-docs/**"
+                                "/api-docs/**",
+                                "/oauth2/**"
                         ) // 로그인, 회원가입, 스웨거는 열어주기
                         .permitAll()
                         .anyRequest().authenticated()

@@ -1,18 +1,15 @@
 package com.jinjinjara.pola.service;
 
 import com.jinjinjara.pola.auth.exception.InvalidRefreshTokenException;
-import com.jinjinjara.pola.auth.exception.InvalidTokenException;
 import com.jinjinjara.pola.auth.exception.MultipleLoginException;
 import com.jinjinjara.pola.auth.RedisUtil;
 import com.jinjinjara.pola.auth.TokenProvider;
-import com.jinjinjara.pola.dto.common.Authority;
+import com.jinjinjara.pola.dto.common.Role;
 import com.jinjinjara.pola.dto.request.SignInDto;
 import com.jinjinjara.pola.dto.request.SignUpDto;
 import com.jinjinjara.pola.dto.response.TokenDto;
 import com.jinjinjara.pola.entity.Users;
 import com.jinjinjara.pola.repository.UsersRepository;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -69,7 +66,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         Users user = Users.builder()
                 .email(signUpDto.getEmail())
                 .displayName(signUpDto.getUsername())
-                .role(Authority.ROLE_MEMBER)
+                .role(Role.ROLE_USER)
                 .favoriteSum(0)
                 .googleSub(signUpDto.getEmail())
                 .build();
