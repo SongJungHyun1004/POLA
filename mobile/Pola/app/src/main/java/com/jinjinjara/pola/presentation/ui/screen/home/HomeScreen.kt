@@ -311,7 +311,7 @@ fun CategoryCard(category: Category, modifier: Modifier = Modifier) {
             text = category.name,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFF333333)
+            color = MaterialTheme.colorScheme.tertiary
         )
     }
 }
