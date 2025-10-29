@@ -126,6 +126,7 @@ fun HomeScreen() {
             item {
                 Text(
                     text = "Recents",
+                    color = MaterialTheme.colorScheme.tertiary,
                     fontSize = 24.sp,
                     fontFamily = FontFamily.Default,
                     fontWeight = FontWeight.Bold,
@@ -189,21 +190,25 @@ fun HomeScreen() {
                 ) {
                     Text(
                         text = "Categories",
+                        color = MaterialTheme.colorScheme.tertiary,
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold
                     )
-                    TextButton(onClick = {}) {
-                        Text(
-                            text = "전체보기",
-                            color = Color.Gray,
-                            fontSize = 14.sp
-                        )
-                    }
+                    Text(
+                        modifier = Modifier
+                            .clickable{
+                                // 전체보기
+                            },
+                        text = "전체보기",
+                        color = MaterialTheme.colorScheme.tertiary,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
 
             item {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(36.dp))
             }
 
             // Categories Grid - LazyColumn items로 변경
@@ -212,7 +217,7 @@ fun HomeScreen() {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
-                        .padding(bottom = 16.dp),
+                        .padding(bottom = 48.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     for (item in rowItems) {
@@ -226,9 +231,6 @@ fun HomeScreen() {
                 }
             }
 
-            item {
-                Spacer(modifier = Modifier.height(24.dp))
-            }
         }
     }
 }
@@ -249,7 +251,7 @@ fun CategoryCard(category: Category, modifier: Modifier = Modifier) {
             // 오른쪽 뒤 카드
             PolaCard(
                 modifier = Modifier
-                    .height(100.dp)
+                    .height(120.dp)
                     .graphicsLayer {
                         rotationZ = 20f
                         translationX = 55f
@@ -257,6 +259,7 @@ fun CategoryCard(category: Category, modifier: Modifier = Modifier) {
                         shadowElevation = 8.dp.toPx()
                     },
                 ratio = 0.7816f,
+                imageRatio = 0.9152f,
                 paddingValues = PaddingValues(
                     top = 8.dp,
                     start = 8.dp,
@@ -268,8 +271,7 @@ fun CategoryCard(category: Category, modifier: Modifier = Modifier) {
             // 왼쪽 뒤 카드
             PolaCard(
                 modifier = Modifier
-                    .height(100.dp)
-
+                    .height(120.dp)
                     .graphicsLayer {
                         rotationZ = -25f
                         translationX = -45f
@@ -277,6 +279,7 @@ fun CategoryCard(category: Category, modifier: Modifier = Modifier) {
                         shadowElevation = 8.dp.toPx()
                     },
                 ratio = 0.7816f,
+                imageRatio = 0.9152f,
                 paddingValues = PaddingValues(
                     top = 8.dp,
                     start = 8.dp,
@@ -288,9 +291,10 @@ fun CategoryCard(category: Category, modifier: Modifier = Modifier) {
             // 중간 카드
             PolaCard(
                 modifier = Modifier
-                    .height(100.dp)
+                    .height(120.dp)
                     .shadow(elevation = 8.dp),
                 ratio = 0.7816f,
+                imageRatio = 0.9152f,
                 paddingValues = PaddingValues(
                     top = 8.dp,
                     start = 8.dp,

@@ -28,6 +28,7 @@ fun PolaCard(
     backgroundColor: Color = Color.White,
     imageResId: Int? = null,
     ratio: Float = 3f / 4f,
+    imageRatio: Float  = 1f,
     paddingValues: PaddingValues = PaddingValues(
         top = 32.dp,
         start = 32.dp,
@@ -56,7 +57,7 @@ fun PolaCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1f)
+                    .aspectRatio(imageRatio)
                     .clip(RoundedCornerShape(5.dp))
                     .border(1.dp, borderColor, RoundedCornerShape(5.dp)),
                 contentAlignment = Alignment.TopCenter
