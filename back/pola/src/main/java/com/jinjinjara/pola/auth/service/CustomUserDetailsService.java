@@ -12,6 +12,7 @@ import com.jinjinjara.pola.user.entity.Users;
 import com.jinjinjara.pola.user.repository.UsersRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -34,8 +35,8 @@ public class CustomUserDetailsService implements UserDetailsService {
     private final TokenProvider tokenProvider;
     private final RedisUtil redisUtil;
 
-    private static final long ACCESS_TOKEN_EXPIRE_TIME = 1000 * 60 * 30;            // 30분
-    private static final long REFRESH_TOKEN_EXPIRE_TIME = 1000 * 60 * 60 * 24 * 7;  // 7일
+    @Value("${jwt.refresh-token-expire-time}")
+    private long refreshTokenExpireTime;
 
     @Override
     @Transactional
@@ -86,7 +87,7 @@ public class CustomUserDetailsService implements UserDetailsService {
 
         TokenDto tokenDto = tokenProvider.generateTokenDto(authentication);
 
-        redisUtil.save(user.getEmail(), tokenDto.getRefreshToken(), REFRESH_TOKEN_EXPIRE_TIME);
+        redisUtil.save(user.getEmail(), tokenDto.getRefreshToken(), refreshTokenExpireTime);
         log.info("[REDIS] saved refresh for {}: {}...",
                 user.getEmail(),
                 tokenDto.getRefreshToken().substring(0, 16));
