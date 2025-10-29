@@ -2,6 +2,7 @@ import Header from "./components/Header";
 import CategoryBox from "./components/CategoryBox";
 import Timeline from "./components/Timeline";
 import CategoryRow from "./components/CategoryRow";
+import TextLink from "./components/TextLink";
 
 export default function HomePage() {
   return (
@@ -9,6 +10,7 @@ export default function HomePage() {
       <Header />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-20">
+        {/* 좌측 영역 */}
         <div className="flex flex-col items-center justify-start gap-12 w-full mt-12">
           <div className="flex justify-center gap-10 w-full">
             <CategoryBox text="Favorite" />
@@ -16,20 +18,26 @@ export default function HomePage() {
             <CategoryBox text="Remind" />
           </div>
 
-          <div className="flex justify-center w-full">
+          <div className="flex flex-col items-center justify-center w-full">
             <Timeline />
+            <TextLink text="Timeline" />
           </div>
         </div>
 
-        <div className="flex flex-col gap-10 overflow-x-hidden overflow-y-auto max-h-[80vh] pr-2 w-full">
+        {/* 우측 영역 */}
+        <div className="flex flex-col gap-8 overflow-x-hidden overflow-y-auto max-h-[80vh] pr-2 w-full">
           {["Travel", "Food", "Daily", "Friends", "Memories"].map(
-            (category) => (
-              <CategoryRow
-                key={category}
-                title={category}
-                imgSrc="/images/POLA_logo_1.png"
-              />
-            )
+            (category) => {
+              const randomNum = Math.floor(Math.random() * 3) + 1;
+              const imgSrc = `/images/dummy_image_${randomNum}.png`;
+
+              return (
+                <div key={category} className="w-full">
+                  <TextLink text={category} />
+                  <CategoryRow imgSrc={imgSrc} />
+                </div>
+              );
+            }
           )}
         </div>
       </div>

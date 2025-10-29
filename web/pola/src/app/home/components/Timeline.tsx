@@ -31,7 +31,7 @@ export default function Timeline() {
   const filmCount = 10;
 
   return (
-    <div className="w-4/5 flex justify-center py-8 overflow-hidden">
+    <div className="w-4/5 flex justify-center pt-8 pb-2 overflow-hidden">
       {/* 타임라인 전체 너비 줄이기 */}
       <div
         ref={scrollRef}
@@ -43,7 +43,7 @@ export default function Timeline() {
             {[...Array(filmCount)].map((_, i) => (
               <div
                 key={i}
-                className="relative w-33 h-40 flex-shrink-0 overflow-hidden"
+                className="relative w-32 h-40 flex-shrink-0 overflow-hidden"
               >
                 {/* 필름 배경 */}
                 <Image
@@ -54,13 +54,12 @@ export default function Timeline() {
                 />
 
                 {/* 중앙 이미지 */}
-                <div className="absolute inset-0 flex items-center justify-center">
+                <div className="absolute top-1/2 left-1/2 w-[120px] h-[120px] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-md bg-[#FFFEF8]">
                   <Image
                     src="/images/POLA_logo_1.png"
                     alt="pola"
-                    width={110}
-                    height={110}
-                    className="object-cover rounded-md select-none pointer-events-none bg-[#FFFEF8]"
+                    fill
+                    className="object-cover object-center select-none pointer-events-none"
                   />
                 </div>
               </div>
