@@ -28,6 +28,13 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.jinjinjara.pola.navigation.BottomNavItem
+import com.jinjinjara.pola.navigation.NavGraphs
+import com.jinjinjara.pola.navigation.Screen
+import com.jinjinjara.pola.navigation.homeTabGraph
+import com.jinjinjara.pola.navigation.myTabGraph
+import com.jinjinjara.pola.navigation.remindScreen
+import com.jinjinjara.pola.navigation.timelineTabGraph
+import com.jinjinjara.pola.navigation.uploadScreen
 import com.jinjinjara.pola.presentation.ui.screen.home.HomeScreen
 import com.jinjinjara.pola.presentation.ui.screen.my.MyScreen
 import com.jinjinjara.pola.presentation.ui.screen.remind.RemindScreen
@@ -45,6 +52,7 @@ fun MainScreen(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
+    // BottomNavigationBar 보여줄 화면
     val showBottomBar = currentDestination?.route in listOf(
         BottomNavItem.Home.route,
         BottomNavItem.Timeline.route,
@@ -90,7 +98,16 @@ fun MainScreen(
                                 },
                                 selected = selected,
                                 onClick = {
-                                    navController.navigate(item.route) {
+                                    val targetRoute = when (item.route) {
+                                        Screen.Home.route -> NavGraphs.HOME_TAB
+                                        Screen.Timeline.route -> NavGraphs.TIMELINE_TAB
+                                        Screen.Upload.route -> Screen.Upload.route
+                                        Screen.Remind.route -> Screen.Remind.route
+                                        Screen.My.route -> NavGraphs.MY_TAB
+                                        else -> item.route
+                                    }
+
+                                    navController.navigate(targetRoute) {
                                         // 시작 destination으로 팝업하여 스택 관리
                                         popUpTo(navController.graph.findStartDestination().id) {
                                             saveState = true
@@ -115,28 +132,17 @@ fun MainScreen(
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = BottomNavItem.Home.route,
+            startDestination = NavGraphs.HOME_TAB,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(BottomNavItem.Home.route) {
-                HomeScreen()
-            }
+            // NavGraph.kt에 정의된 각 탭의 네비게이션 그래프 호출
+            homeTabGraph(navController)
+            timelineTabGraph(navController)
+            myTabGraph(navController)
 
-            composable(BottomNavItem.Timeline.route) {
-                TimelineScreen()
-            }
-
-            composable(BottomNavItem.Upload.route) {
-                UploadScreen()
-            }
-
-            composable(BottomNavItem.Remind.route) {
-                RemindScreen()
-            }
-
-            composable(BottomNavItem.My.route) {
-                MyScreen()
-            }
+            // 단일 화면들
+            uploadScreen()
+            remindScreen()
         }
     }
 }

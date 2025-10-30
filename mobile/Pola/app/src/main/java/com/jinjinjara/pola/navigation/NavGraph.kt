@@ -7,6 +7,13 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import androidx.navigation.navigation
+import com.jinjinjara.pola.presentation.ui.screen.MainScreen
+import com.jinjinjara.pola.presentation.ui.screen.home.HomeScreen
+import com.jinjinjara.pola.presentation.ui.screen.my.MyScreen
+import com.jinjinjara.pola.presentation.ui.screen.remind.RemindScreen
+import com.jinjinjara.pola.presentation.ui.screen.start.StartScreen
+import com.jinjinjara.pola.presentation.ui.screen.timeline.TimelineScreen
+import com.jinjinjara.pola.presentation.ui.screen.upload.UploadScreen
 
 /**
  * Auth 네비게이션 그래프
@@ -16,11 +23,12 @@ fun NavGraphBuilder.authNavGraph(
     onLoginSuccess: () -> Unit
 ) {
     navigation(
-        startDestination = Screen.Login.route,
+        startDestination = Screen.Start.route,
         route = NavGraphs.AUTH
     ) {
-        // 로그인 화면
-        composable(route = Screen.Login.route) {
+        // 시작 화면 (구글 로그인) 화면
+        composable(route = Screen.Start.route) {
+            StartScreen(onLoginSuccess = onLoginSuccess)
             // TODO: LoginScreen 구현 후 연결
             // LoginScreen(
             //     onNavigateToSignUp = {
@@ -29,111 +37,148 @@ fun NavGraphBuilder.authNavGraph(
             //     onLoginSuccess = onLoginSuccess
             // )
         }
-
-        // 회원가입 화면
-        composable(route = Screen.SignUp.route) {
-            // TODO: SignUpScreen 구현 후 연결
-            // SignUpScreen(
-            //     onNavigateBack = {
-            //         navController.popBackStack()
-            //     },
-            //     onSignUpSuccess = {
-            //         navController.popBackStack()
-            //     }
-            // )
-        }
     }
 }
 
 /**
  * Main 네비게이션 그래프
  */
-fun NavGraphBuilder.mainNavGraph(
-    navController: NavHostController
-) {
+fun NavGraphBuilder.mainNavGraph() {
+    composable(route = NavGraphs.MAIN) {
+        MainScreen()
+    }
+}
+/**
+ * Home 탭 네비게이션 그래프
+ */
+fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
     navigation(
         startDestination = Screen.Home.route,
-        route = NavGraphs.MAIN
+        route = NavGraphs.HOME_TAB
     ) {
-        // 홈 화면
-        composable(route = Screen.Home.route) {
-            // TODO: HomeScreen 구현 후 연결
-            // HomeScreen(
-            //     onNavigateToProfile = {
-            //         navController.navigate(Screen.Profile.route)
-            //     },
-            //     onNavigateToSettings = {
-            //         navController.navigate(Screen.Settings.route)
-            //     },
-            //     onNavigateToDetail = { itemId ->
-            //         navController.navigate(Screen.Detail.createRoute(itemId))
-            //     }
-            // )
+        composable(Screen.Home.route) {
+            HomeScreen(
+                // 필요한 네비게이션 콜백 추가
+                // onNavigateToDetail = { itemId ->
+                //     navController.navigate(Screen.HomeDetail.createRoute(itemId))
+                // }
+            )
         }
 
-        // 프로필 화면
-        composable(route = Screen.Profile.route) {
-            // TODO: ProfileScreen 구현 후 연결
-            // ProfileScreen(
-            //     onNavigateBack = {
-            //         navController.popBackStack()
-            //     }
-            // )
-        }
-
-        // 설정 화면
-        composable(route = Screen.Settings.route) {
-            // TODO: SettingsScreen 구현 후 연결
-            // SettingsScreen(
-            //     onNavigateBack = {
-            //         navController.popBackStack()
-            //     },
-            //     onLogout = {
-            //         navController.navigate(NavGraphs.AUTH) {
-            //             popUpTo(NavGraphs.MAIN) { inclusive = true }
-            //         }
-            //     }
-            // )
-        }
-
-        // 상세 화면 (인자 받기 예시)
+        // Home Detail 화면 예시
         composable(
-            route = Screen.Detail.route,
+            route = Screen.HomeDetail.route,
             arguments = listOf(
-                navArgument("itemId") {
-                    type = NavType.StringType
-                }
+                navArgument("itemId") { type = NavType.StringType }
             )
         ) { backStackEntry ->
             val itemId = backStackEntry.arguments?.getString("itemId")
-            // TODO: DetailScreen 구현 후 연결
-            // DetailScreen(
+            // TODO: HomeDetailScreen 구현 후 연결
+            // HomeDetailScreen(
             //     itemId = itemId,
-            //     onNavigateBack = {
-            //         navController.popBackStack()
+            //     onNavigateBack = { navController.popBackStack() }
+            // )
+        }
+    }
+}
+
+/**
+ * Timeline 탭 네비게이션 그래프
+ */
+fun NavGraphBuilder.timelineTabGraph(navController: NavHostController) {
+    navigation(
+        startDestination = Screen.Timeline.route,
+        route = NavGraphs.TIMELINE_TAB
+    ) {
+        composable(Screen.Timeline.route) {
+            TimelineScreen(
+                // 필요한 네비게이션 콜백 추가
+                // onNavigateToDetail = { postId ->
+                //     navController.navigate(Screen.TimelineDetail.createRoute(postId))
+                // }
+            )
+        }
+
+        // Timeline Detail 화면 예시
+        composable(
+            route = Screen.TimelineDetail.route,
+            arguments = listOf(
+                navArgument("postId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val postId = backStackEntry.arguments?.getString("postId")
+            // TODO: TimelineDetailScreen 구현 후 연결
+            // TimelineDetailScreen(
+            //     postId = postId,
+            //     onNavigateBack = { navController.popBackStack() }
+            // )
+        }
+    }
+}
+
+/**
+ * My 탭 네비게이션 그래프
+ */
+fun NavGraphBuilder.myTabGraph(navController: NavHostController) {
+    navigation(
+        startDestination = Screen.My.route,
+        route = NavGraphs.MY_TAB
+    ) {
+        composable(Screen.My.route) {
+            MyScreen(
+                // 필요한 네비게이션 콜백 추가
+                // onNavigateToProfile = {
+                //     navController.navigate(Screen.Profile.route)
+                // },
+                // onNavigateToSettings = {
+                //     navController.navigate(Screen.Settings.route)
+                // }
+            )
+        }
+
+        // Profile 화면
+        composable(Screen.Profile.route) {
+            // TODO: ProfileScreen 구현 후 연결
+            // ProfileScreen(
+            //     onNavigateBack = { navController.popBackStack() },
+            //     onNavigateToEdit = {
+            //         navController.navigate(Screen.EditProfile.route)
             //     }
             // )
         }
 
-        // 검색 화면 (선택적 인자 예시)
-        composable(
-            route = Screen.Search.route,
-            arguments = listOf(
-                navArgument("query") {
-                    type = NavType.StringType
-                    nullable = true
-                    defaultValue = null
-                }
-            )
-        ) { backStackEntry ->
-            val query = backStackEntry.arguments?.getString("query")
-            // TODO: SearchScreen 구현 후 연결
-            // SearchScreen(
-            //     initialQuery = query,
-            //     onNavigateBack = {
-            //         navController.popBackStack()
-            //     }
+        // Settings 화면
+        composable(Screen.Settings.route) {
+            // TODO: SettingsScreen 구현 후 연결
+            // SettingsScreen(
+            //     onNavigateBack = { navController.popBackStack() }
             // )
         }
+
+        // Edit Profile 화면
+        composable(Screen.EditProfile.route) {
+            // TODO: EditProfileScreen 구현 후 연결
+            // EditProfileScreen(
+            //     onNavigateBack = { navController.popBackStack() }
+            // )
+        }
+    }
+}
+
+/**
+ * Upload 화면 (단일 화면)
+ */
+fun NavGraphBuilder.uploadScreen() {
+    composable(Screen.Upload.route) {
+        UploadScreen()
+    }
+}
+
+/**
+ * Remind 화면 (단일 화면)
+ */
+fun NavGraphBuilder.remindScreen() {
+    composable(Screen.Remind.route) {
+        RemindScreen()
     }
 }
