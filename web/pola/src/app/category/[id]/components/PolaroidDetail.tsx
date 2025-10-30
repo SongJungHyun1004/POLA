@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import ImageModal from "./ImageModal";
-import { RotateCcw, Download, Share2 } from "lucide-react";
+import { RotateCcw, Download, Share2, Pencil } from "lucide-react";
 
 interface PolaroidDetailProps {
   src?: string;
@@ -60,6 +60,9 @@ export default function PolaroidDetail({
             <h2 className="text-lg font-semibold text-[#4C3D25]">Context</h2>
             <div className="flex gap-3">
               <button>
+                <Pencil className="w-5 h-5 text-[#4C3D25] hover:text-black" />
+              </button>
+              <button>
                 <Download className="w-5 h-5 text-[#4C3D25] hover:text-black" />
               </button>
               <button>
@@ -70,16 +73,11 @@ export default function PolaroidDetail({
 
           {/* Context input area */}
           <textarea
-            className="flex-1 resize-none border border-[#C9C2B3] p-3 rounded-md text-sm focus:outline-none"
-            placeholder="내용을 입력하세요..."
-            value={context}
-            onChange={(e) => setContext(e.target.value)}
+            className="flex-1 resize-none p-3 rounded-md text-sm text-[#4C3D25] focus:outline-none cursor-default"
+            placeholder="이미지 설명"
+            value="내용을 입력하세요..."
+            readOnly
           />
-
-          {/* Date */}
-          <div className="text-center mt-3 font-medium text-[#4C3D25]">
-            {date}
-          </div>
         </div>
       </div>
 
