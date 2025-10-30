@@ -1,7 +1,8 @@
 package com.jinjinjara.pola.controller;
 
 import com.jinjinjara.pola.common.ApiResponse;
-import com.jinjinjara.pola.user.dto.response.UserCategoryResponse;
+import com.jinjinjara.pola.data.dto.response.CategoryDataResponse;
+import com.jinjinjara.pola.data.dto.response.CategoryResponse;
 import com.jinjinjara.pola.user.dto.response.UserInfoResponse;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -36,10 +37,10 @@ public class UserController {
 
     @Operation(summary = "카테고리 정보 조회", description = "로그인한 사용자의 카테고리 정보를 조회합니다.")
     @GetMapping("/me/categories")
-    public ApiResponse<List<UserCategoryResponse>> getUserCategories() {
-        List<UserCategoryResponse> userCategories = new ArrayList<>();
-        userCategories.add(new UserCategoryResponse(10L, "#UI"));
-        userCategories.add(new UserCategoryResponse(11L, "#디자인시스템"));
+    public ApiResponse<List<CategoryResponse>> getUserCategories() {
+        List<CategoryResponse> userCategories = new ArrayList<>();
+        userCategories.add(new CategoryResponse(10L, "UI"));
+        userCategories.add(new CategoryResponse(11L, "디자인시스템"));
         return ApiResponse.ok(userCategories,"카테고리 태그 목록 조회에 성공했습니다.");
     }
 }

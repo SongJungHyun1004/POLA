@@ -2,10 +2,7 @@ package com.jinjinjara.pola.controller;
 
 import com.jinjinjara.pola.common.ApiResponse;
 import com.jinjinjara.pola.data.dto.common.Platform;
-import com.jinjinjara.pola.data.dto.response.CategoryDataResponse;
-import com.jinjinjara.pola.data.dto.response.DataResponse;
-import com.jinjinjara.pola.data.dto.response.HomeDataResponse;
-import com.jinjinjara.pola.data.dto.response.InsertDataResponse;
+import com.jinjinjara.pola.data.dto.response.*;
 import com.jinjinjara.pola.data.service.DataService;
 import com.jinjinjara.pola.user.dto.response.UserInfoResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -38,7 +35,21 @@ public class DataController {
         return ApiResponse.ok(data, "파일이 성공적으로 추가되었습니다.");
     }
 
-    @Operation(summary = "카테고리별 데이터 조회", description = "사용자가 선택한 카테고리의 파일들을 최근 날짜순으로 리턴합니다.")
+
+    @Operation(summary = "데이터 삭제", description = "사용자가 지정한 파일을 제거합니다.")
+    @DeleteMapping("/{id}")
+    public ApiResponse<List<Object>> deleteData(
+            @PathVariable("id") Long fileId
+    ) {
+        return ApiResponse.okMessage("파일이 성공적으로 삭제되었습니다.");
+    }
+
+
+    @Operation(summary = "카테고리별 데이터 조회",
+            description =   "유저 프로필과 함께 홈 화면에서 사용될 파일들을 리턴합니다.\n" +
+                            "즐겨찾기, 리마인드 최신 순 3장\n" +
+                            "최근 저장된 파일 10장\n" +
+                            "카테고리 별 데이터 최신 순 5장")
     @GetMapping("/categories/{id}")
     public ApiResponse<List<DataResponse>> getCategoryDataList(
             @PathVariable("id") Long categoryId
@@ -122,5 +133,4 @@ public class DataController {
 
         return ApiResponse.ok(data, "데이터 목록 조회에 성공했습니다.");
     }
-
 }

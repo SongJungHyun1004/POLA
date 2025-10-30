@@ -5,22 +5,13 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CategoryDataResponse {
-
+public class TagResponse {
     @JsonProperty("id")
     private Long id;
 
-    @JsonProperty("category_name")
-    private String categoryName;
-
-    @JsonProperty("category_sort")
-    private Integer categorySort;
-
-    @JsonProperty("category_data")
-    private List<DataResponse> data;
+    @JsonProperty("tag_name")
+    private String tagName;
 }

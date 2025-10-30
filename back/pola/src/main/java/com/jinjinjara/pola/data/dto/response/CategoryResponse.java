@@ -1,4 +1,4 @@
-package com.jinjinjara.pola.user.dto.response;
+package com.jinjinjara.pola.data.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
@@ -8,11 +8,11 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserCategoryResponse {
+public class CategoryResponse {
 
     @JsonProperty("id")
     private Long id;
 
-    @JsonProperty("tag_name")
-    private String tagName;
+    @JsonProperty("category_name")
+    private String categoryName;
 }
