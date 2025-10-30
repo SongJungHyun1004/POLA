@@ -102,11 +102,10 @@ fun TimelineScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
-            modifier = modifier,
+            modifier = modifier.fillMaxSize(),
             contentWindowInsets = WindowInsets(0.dp),
             topBar = {
                 TopAppBar(
-                    modifier = Modifier.height(48.dp),
                     title = {
                         Box(
                             modifier = Modifier.fillMaxHeight(),
@@ -114,9 +113,9 @@ fun TimelineScreen(
                         ) {
                             Text(
                                 text = "Timeline",
-                                fontSize = 24.sp,
+                                color = MaterialTheme.colorScheme.tertiary,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.tertiary
+                                style = MaterialTheme.typography.titleLarge
                             )
                         }
                     },
