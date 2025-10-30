@@ -43,7 +43,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorizeHttpRequests -> authorizeHttpRequests
                         .requestMatchers("/api/v2/admin/**").hasAuthority("ROLE_ADMIN") // 관리자 페이지 role 추가
                         .requestMatchers(
-                                "/api/auth/**",
+                                "/api/v1/oauth/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/api-docs/**",
