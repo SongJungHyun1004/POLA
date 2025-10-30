@@ -1,4 +1,4 @@
-package com.jinjinjara.pola.auth;
+package com.jinjinjara.pola.auth.oauth;
 
 import java.util.Map;
 

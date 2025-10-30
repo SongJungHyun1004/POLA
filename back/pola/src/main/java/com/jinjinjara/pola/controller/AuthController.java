@@ -1,11 +1,14 @@
 package com.jinjinjara.pola.controller;
 
-import com.jinjinjara.pola.service.CustomUserDetailsService;
-import com.jinjinjara.pola.dto.request.SignInDto;
-import com.jinjinjara.pola.dto.request.SignUpDto;
-import com.jinjinjara.pola.dto.response.TokenDto;
+import com.jinjinjara.pola.auth.dto.request.GoogleLoginRequest;
+import com.jinjinjara.pola.auth.service.CustomUserDetailsService;
+import com.jinjinjara.pola.auth.dto.request.SignInDto;
+import com.jinjinjara.pola.auth.dto.request.SignUpDto;
+import com.jinjinjara.pola.auth.dto.response.TokenDto;
+import com.jinjinjara.pola.auth.service.GoogleAuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final CustomUserDetailsService userService;
+    private final GoogleAuthService googleAuthService;
 
     @Operation(summary = "회원가입", description = "이메일과 사용자 이름으로 회원가입을 진행합니다.")
     @PostMapping("/signup")
@@ -38,5 +42,12 @@ public class AuthController {
     public ResponseEntity<String> reissue(@RequestHeader("Authorization") String refreshToken) {
         String parsedToken = userService.resolveRefreshToken(refreshToken);
         return ResponseEntity.ok("유효한 리프레시 토큰: " + parsedToken);
+    }
+
+    @Operation(summary = "Google ID Token 로그인", description = "프론트에서 받은 Google ID Token으로 내부 JWT를 발급합니다.")
+    @PostMapping("/google")
+    public ResponseEntity<TokenDto> loginWithGoogle(@Valid @RequestBody GoogleLoginRequest request) throws Exception {
+        TokenDto token = googleAuthService.authenticate(request.getIdToken());
+        return ResponseEntity.ok(token);
     }
 }

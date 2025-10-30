@@ -1,17 +1,18 @@
-package com.jinjinjara.pola.service;
+package com.jinjinjara.pola.auth.service;
 
 import com.jinjinjara.pola.auth.exception.InvalidRefreshTokenException;
 import com.jinjinjara.pola.auth.exception.MultipleLoginException;
-import com.jinjinjara.pola.auth.RedisUtil;
-import com.jinjinjara.pola.auth.TokenProvider;
-import com.jinjinjara.pola.dto.common.Role;
-import com.jinjinjara.pola.dto.request.SignInDto;
-import com.jinjinjara.pola.dto.request.SignUpDto;
-import com.jinjinjara.pola.dto.response.TokenDto;
-import com.jinjinjara.pola.entity.Users;
-import com.jinjinjara.pola.repository.UsersRepository;
+import com.jinjinjara.pola.auth.redis.RedisUtil;
+import com.jinjinjara.pola.auth.jwt.TokenProvider;
+import com.jinjinjara.pola.auth.dto.common.Role;
+import com.jinjinjara.pola.auth.dto.request.SignInDto;
+import com.jinjinjara.pola.auth.dto.request.SignUpDto;
+import com.jinjinjara.pola.auth.dto.response.TokenDto;
+import com.jinjinjara.pola.user.entity.Users;
+import com.jinjinjara.pola.user.repository.UsersRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -34,8 +35,8 @@ public class CustomUserDetailsService implements UserDetailsService {
     private final TokenProvider tokenProvider;
     private final RedisUtil redisUtil;
 
-    private static final long ACCESS_TOKEN_EXPIRE_TIME = 1000 * 60 * 30;            // 30분
-    private static final long REFRESH_TOKEN_EXPIRE_TIME = 1000 * 60 * 60 * 24 * 7;  // 7일
+    @Value("${jwt.refresh-token-expire-time}")
+    private long refreshTokenExpireTime;
 
     @Override
     @Transactional
@@ -86,7 +87,7 @@ public class CustomUserDetailsService implements UserDetailsService {
 
         TokenDto tokenDto = tokenProvider.generateTokenDto(authentication);
 
-        redisUtil.save(user.getEmail(), tokenDto.getRefreshToken(), REFRESH_TOKEN_EXPIRE_TIME);
+        redisUtil.save(user.getEmail(), tokenDto.getRefreshToken(), refreshTokenExpireTime);
         log.info("[REDIS] saved refresh for {}: {}...",
                 user.getEmail(),
                 tokenDto.getRefreshToken().substring(0, 16));

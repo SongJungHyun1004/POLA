@@ -1,4 +1,4 @@
-package com.jinjinjara.pola.dto.common;
+package com.jinjinjara.pola.auth.dto.common;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

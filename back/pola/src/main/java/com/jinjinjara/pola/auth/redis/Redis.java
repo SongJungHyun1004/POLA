@@ -1,4 +1,4 @@
-package com.jinjinjara.pola.auth;
+package com.jinjinjara.pola.auth.redis;
 
 import jakarta.persistence.Id;
 import lombok.AllArgsConstructor;

@@ -1,6 +1,6 @@
-package com.jinjinjara.pola.repository;
+package com.jinjinjara.pola.user.repository;
 
-import com.jinjinjara.pola.entity.Users;
+import com.jinjinjara.pola.user.entity.Users;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

@@ -3,17 +3,17 @@ spring:
     name: pola
 
   # ===============================
-  # DB Setting (제공된 yml 기준으로 병합)
+  # Database Configuration
   # ===============================
   datasource:
     driver-class-name: org.postgresql.Driver
-    # [주의] localhost -> postgres (Docker 내부 통신용)
+    # [Note] Use container name (postgres) instead of localhost in Docker
     url: jdbc:postgresql://postgres:5432/pola_db
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
 
   # ===============================
-  # JPA Setting
+  # JPA Configuration
   # ===============================
   jpa:
     hibernate:
@@ -25,23 +25,53 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
     database-platform: org.hibernate.dialect.PostgreSQLDialect
 
-    # ===============================
-    # Redis Setting
-    # ===============================
-    data:
-      redis:
-        host: redis  # docker-compose의 컨테이너 이름
-        port: 6379
-        password: ${REDIS_PASSWORD} # .env 파일에서 읽어올 변수
+  # ===============================
+  # Redis Configuration
+  # ===============================
+  data:
+    redis:
+      host: redis              # container name
+      port: 6379
+      password: ${REDIS_PASSWORD}
+
+  # ===============================
+  # Security & OAuth2
+  # ===============================
+  security:
+    oauth2:
+      client:
+        registration:
+          google-web:
+            provider: google
+            client-id: ${GOOGLE_WEB_CLIENT_ID}
+            client-secret: ${GOOGLE_WEB_CLIENT_SECRET}
+            scope: openid, profile, email
+
+          google-android:
+            provider: google
+            client-id: ${GOOGLE_ANDROID_CLIENT_ID}
+            scope: openid, profile, email
+
+        provider:
+          google:
+            issuer-uri: https://accounts.google.com
 
 # ===============================
-# Server Setting
+# JWT Configuration
+# ===============================
+jwt:
+  secret: ${JWT_SECRET}
+  access-token-expire-time: ${ACCESS_TOKEN_EXPIRE_TIME}     # in milliseconds
+  refresh-token-expire-time: ${REFRESH_TOKEN_EXPIRE_TIME}   # in milliseconds
+
+# ===============================
+# Server Configuration
 # ===============================
 server:
   port: 8080
 
 # ===============================
-# logging
+# Logging
 # ===============================
 logging:
   level:
@@ -56,3 +86,9 @@ springdoc:
     path: /api-docs
   swagger-ui:
     path: /swagger-ui.html
+
+# ===============================
+# Google Allowed Client IDs
+# ===============================
+google:
+  client-ids: ${GOOGLE_WEB_CLIENT_ID},${GOOGLE_ANDROID_CLIENT_ID}

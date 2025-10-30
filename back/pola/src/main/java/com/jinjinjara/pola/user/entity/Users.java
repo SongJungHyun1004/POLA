@@ -1,6 +1,6 @@
-package com.jinjinjara.pola.entity;
+package com.jinjinjara.pola.user.entity;
 
-import com.jinjinjara.pola.dto.common.Role;
+import com.jinjinjara.pola.auth.dto.common.Role;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -51,10 +51,6 @@ public class Users {
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false, length = 32)
     private Role role;
-
-    public void authorizeUser() {
-        this.role = Role.ROLE_USER;
-    }
 
     @PrePersist
     private void prePersist() {

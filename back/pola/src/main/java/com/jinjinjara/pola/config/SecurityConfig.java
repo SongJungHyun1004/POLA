@@ -1,8 +1,8 @@
 package com.jinjinjara.pola.config;
 
-import com.jinjinjara.pola.auth.JwtAccessDeniedHandler;
-import com.jinjinjara.pola.auth.JwtAuthenticationEntryPoint;
-import com.jinjinjara.pola.auth.TokenProvider;
+import com.jinjinjara.pola.auth.jwt.JwtAccessDeniedHandler;
+import com.jinjinjara.pola.auth.jwt.JwtAuthenticationEntryPoint;
+import com.jinjinjara.pola.auth.jwt.TokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.filter.CorsFilter;
 import org.springframework.context.annotation.Bean;

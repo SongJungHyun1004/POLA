@@ -1,4 +1,4 @@
-package com.jinjinjara.pola.auth;
+package com.jinjinjara.pola.auth.redis;
 
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
