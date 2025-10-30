@@ -141,7 +141,7 @@ fun MainScreen(
             myTabGraph(navController)
 
             // 단일 화면들
-            uploadScreen()
+            uploadScreen(navController)
             remindScreen()
         }
     }

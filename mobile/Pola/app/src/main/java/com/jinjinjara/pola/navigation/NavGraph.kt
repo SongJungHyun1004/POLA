@@ -48,6 +48,7 @@ fun NavGraphBuilder.mainNavGraph() {
         MainScreen()
     }
 }
+
 /**
  * Home 탭 네비게이션 그래프
  */
@@ -168,9 +169,17 @@ fun NavGraphBuilder.myTabGraph(navController: NavHostController) {
 /**
  * Upload 화면 (단일 화면)
  */
-fun NavGraphBuilder.uploadScreen() {
+fun NavGraphBuilder.uploadScreen(navController: NavHostController) {
     composable(Screen.Upload.route) {
-        UploadScreen()
+        UploadScreen(
+            onBackClick = { navController.popBackStack() },
+            onClipboardClick = {
+
+            },
+            onCameraClick = {
+
+            }
+        )
     }
 }
 

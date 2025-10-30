@@ -49,7 +49,7 @@ fun UploadScreen(
                         .align(Alignment.CenterStart)
                 ) {
                     Icon(
-                        modifier = Modifier.size(48.dp),
+                        modifier = Modifier.size(36.dp),
                         imageVector = Icons.Default.Close,
                         contentDescription = "닫기",
                         tint = MaterialTheme.colorScheme.tertiary
