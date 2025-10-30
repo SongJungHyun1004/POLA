@@ -7,11 +7,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -110,7 +113,10 @@ fun HomeScreen() {
                     contentDescription = "Favorites",
                     tint = MaterialTheme.colorScheme.tertiary,
                     modifier = Modifier
-                        .clickable {
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
                             // 즐겨찾기 이동
                         }
                         .size(30.dp)
@@ -196,7 +202,10 @@ fun HomeScreen() {
                     )
                     Text(
                         modifier = Modifier
-                            .clickable{
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ){
                                 // 전체보기
                             },
                         text = "전체보기",
