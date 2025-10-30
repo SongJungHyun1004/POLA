@@ -1,4 +1,4 @@
-package com.jinjinjara.pola.dto.response;
+package com.jinjinjara.pola.auth.dto.response;
 
 import lombok.*;
 

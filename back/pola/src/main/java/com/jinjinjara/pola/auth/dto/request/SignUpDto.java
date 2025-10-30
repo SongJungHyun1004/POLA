@@ -1,4 +1,4 @@
-package com.jinjinjara.pola.dto.request;
+package com.jinjinjara.pola.auth.dto.request;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
