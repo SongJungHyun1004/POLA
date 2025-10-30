@@ -27,6 +27,7 @@ public class S3ServiceImpl implements S3Service {
         String fileName = url+"/"+ UUID.randomUUID().toString() + "_" + multipartFile.getOriginalFilename();
         ObjectMetadata objMeta = new ObjectMetadata();
         objMeta.setContentLength(multipartFile.getSize());
+        objMeta.setContentType(multipartFile.getContentType());
         try {
             amazonS3.putObject(bucket, fileName, multipartFile.getInputStream(), objMeta);
         } catch (IOException e) {
