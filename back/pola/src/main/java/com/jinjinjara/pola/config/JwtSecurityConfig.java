@@ -1,7 +1,7 @@
 package com.jinjinjara.pola.config;
 
-import com.jinjinjara.pola.auth.JwtFilter;
-import com.jinjinjara.pola.auth.TokenProvider;
+import com.jinjinjara.pola.auth.jwt.JwtFilter;
+import com.jinjinjara.pola.auth.jwt.TokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.config.annotation.SecurityConfigurerAdapter;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;

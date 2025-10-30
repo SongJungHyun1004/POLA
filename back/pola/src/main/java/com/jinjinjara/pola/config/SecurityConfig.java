@@ -1,8 +1,8 @@
 package com.jinjinjara.pola.config;
 
-import com.jinjinjara.pola.auth.JwtAccessDeniedHandler;
-import com.jinjinjara.pola.auth.JwtAuthenticationEntryPoint;
-import com.jinjinjara.pola.auth.TokenProvider;
+import com.jinjinjara.pola.auth.jwt.JwtAccessDeniedHandler;
+import com.jinjinjara.pola.auth.jwt.JwtAuthenticationEntryPoint;
+import com.jinjinjara.pola.auth.jwt.TokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.filter.CorsFilter;
 import org.springframework.context.annotation.Bean;
@@ -43,7 +43,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorizeHttpRequests -> authorizeHttpRequests
                         .requestMatchers("/api/v2/admin/**").hasAuthority("ROLE_ADMIN") // 관리자 페이지 role 추가
                         .requestMatchers(
-                                "/api/auth/**",
+                                "/api/v1/oauth/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/api-docs/**",
