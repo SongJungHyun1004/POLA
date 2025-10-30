@@ -1,17 +1,19 @@
 package com.jinjinjara.pola.controller;
 
 import com.jinjinjara.pola.common.ApiResponse;
+import com.jinjinjara.pola.data.dto.common.Platform;
 import com.jinjinjara.pola.data.dto.response.CategoryDataResponse;
 import com.jinjinjara.pola.data.dto.response.DataResponse;
 import com.jinjinjara.pola.data.dto.response.HomeDataResponse;
+import com.jinjinjara.pola.data.dto.response.InsertDataResponse;
+import com.jinjinjara.pola.data.service.DataService;
 import com.jinjinjara.pola.user.dto.response.UserInfoResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -22,6 +24,19 @@ import java.util.List;
 @RequestMapping("/api/v1/files")
 @RequiredArgsConstructor
 public class DataController {
+
+    private final DataService dataService;
+
+    @Operation(summary = "데이터 추가", description = "사용자의 이미지 또는 텍스트 파일을 저장합니다.")
+    @PostMapping(value ="", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<InsertDataResponse> insertData(
+            @RequestPart("file") MultipartFile file,
+            @RequestParam(value = "origin_url", required = false) String originUrl,
+            @RequestParam("platform") Platform platform
+    ) {
+        InsertDataResponse data = dataService.insertData(file, originUrl, platform);
+        return ApiResponse.ok(data, "파일이 성공적으로 추가되었습니다.");
+    }
 
     @Operation(summary = "카테고리별 데이터 조회", description = "사용자가 선택한 카테고리의 파일들을 최근 날짜순으로 리턴합니다.")
     @GetMapping("/categories/{id}")
