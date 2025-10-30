@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.HorizontalDivider
@@ -47,7 +48,9 @@ fun MainScreen(
     Scaffold(
         modifier = modifier,
         bottomBar = {
-            Column {
+            Column(
+                modifier = Modifier.navigationBarsPadding()
+            ) {
                 HorizontalDivider(
                     thickness = 1.dp,
                     color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f)
