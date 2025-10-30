@@ -24,6 +24,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.jinjinjara.pola.R
 import com.jinjinjara.pola.presentation.ui.component.PolaCard
@@ -197,7 +198,13 @@ fun RemindScreen(modifier: Modifier = Modifier) {
             TopAppBar(
                 title = {
                     Box(Modifier.fillMaxHeight(), contentAlignment = Alignment.Center) {
-                        Text("Remind", style = MaterialTheme.typography.titleLarge)
+                        Text(
+                            text = "Remind",
+                            color = MaterialTheme.colorScheme.tertiary,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleLarge
+                        )
+
                     }
                 },
                 windowInsets = WindowInsets(0.dp)
