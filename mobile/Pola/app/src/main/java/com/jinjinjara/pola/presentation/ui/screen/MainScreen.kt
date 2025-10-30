@@ -1,5 +1,8 @@
 package com.jinjinjara.pola.presentation.ui.screen
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,6 +19,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -80,50 +84,47 @@ fun MainScreen(
                                 it.route == item.route
                             } == true
 
-                            NavigationBarItem(
-                                icon = {
-                                    Box(
-                                        modifier = Modifier.size(24.dp),
-                                        contentAlignment = Alignment.Center
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxSize()
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null
                                     ) {
-                                        Icon(
-                                            painter = painterResource(
-                                                id = if (selected) item.selectedIcon else item.icon
-                                            ),
-                                            contentDescription = item.title,
-                                            tint = Color.Unspecified,
-                                            modifier = Modifier.fillMaxSize()
-                                        )
-                                    }
-                                },
-                                selected = selected,
-                                onClick = {
-                                    val targetRoute = when (item.route) {
-                                        Screen.Home.route -> NavGraphs.HOME_TAB
-                                        Screen.Timeline.route -> NavGraphs.TIMELINE_TAB
-                                        Screen.Upload.route -> Screen.Upload.route
-                                        Screen.Remind.route -> Screen.Remind.route
-                                        Screen.My.route -> NavGraphs.MY_TAB
-                                        else -> item.route
-                                    }
-
-                                    navController.navigate(targetRoute) {
-                                        // 시작 destination으로 팝업하여 스택 관리
-                                        popUpTo(navController.graph.findStartDestination().id) {
-                                            saveState = true
+                                        val targetRoute = when (item.route) {
+                                            Screen.Home.route -> NavGraphs.HOME_TAB
+                                            Screen.Timeline.route -> NavGraphs.TIMELINE_TAB
+                                            Screen.Upload.route -> Screen.Upload.route
+                                            Screen.Remind.route -> Screen.Remind.route
+                                            Screen.My.route -> NavGraphs.MY_TAB
+                                            else -> item.route
                                         }
-                                        // 같은 아이템을 다시 선택했을 때 중복 방지
-                                        launchSingleTop = true
-                                        // 이전 상태 복원
-                                        restoreState = true
-                                    }
-                                },
-                                colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = Color.Unspecified,
-                                    unselectedIconColor = Color.Unspecified,
-                                    indicatorColor = Color.Transparent
-                                )
-                            )
+
+                                        navController.navigate(targetRoute) {
+                                            popUpTo(navController.graph.findStartDestination().id) {
+                                                saveState = true
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        painter = painterResource(
+                                            id = if (selected) item.selectedIcon else item.icon
+                                        ),
+                                        contentDescription = item.title,
+                                        tint = Color.Unspecified,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
