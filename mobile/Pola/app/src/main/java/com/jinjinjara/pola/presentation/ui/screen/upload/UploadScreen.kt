@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -22,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -87,16 +89,23 @@ fun UploadScreen(
                     .padding(horizontal = 4.dp),
                 contentAlignment = Alignment.Center
             ) {
-                IconButton(
-                    onClick = onBackClick,
+                Box(
                     modifier = Modifier
                         .align(Alignment.CenterStart)
+                        .size(48.dp)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            onBackClick()
+                        },
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        modifier = Modifier.size(36.dp),
                         imageVector = Icons.Default.Close,
                         contentDescription = "닫기",
-                        tint = MaterialTheme.colorScheme.tertiary
+                        tint = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.size(36.dp)
                     )
                 }
 
@@ -123,16 +132,20 @@ fun UploadScreen(
                         )
                     }
                 } else {
-                    TextButton(
-                        onClick = onClipboardClick,
-                        modifier = Modifier.align(Alignment.CenterEnd)
-                    ) {
-                        Text(
-                            text = "클립보드",
-                            fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.tertiary
-                        )
-                    }
+                    Text(
+                        text = "클립보드",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
+                                onClipboardClick()
+                            }
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
                 }
             }
         }
