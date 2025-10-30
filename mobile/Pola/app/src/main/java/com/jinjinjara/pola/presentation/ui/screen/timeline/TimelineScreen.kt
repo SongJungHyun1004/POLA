@@ -114,7 +114,8 @@ fun TimelineScreen(
                         ) {
                             Text(
                                 text = "Timeline",
-                                fontSize = 20.sp,
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.tertiary
                             )
                         }
@@ -315,7 +316,7 @@ fun TimelineItem(
                     ) {
                         // 스크롤되는 아이템들
                         Spacer(Modifier.width(12.dp))
-                        repeat(10) {
+                        repeat(10) {    // 나중에 리스트 갯수만큼 받아와야함.
                             Box(
                                 modifier = Modifier
                                     .height(120.dp)
