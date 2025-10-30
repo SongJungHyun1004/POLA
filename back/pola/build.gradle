@@ -41,7 +41,13 @@ dependencies {
     runtimeOnly   'io.jsonwebtoken:jjwt-jackson:0.11.5'
 
     // --- AWS (S3) ---
-    implementation 'org.springframework.cloud:spring-cloud-starter-aws:2.2.6.RELEASE'
+//    implementation 'org.springframework.cloud:spring-cloud-starter-aws:2.2.6.RELEASE'
+    // --- AWS SDK v2 (BOM 기반 관리) ---
+    implementation platform('software.amazon.awssdk:bom:2.25.37')
+    implementation 'software.amazon.awssdk:s3'
+    implementation 'software.amazon.awssdk:auth'
+    implementation 'software.amazon.awssdk:regions'
+
 
     // --- DB ---
     runtimeOnly 'org.postgresql:postgresql'

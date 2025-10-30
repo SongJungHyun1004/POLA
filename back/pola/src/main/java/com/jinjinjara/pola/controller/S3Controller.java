@@ -1,11 +1,9 @@
-package com.jinjinjara.pola.s3;
+package com.jinjinjara.pola.controller;
 
 
 import com.jinjinjara.pola.s3.S3Service;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.net.URL;
 import java.util.Map;
@@ -19,7 +17,7 @@ public class S3Controller {
 
     @GetMapping("/s3/presigned/upload")
     public Map<String, String> getUploadUrl(@RequestParam String fileName) {
-        URL presignedUrl = s3Service.generateUploadUrl(fileName);
+        URL presignedUrl = s3Service.generateUploadUrl(fileName).getUrl();
         return Map.of("url", presignedUrl.toString());
     }
 
