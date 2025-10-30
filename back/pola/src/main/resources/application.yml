@@ -8,7 +8,8 @@ spring:
   datasource:
     driver-class-name: org.postgresql.Driver
     # [Note] Use container name (postgres) instead of localhost in Docker
-    url: jdbc:postgresql://postgres:5432/pola_db
+    #    url: jdbc:postgresql://postgres:5432/pola_db
+    url: jdbc:postgresql://k13d204.p.ssafy.io:5432/pola_db
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
 
@@ -30,7 +31,7 @@ spring:
   # ===============================
   data:
     redis:
-      host: redis              # container name
+      host: k13d204.p.ssafy.io
       port: 6379
       password: ${REDIS_PASSWORD}
 
@@ -88,7 +89,22 @@ springdoc:
     path: /swagger-ui.html
 
 # ===============================
-# Google Allowed Client IDs
+# S3 (From HEAD)
+# ===============================
+aws:
+  credentials:
+    accessKey: ${AWS_ACCESS_KEY_ID}
+    secretKey: ${AWS_SECRET_ACCESS_KEY}
+  s3:
+    bucket: pola-storage-bucket
+    dir: home
+  region:
+    static: ap-northeast-2
+  stack:
+    auto: false
+
+# ===============================
+# Google Allowed Client IDs (From develop)
 # ===============================
 google:
   client-ids: ${GOOGLE_WEB_CLIENT_ID},${GOOGLE_ANDROID_CLIENT_ID}
