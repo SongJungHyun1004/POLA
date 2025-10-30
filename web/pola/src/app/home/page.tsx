@@ -30,7 +30,7 @@ export default function HomePage() {
             { id: 4, name: "Friends" },
             { id: 5, name: "Memories" },
           ].map((category) => {
-            const imgSrc = "/images/POLA_logo_1.png";
+            const imgSrc = `/images/dummy_image_1.png`;
 
             return (
               <div key={category.id} className="w-full flex-shrink-0">
