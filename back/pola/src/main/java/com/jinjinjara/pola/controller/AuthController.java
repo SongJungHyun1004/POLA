@@ -6,6 +6,8 @@ import com.jinjinjara.pola.auth.dto.request.SignInDto;
 import com.jinjinjara.pola.auth.dto.request.SignUpDto;
 import com.jinjinjara.pola.auth.dto.response.TokenDto;
 import com.jinjinjara.pola.auth.service.GoogleAuthService;
+import com.jinjinjara.pola.common.ControllerHelper;
+import com.jinjinjara.pola.common.CustomException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -16,9 +18,9 @@ import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Auth API", description = "인증 API")
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api/v1/oauth")
 @RequiredArgsConstructor
-public class AuthController {
+public class AuthController implements ControllerHelper {
 
     private final CustomUserDetailsService userService;
     private final GoogleAuthService googleAuthService;
@@ -32,9 +34,14 @@ public class AuthController {
 
     @Operation(summary = "로그인", description = "이메일로 로그인 후 JWT 토큰을 발급받습니다.")
     @PostMapping("/signin")
-    public ResponseEntity<TokenDto> signin(@RequestBody SignInDto signInDto) {
-        TokenDto token = userService.signIn(signInDto);
-        return ResponseEntity.ok(token);
+    public ResponseEntity<?> signin(@RequestBody SignInDto signInDto) {
+        try{
+            TokenDto token = userService.signIn(signInDto);
+            return handleSuccess(token, HttpStatus.OK, "토큰 발급이 완료되었습니다.");
+        }
+        catch (CustomException e){
+            return handleFail(e);
+        }
     }
 
     @Operation(summary = "리프레시 토큰 재발급", description = "리프레시 토큰을 사용해 새로운 Access Token을 발급받습니다.")
@@ -45,9 +52,14 @@ public class AuthController {
     }
 
     @Operation(summary = "Google ID Token 로그인", description = "프론트에서 받은 Google ID Token으로 내부 JWT를 발급합니다.")
-    @PostMapping("/google")
-    public ResponseEntity<TokenDto> loginWithGoogle(@Valid @RequestBody GoogleLoginRequest request) throws Exception {
-        TokenDto token = googleAuthService.authenticate(request.getIdToken());
-        return ResponseEntity.ok(token);
+    @PostMapping("/token")
+    public ResponseEntity<?> loginWithGoogle(@Valid @RequestBody GoogleLoginRequest request) throws Exception {
+        try {
+            TokenDto token = googleAuthService.authenticate(request.getIdToken());
+            return handleSuccess(token, HttpStatus.OK, "토큰 발급이 완료되었습니다.");
+        }
+        catch (CustomException e){
+            return handleFail(e);
+        }
     }
 }
