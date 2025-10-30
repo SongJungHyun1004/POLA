@@ -147,7 +147,7 @@ fun HomeScreen() {
                         val ratio = painter.intrinsicSize.width / painter.intrinsicSize.height
                         Box(
                             modifier = Modifier
-                                .height(150.dp)
+                                .height(120.dp)
                                 .aspectRatio(ratio)
                         ) {
                             Image(
@@ -158,7 +158,7 @@ fun HomeScreen() {
                             )
                             Box(
                                 modifier = Modifier
-                                    .size(110.dp)
+                                    .size(88.dp)
                                     .clip(RoundedCornerShape(5.dp))
                                     .align(Alignment.Center)
                             ) {
