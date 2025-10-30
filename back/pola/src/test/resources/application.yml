@@ -1,0 +1,68 @@
+spring:
+  # ===============================
+  # Test Datasource Configuration (H2 In-Memory)
+  # ===============================
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  # ===============================
+  # Test JPA Configuration
+  # ===============================
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.H2Dialect
+    database-platform: org.hibernate.dialect.H2Dialect
+
+  # ===============================
+  # H2 Console (Optional - for debugging)
+  # ===============================
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  # ===============================
+  # Redis Configuration (Embedded for Test)
+  # ===============================
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+# ===============================
+# AWS Configuration (Mock for Test)
+# ===============================
+cloud:
+  aws:
+    credentials:
+      access-key: test-access-key
+      secret-key: test-secret-key
+    s3:
+      bucket: test-bucket
+      dir: test
+    region:
+      static: ap-northeast-2
+    stack:
+      auto: false
+
+# ===============================
+# JWT Configuration (Test Values)
+# ===============================
+jwt:
+  secret: dGVzdC1zZWNyZXQta2V5LWZvci1qd3QtdG9rZW4tZ2VuZXJhdGlvbi1taW5pbXVtLTI1Ni1iaXRzLXJlcXVpcmVk
+  access-token-expire-time: 3600000
+  refresh-token-expire-time: 86400000
+
+# ===============================
+# Google OAuth2 (Test Values)
+# ===============================
+google:
+  client-ids: test-client-id-1,test-client-id-2

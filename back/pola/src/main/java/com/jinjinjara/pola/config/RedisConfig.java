@@ -1,6 +1,6 @@
 package com.jinjinjara.pola.config;
 
-import com.jinjinjara.pola.auth.RedisProperties;
+import com.jinjinjara.pola.auth.redis.RedisProperties;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.context.annotation.Bean;
