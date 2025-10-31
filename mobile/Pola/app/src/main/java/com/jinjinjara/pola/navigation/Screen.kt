@@ -5,8 +5,7 @@ package com.jinjinjara.pola.navigation
  */
 sealed class Screen(val route: String) {
     // Auth
-    data object Login : Screen("login")
-    data object SignUp : Screen("signup")
+    data object Start : Screen("start")
 
     // Main
     data object Home : Screen("home")
@@ -14,8 +13,22 @@ sealed class Screen(val route: String) {
     data object Upload : Screen("upload")
     data object Remind : Screen("remind")
     data object My : Screen("my")
-    data object Profile : Screen("profile")
-    data object Settings : Screen("settings")
+
+
+    // Home 탭 내부 화면들
+    data object HomeDetail : Screen("home/detail/{itemId}") {
+        fun createRoute(itemId: String) = "home/detail/$itemId"
+    }
+
+    // Timeline 탭 내부 화면들
+    data object TimelineDetail : Screen("timeline/detail/{postId}") {
+        fun createRoute(postId: String) = "timeline/detail/$postId"
+    }
+
+    // My 탭 내부 화면들
+    data object Profile : Screen("my/profile")
+    data object Settings : Screen("my/settings")
+    data object EditProfile : Screen("my/profile/edit")
 
     // 인자를 받는 화면 예시
     data object Detail : Screen("detail/{itemId}") {
@@ -36,4 +49,9 @@ sealed class Screen(val route: String) {
 object NavGraphs {
     const val AUTH = "auth_graph"
     const val MAIN = "main_graph"
+
+    // 각 탭의 네비게이션 그래프
+    const val HOME_TAB = "home_tab_graph"
+    const val TIMELINE_TAB = "timeline_tab_graph"
+    const val MY_TAB = "my_tab_graph"
 }
