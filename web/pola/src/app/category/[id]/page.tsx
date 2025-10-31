@@ -15,6 +15,7 @@ export default function CategoryPage() {
     id: i + 1,
     src: "/images/dummy_image_1.png",
     tags: ["#태그1", "#태그2", "#태그3", "#태그4", "#태그5", "#태그6"],
+    contexts: "내용을 입력하세요...",
     favorite: i % 4 === 0,
     date: "2025.10.30",
   }));
@@ -88,7 +89,8 @@ export default function CategoryPage() {
         <PolaroidDetail
           id={selectedImage?.id}
           src={selectedImage?.src}
-          tags={selectedImage?.tags}
+          tags={selectedImage?.tags ?? []}
+          contexts={selectedImage?.contexts ?? ""}
           date={selectedImage?.date}
         />
       </div>
