@@ -11,6 +11,7 @@ import com.jinjinjara.pola.presentation.ui.screen.MainScreen
 import com.jinjinjara.pola.presentation.ui.screen.home.HomeScreen
 import com.jinjinjara.pola.presentation.ui.screen.my.MyScreen
 import com.jinjinjara.pola.presentation.ui.screen.remind.RemindScreen
+import com.jinjinjara.pola.presentation.ui.screen.start.CategorySelectScreen
 import com.jinjinjara.pola.presentation.ui.screen.start.StartScreen
 import com.jinjinjara.pola.presentation.ui.screen.timeline.TimelineScreen
 import com.jinjinjara.pola.presentation.ui.screen.upload.UploadScreen
@@ -20,7 +21,6 @@ import com.jinjinjara.pola.presentation.ui.screen.upload.UploadScreen
  */
 fun NavGraphBuilder.authNavGraph(
     navController: NavHostController,
-    onLoginSuccess: () -> Unit
 ) {
     navigation(
         startDestination = Screen.Start.route,
@@ -28,14 +28,31 @@ fun NavGraphBuilder.authNavGraph(
     ) {
         // 시작 화면 (구글 로그인) 화면
         composable(route = Screen.Start.route) {
-            StartScreen(onLoginSuccess = onLoginSuccess)
-            // TODO: LoginScreen 구현 후 연결
-            // LoginScreen(
-            //     onNavigateToSignUp = {
-            //         navController.navigate(Screen.SignUp.route)
-            //     },
-            //     onLoginSuccess = onLoginSuccess
-            // )
+            StartScreen(onLoginSuccess = {
+                val isCategorySelected = false
+
+                if (isCategorySelected) {
+                    // 카테고리 이미 선택됨 -> 바로 메인으로
+                    navController.navigate(NavGraphs.MAIN) {
+                        popUpTo(NavGraphs.AUTH) { inclusive = true }
+                    }
+                } else {
+                    // 카테고리 선택 필요 -> 카테고리 선택 화면으로
+                    navController.navigate(Screen.CategorySelect.route)
+                }
+            })
+        }
+
+        // 카테고리 선택 화면
+        composable(route = Screen.CategorySelect.route) {
+            CategorySelectScreen(
+                onCategorySelected = {
+                    // 카테고리 설정 완료 후 메인으로 이동
+                    navController.navigate(NavGraphs.MAIN) {
+                        popUpTo(NavGraphs.AUTH) { inclusive = true }
+                    }
+                }
+            )
         }
     }
 }

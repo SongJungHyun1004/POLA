@@ -24,7 +24,6 @@ fun PolaNavHost(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
     isLoggedIn: Boolean = false,
-    onLoginSuccess: () -> Unit = {}
 ) {
 
     NavHost(
@@ -34,14 +33,7 @@ fun PolaNavHost(
     ) {
         // Auth 네비게이션 그래프
         authNavGraph(
-            navController = navController,
-            onLoginSuccess = {
-                onLoginSuccess()
-                navController.navigate(NavGraphs.MAIN) {
-                    // 뒤로가기 시 로그인 화면으로 안 가도록 설정
-                    popUpTo(NavGraphs.AUTH) { inclusive = true }
-                }
-            }
+            navController = navController
         )
 
         // Main 네비게이션 그래프

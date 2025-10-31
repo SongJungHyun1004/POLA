@@ -31,7 +31,9 @@ data class Category(
 )
 
 @Composable
-fun CategorySelectScreen() {
+fun CategorySelectScreen(
+    onCategorySelected: () -> Unit,
+) {
     var selectedCategories by remember { mutableStateOf(setOf("쇼핑")) }
 
     val categories = listOf(
@@ -46,107 +48,104 @@ fun CategorySelectScreen() {
         Category("add", "", Icons.Default.Add, isAddBtn = true)
     )
 
-    Box(
+
+    Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .padding(horizontal = 24.dp)
     ) {
+        Spacer(modifier = Modifier.height(60.dp))
+
+        // Title
+        Text(
+            text = buildAnnotatedString {
+                append("원하는 ")
+
+                withStyle(
+                    style = SpanStyle(
+                        color = MaterialTheme.colorScheme.primary, // 원하는 색상
+                        fontWeight = FontWeight.Bold
+                    )
+                ) {
+                    append("카테고리")
+                }
+
+                append("를\n모두 골라주세요")
+            },
+            fontSize = 32.sp,
+            fontWeight = FontWeight.Bold,
+            lineHeight = 36.sp,
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Progress indicator
+        Text(
+            text = "1/10",
+            fontSize = 16.sp,
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Category Grid
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 24.dp)
+            verticalArrangement = Arrangement.spacedBy(36.dp)
         ) {
-            Spacer(modifier = Modifier.height(60.dp))
-
-            // Title
-            Text(
-                text = buildAnnotatedString {
-                    append("원하는 ")
-
-                    withStyle(
-                        style = SpanStyle(
-                            color = MaterialTheme.colorScheme.primary, // 원하는 색상
-                            fontWeight = FontWeight.Bold
-                        )
-                    ) {
-                        append("카테고리")
-                    }
-
-                    append("를\n모두 골라주세요")
-                },
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
-                lineHeight = 36.sp,
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Progress indicator
-            Text(
-                text = "1/10",
-                fontSize = 16.sp,
-                color = Color(0xFF666666)
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Category Grid
-            Column(
-                verticalArrangement = Arrangement.spacedBy(36.dp)
-            ) {
-                for (rowIndex in 0..2) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        for (colIndex in 0..2) {
-                            val index = rowIndex * 3 + colIndex
-                            if (index < categories.size) {
-                                val category = categories[index]
-                                CategoryItem(
-                                    category = category,
-                                    isSelected = selectedCategories.contains(category.name),
-                                    onToggle = {
-                                        selectedCategories =
-                                            if (selectedCategories.contains(category.name)) {
-                                                selectedCategories - category.name
-                                            } else {
-                                                selectedCategories + category.name
-                                            }
-                                    },
-                                    modifier = Modifier.weight(1f)
-                                )
-                            } else {
-                                Spacer(modifier = Modifier.weight(1f))
-                            }
+            for (rowIndex in 0..2) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    for (colIndex in 0..2) {
+                        val index = rowIndex * 3 + colIndex
+                        if (index < categories.size) {
+                            val category = categories[index]
+                            CategoryItem(
+                                category = category,
+                                isSelected = selectedCategories.contains(category.name),
+                                onToggle = {
+                                    selectedCategories =
+                                        if (selectedCategories.contains(category.name)) {
+                                            selectedCategories - category.name
+                                        } else {
+                                            selectedCategories + category.name
+                                        }
+                                },
+                                modifier = Modifier.weight(1f)
+                            )
+                        } else {
+                            Spacer(modifier = Modifier.weight(1f))
                         }
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Next Button
-            Button(
-                onClick = { /* Navigate to next screen */ },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                ),
-                shape = RoundedCornerShape(100.dp)
-            ) {
-                Text(
-                    text = "다음",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White
-                )
-            }
-
-            Spacer(modifier = Modifier.height(40.dp))
         }
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        // Next Button
+        Button(
+            onClick = { onCategorySelected() },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary
+            ),
+            shape = RoundedCornerShape(100.dp)
+        ) {
+            Text(
+                text = "다음",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White
+            )
+        }
+
+        Spacer(modifier = Modifier.height(40.dp))
     }
+
 }
 
 @Composable
@@ -217,7 +216,7 @@ fun CategoryItem(
         }
 
         // Checkmark for selected items
-        if(!category.isAddBtn) {
+        if (!category.isAddBtn) {
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -240,5 +239,7 @@ fun CategoryItem(
 @Preview(showBackground = true)
 @Composable
 fun CategorySelectScreenPreview() {
-    CategorySelectScreen()
+    CategorySelectScreen(
+        onCategorySelected = {}
+    )
 }
