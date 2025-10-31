@@ -1,27 +1,37 @@
 package com.jinjinjara.pola.presentation.ui.screen.start
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.jinjinjara.pola.R
 
 /**
@@ -30,65 +40,130 @@ import com.jinjinjara.pola.R
 @Composable
 fun StartScreen(
     onLoginSuccess: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: StartViewModel = hiltViewModel()
 ) {
+    val uiState by viewModel.uiState.collectAsState()
+
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .background(MaterialTheme.colorScheme.background)
+            .padding(vertical = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // 앱 로고 또는 이름
-        Text(
-            text = "Pola",
-            style = MaterialTheme.typography.displayLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
+        Box(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.pola_start),
+                contentDescription = "Pola Logo",
+                modifier = Modifier.fillMaxWidth()
+            )
+            // 아래쪽 하얀색 그라데이션
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(36.dp)
+                    .align(Alignment.BottomCenter)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.White
+                            )
+                        )
+                    )
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Image(
+            painter = painterResource(id = R.drawable.pola_start_title),
+            contentDescription = "Pola Logo",
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 60.dp)
+                .clickable {   // (임시) 클릭 시 홈으로 이동
+                    onLoginSuccess()
+                }
+
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
 
-        // 앱 설명
-        Text(
-            text = "추억을 기록하고 공유하세요",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-        )
 
-        Spacer(modifier = Modifier.height(80.dp))
+        Spacer(modifier = Modifier.height(100.dp))
 
         // 구글 로그인 버튼
         Button(
-            onClick = onLoginSuccess,
+            onClick = {
+                // ViewModel에서 로그인 처리 호출
+                viewModel.signIn()
+            },
             modifier = Modifier
+                .padding(horizontal = 24.dp)
                 .fillMaxWidth()
                 .height(56.dp),
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(50),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color.White,
-                contentColor = Color.Black
+                containerColor = Color.White
             ),
             elevation = ButtonDefaults.buttonElevation(
-                defaultElevation = 2.dp
+                defaultElevation = 4.dp
             )
         ) {
-            // 실제로는 Google 아이콘을 사용하지만, 여기서는 텍스트로 대체
-            Text(
-                text = "🔍 Google로 시작하기",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium
-            )
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.google_logo),
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Google 계정으로 로그인",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.Black
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 서비스 이용 약관 등
-        Text(
-            text = "계속 진행하면 서비스 이용약관 및\n개인정보 처리방침에 동의하게 됩니다",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-            modifier = Modifier.padding(horizontal = 32.dp)
-        )
+        // 로그인 상태 표시
+        Box(
+            modifier = Modifier
+                .height(40.dp)
+                .fillMaxWidth(),
+            contentAlignment = Alignment.Center
+        ) {
+            when (val state = uiState) {
+                is StartUiState.Success -> {
+                    onLoginSuccess() // 로그인 성공 시 이동
+                }
+                is StartUiState.Error -> {
+                    Text(
+                        text = "로그인 실패: ${state.message}",
+                        color = Color.Red,
+                        fontSize = 14.sp
+                    )
+                }
+                is StartUiState.Loading -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(32.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                else -> {
+                    // 기본 상태일 때도 공간 유지
+                    Spacer(modifier = Modifier.height(32.dp))
+                }
+            }
+}
     }
 }
