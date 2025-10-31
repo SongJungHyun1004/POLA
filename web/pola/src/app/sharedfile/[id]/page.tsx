@@ -20,6 +20,7 @@ export default async function SharedFilePage({
     id: num,
     src: "/images/dummy_image_1.png",
     tags: ["#태그1", "#태그2", "#태그3", "#태그4", "#태그5", "#태그6"],
+    contexts: "내용을 입력하세요...",
     date: "2025.10.30",
   };
 
@@ -30,6 +31,7 @@ export default async function SharedFilePage({
         src={images.src}
         tags={images.tags}
         date={images.date}
+        contexts={images.contexts}
         username={username}
         sharedView
       />
