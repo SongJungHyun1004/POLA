@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,7 +15,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -23,7 +27,7 @@ data class Category(
     val id: String,
     val name: String,
     val icon: ImageVector,
-    val isSpecial: Boolean = false
+    val isAddBtn: Boolean = false
 )
 
 @Composable
@@ -34,18 +38,17 @@ fun CategorySelectScreen() {
         Category("shopping", "쇼핑", Icons.Default.ShoppingBag),
         Category("place", "장소", Icons.Default.Place),
         Category("person", "인물", Icons.Default.Person),
-        Category("snack", "간식", Icons.Default.Cake),
+        Category("snack", "간식", Icons.Default.BakeryDining),
         Category("exercise", "운동", Icons.Default.FitnessCenter),
         Category("info", "정보", Icons.Default.Info),
         Category("study", "학습", Icons.Default.School),
         Category("food", "음식", Icons.Default.Restaurant),
-        Category("add", "", Icons.Default.Add, isSpecial = true)
+        Category("add", "", Icons.Default.Add, isAddBtn = true)
     )
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFFAF7F2))
     ) {
         Column(
             modifier = Modifier
@@ -56,14 +59,26 @@ fun CategorySelectScreen() {
 
             // Title
             Text(
-                text = "원하는 카테고리를\n모두 골라주세요",
-                fontSize = 28.sp,
+                text = buildAnnotatedString {
+                    append("원하는 ")
+
+                    withStyle(
+                        style = SpanStyle(
+                            color = MaterialTheme.colorScheme.primary, // 원하는 색상
+                            fontWeight = FontWeight.Bold
+                        )
+                    ) {
+                        append("카테고리")
+                    }
+
+                    append("를\n모두 골라주세요")
+                },
+                fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
                 lineHeight = 36.sp,
-                color = Color(0xFF2D2D2D)
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
             // Progress indicator
             Text(
@@ -76,7 +91,7 @@ fun CategorySelectScreen() {
 
             // Category Grid
             Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(36.dp)
             ) {
                 for (rowIndex in 0..2) {
                     Row(
@@ -91,11 +106,12 @@ fun CategorySelectScreen() {
                                     category = category,
                                     isSelected = selectedCategories.contains(category.name),
                                     onToggle = {
-                                        selectedCategories = if (selectedCategories.contains(category.name)) {
-                                            selectedCategories - category.name
-                                        } else {
-                                            selectedCategories + category.name
-                                        }
+                                        selectedCategories =
+                                            if (selectedCategories.contains(category.name)) {
+                                                selectedCategories - category.name
+                                            } else {
+                                                selectedCategories + category.name
+                                            }
                                     },
                                     modifier = Modifier.weight(1f)
                                 )
@@ -114,11 +130,11 @@ fun CategorySelectScreen() {
                 onClick = { /* Navigate to next screen */ },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
+                    .height(48.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFA88B6C)
+                    containerColor = MaterialTheme.colorScheme.primary
                 ),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(100.dp)
             ) {
                 Text(
                     text = "다음",
@@ -140,74 +156,81 @@ fun CategoryItem(
     onToggle: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val backgroundColor = if (isSelected && !category.isSpecial) {
-        Color(0xFFEDE5DA)
+    val backgroundColor = if (isSelected) {
+        Color(0xFFFFF6EA)
     } else {
         Color.White
     }
 
-    val borderColor = if (category.isSpecial) {
-        Color(0xFFE0E0E0)
+    val borderColor = if (isSelected) {
+        MaterialTheme.colorScheme.primary
+    } else if (category.isAddBtn) {
+        MaterialTheme.colorScheme.tertiary
     } else {
-        Color.Transparent
+        Color(0xFFE3E3E3)
     }
 
     Box(
         modifier = modifier
             .aspectRatio(1f)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(10.dp))
             .background(backgroundColor)
             .border(
-                width = if (category.isSpecial) 1.dp else 0.dp,
+                width = 1.dp,
                 color = borderColor,
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(10.dp)
             )
-            .clickable(enabled = !category.isSpecial) { onToggle() }
-            .padding(16.dp),
+            .clickable(enabled = !category.isAddBtn) { onToggle() }
+            .padding(8.dp),
         contentAlignment = Alignment.Center
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Box(
-                modifier = Modifier.size(40.dp),
-                contentAlignment = Alignment.Center
+        if (!category.isAddBtn) {
+            Column(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .align(alignment = Alignment.CenterStart)
+                    .padding(start = 8.dp, bottom = 8.dp)
             ) {
                 Icon(
                     imageVector = category.icon,
                     contentDescription = category.name,
-                    modifier = Modifier.size(if (category.isSpecial) 32.dp else 28.dp),
-                    tint = if (category.isSpecial) Color(0xFF666666) else Color(0xFF2D2D2D)
+                    modifier = Modifier.size(36.dp),
+                    tint = MaterialTheme.colorScheme.tertiary
                 )
-            }
-
-            if (!category.isSpecial) {
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(Modifier.weight(1f))
                 Text(
                     text = category.name,
-                    fontSize = 14.sp,
+                    fontSize = 24.sp,
                     fontWeight = FontWeight.Medium,
-                    color = Color(0xFF2D2D2D)
+                    color = MaterialTheme.colorScheme.tertiary
                 )
             }
         }
+        // 카테고리 추가 버튼
+        else {
+            Icon(
+                imageVector = category.icon,
+                contentDescription = category.name,
+                modifier = Modifier.size(36.dp),
+                tint = MaterialTheme.colorScheme.tertiary
+            )
+        }
 
         // Checkmark for selected items
-        if (isSelected && !category.isSpecial) {
+        if(!category.isAddBtn) {
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .size(24.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFFA88B6C)),
+                    .size(20.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.Check,
+                    imageVector = Icons.Rounded.CheckCircle,
                     contentDescription = "Selected",
-                    tint = Color.White,
-                    modifier = Modifier.size(16.dp)
+                    tint = if (isSelected) MaterialTheme.colorScheme.primary else Color(
+                        0xFFE3E3E3
+                    ),
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }
