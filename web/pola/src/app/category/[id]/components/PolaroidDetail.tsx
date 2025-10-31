@@ -3,22 +3,29 @@
 import Image from "next/image";
 import { useState } from "react";
 import ImageModal from "./ImageModal";
+import ShareModal from "./ShareModal";
 import { RotateCcw, Download, Share2, Pencil } from "lucide-react";
 
 interface PolaroidDetailProps {
+  id?: number;
   src?: string;
   tags?: string[];
   date?: string;
+  sharedView?: boolean;
+  username?: string;
 }
 
 export default function PolaroidDetail({
+  id,
   src,
   tags,
   date,
+  sharedView,
+  username = "username",
 }: PolaroidDetailProps) {
   const [open, setOpen] = useState(false);
   const [flipped, setFlipped] = useState(false);
-  const [context, setContext] = useState("");
+  const [shareOpen, setShareOpen] = useState(false);
 
   if (!src) {
     return (
@@ -35,7 +42,7 @@ export default function PolaroidDetail({
           flipped ? "rotate-y-180" : ""
         }`}
       >
-        {/* Front (Image) */}
+        {/* Front */}
         <div
           className="absolute w-full h-full backface-hidden flex flex-col items-center justify-center cursor-pointer"
           onClick={() => setOpen(true)}
@@ -48,30 +55,34 @@ export default function PolaroidDetail({
               src={src}
               alt="selected polaroid"
               fill
-              style={{ objectFit: "cover", objectPosition: "center" }}
+              className="object-cover object-center"
             />
           </div>
         </div>
 
-        {/* Back (Context View) */}
+        {/* Back */}
         <div className="absolute w-full h-full rotate-y-180 backface-hidden p-4 flex flex-col">
-          {/* Header Row */}
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-lg font-semibold text-[#4C3D25]">Context</h2>
             <div className="flex gap-3">
-              <button>
+              <button className={`${sharedView && "hidden"}`}>
                 <Pencil className="w-5 h-5 text-[#4C3D25] hover:text-black" />
               </button>
+
               <button>
                 <Download className="w-5 h-5 text-[#4C3D25] hover:text-black" />
               </button>
-              <button>
+
+              <button
+                onClick={() => id && setShareOpen(true)}
+                className={`${sharedView && "hidden"}`}
+              >
                 <Share2 className="w-5 h-5 text-[#4C3D25] hover:text-black" />
               </button>
             </div>
           </div>
 
-          {/* Context input area */}
+          {/* 읽기 전용 영역 */}
           <textarea
             className="flex-1 resize-none p-3 rounded-md text-sm text-[#4C3D25] focus:outline-none cursor-default"
             placeholder="이미지 설명"
@@ -81,12 +92,10 @@ export default function PolaroidDetail({
         </div>
       </div>
 
-      {/* Tags / Date / Flip Button */}
+      {/* Tags / Date / Flip */}
       <div className="mt-4 text-center text-[#4C3D25] flex flex-col items-center">
         <p className="text-lg">{tags?.join(" ")}</p>
         <p className="text-2xl font-semibold mt-1">{date}</p>
-
-        {/* Flip Button */}
         <button
           className="mt-3 bg-white border border-[#8B857C] rounded-full p-2 shadow hover:bg-[#F6F1E7] transition-transform hover:rotate-180"
           onClick={() => setFlipped((prev) => !prev)}
@@ -95,7 +104,15 @@ export default function PolaroidDetail({
         </button>
       </div>
 
+      {/* 모달들 */}
       {open && <ImageModal src={src} onClose={() => setOpen(false)} />}
+      {shareOpen && id != null && (
+        <ShareModal
+          id={id}
+          username={username}
+          onClose={() => setShareOpen(false)}
+        />
+      )}
     </div>
   );
 }
