@@ -3,14 +3,16 @@
 import Image from "next/image";
 import { useState } from "react";
 import ImageModal from "./ImageModal";
+import EditModal from "./EditModal";
 import ShareModal from "./ShareModal";
 import { RotateCcw, Download, Share2, Pencil } from "lucide-react";
 
 interface PolaroidDetailProps {
   id?: number;
   src?: string;
-  tags?: string[];
+  tags: string[];
   date?: string;
+  contexts: string;
   sharedView?: boolean;
   username?: string;
 }
@@ -20,11 +22,15 @@ export default function PolaroidDetail({
   src,
   tags,
   date,
+  contexts,
   sharedView,
   username = "username",
 }: PolaroidDetailProps) {
   const [open, setOpen] = useState(false);
   const [flipped, setFlipped] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [context, setContext] = useState(contexts);
+  const [tagState, setTagState] = useState(tags);
   const [shareOpen, setShareOpen] = useState(false);
 
   if (!src) {
@@ -65,7 +71,10 @@ export default function PolaroidDetail({
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-lg font-semibold text-[#4C3D25]">Context</h2>
             <div className="flex gap-3">
-              <button className={`${sharedView && "hidden"}`}>
+              <button
+                onClick={() => setEditOpen(true)}
+                className={`${sharedView && "hidden"}`}
+              >
                 <Pencil className="w-5 h-5 text-[#4C3D25] hover:text-black" />
               </button>
 
@@ -111,6 +120,17 @@ export default function PolaroidDetail({
           id={id}
           username={username}
           onClose={() => setShareOpen(false)}
+        />
+      )}
+      {editOpen && (
+        <EditModal
+          defaultTags={tagState}
+          defaultContext={context}
+          onClose={() => setEditOpen(false)}
+          onSave={(newTags, newContext) => {
+            setTagState(newTags);
+            setContext(newContext);
+          }}
         />
       )}
     </div>
