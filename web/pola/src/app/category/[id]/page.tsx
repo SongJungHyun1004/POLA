@@ -86,6 +86,7 @@ export default function CategoryPage() {
       {/* 우측 상세 */}
       <div className="w-2/7 flex-shrink-0 border-l border-[#E3DCC8] pl-6 flex flex-col items-center justify-center">
         <PolaroidDetail
+          id={selectedImage?.id}
           src={selectedImage?.src}
           tags={selectedImage?.tags}
           date={selectedImage?.date}
