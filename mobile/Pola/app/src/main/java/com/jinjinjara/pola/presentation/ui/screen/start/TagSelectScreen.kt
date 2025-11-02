@@ -1,6 +1,7 @@
 package com.jinjinjara.pola.presentation.ui.screen.start
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -19,7 +21,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TagSelectScreen(
     onNextClick: (Set<String>) -> Unit = {},
@@ -39,67 +40,58 @@ fun TagSelectScreen(
         TagCategory(
             title = "종교시설",
             tags = listOf("광장"),
-            hasAddButton = true
         ),
         TagCategory(
             title = "쇼핑",
             tags = listOf("숍", "서점", "소핑몰", "시장"),
-            hasAddButton = true
         ),
         TagCategory(
             title = "커스텀",
             tags = listOf("#관광지", "관광지"),
-            hasAddButton = true
         )
     )
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = androidx.compose.material.icons.Icons.Default.ArrowBack,
-                            contentDescription = "뒤로가기"
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        // Top Bar
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBackClick) {
+                Icon(
+                    imageVector = androidx.compose.material.icons.Icons.Default.ArrowBack,
+                    contentDescription = "뒤로가기"
                 )
-            )
-        },
-        containerColor = Color.White
-    ) { padding ->
+            }
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
                 .padding(horizontal = 24.dp)
         ) {
             // Title
             Text(
                 text = buildAnnotatedString {
+                    append("카테고리에 담고 싶은\n")
                     withStyle(
                         style = SpanStyle(
-                            color = Color.Black,
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold
+                            color = MaterialTheme.colorScheme.primary,
                         )
                     ) {
-                        append("카테고리에 담고 싶은\n")
+                        append("태그")
                     }
-                    withStyle(
-                        style = SpanStyle(
-                            color = Color(0xFFB8956A),
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    ) {
-                        append("태그를 입력해주세요")
-                    }
+                    append("를 입력해주세요")
                 },
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Bold,
+                lineHeight = 36.sp,
                 modifier = Modifier.padding(top = 16.dp, bottom = 24.dp)
             )
 
@@ -125,25 +117,26 @@ fun TagSelectScreen(
                 }
             }
 
+            Spacer(modifier = Modifier.height(8.dp))
             // Next Button
             Button(
                 onClick = { onNextClick(selectedTags) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 16.dp)
-                    .height(56.dp),
+                    .height(48.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFB8956A)
+                    containerColor = MaterialTheme.colorScheme.primary
                 ),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(100.dp)
             ) {
                 Text(
                     text = "다음",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
                     color = Color.White
                 )
             }
+            Spacer(modifier = Modifier.height(40.dp))
         }
     }
 }
@@ -171,7 +164,7 @@ private fun TagCategorySection(
                 color = Color.Black
             )
             Text(
-                text = "모두 선택",
+                text = "모두 해제",
                 fontSize = 12.sp,
                 color = Color.Gray
             )
@@ -190,55 +183,59 @@ private fun TagCategorySection(
                 )
             }
 
-            if (category.hasAddButton) {
-                AddButton()
-            }
+            AddButton()
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TagChip(
     text: String,
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    FilterChip(
-        selected = isSelected,
-        onClick = onClick,
-        label = {
-            Text(
-                text = text,
-                fontSize = 14.sp
+    Box(
+        modifier = Modifier
+            .shadow(
+                elevation = 2.dp,
+                shape = RoundedCornerShape(20.dp)
             )
-        },
-        colors = FilterChipDefaults.filterChipColors(
-            containerColor = Color.White,
-            selectedContainerColor = Color(0xFFB8956A),
-            labelColor = Color.Black,
-            selectedLabelColor = Color.White
-        ),
-        shape = RoundedCornerShape(20.dp)
-    )
+            .background(
+                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.background,
+                shape = RoundedCornerShape(20.dp)
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            fontSize = 14.sp,
+            color = if (isSelected) Color.White else MaterialTheme.colorScheme.tertiary
+        )
+    }
 }
 
 @Composable
 private fun AddButton() {
     Box(
         modifier = Modifier
-            .size(40.dp)
-            .background(
-                color = Color(0xFFB8956A),
+            .shadow(
+                elevation = 2.dp,
                 shape = RoundedCornerShape(20.dp)
-            ),
+            )
+            .background(
+                color = MaterialTheme.colorScheme.secondary,
+                shape = RoundedCornerShape(20.dp)
+            )
+            .clickable { }
+            .padding(horizontal = 20.dp, vertical = 8.dp), // horizontal padding 증가
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = "+",
-            fontSize = 18.sp,
-            color = Color.White,
-            fontWeight = FontWeight.Bold
+            fontSize = 14.sp,
+            color = Color.White
         )
     }
 }
@@ -246,7 +243,6 @@ private fun AddButton() {
 data class TagCategory(
     val title: String,
     val tags: List<String>,
-    val hasAddButton: Boolean = false
 )
 
 @Preview(showBackground = true)
