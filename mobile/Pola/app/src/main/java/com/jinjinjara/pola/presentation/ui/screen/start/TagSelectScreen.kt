@@ -2,6 +2,7 @@ package com.jinjinjara.pola.presentation.ui.screen.start
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,7 +28,6 @@ fun TagSelectScreen(
     onNextClick: (Set<String>) -> Unit = {},
     onBackClick: () -> Unit = {}
 ) {
-    var selectedTags by remember { mutableStateOf(setOf<String>()) }
 
     val categories = listOf(
         TagCategory(
@@ -51,6 +51,10 @@ fun TagSelectScreen(
             tags = listOf(),
         )
     )
+
+    // 모든 태그를 초기 선택 상태로 설정
+    val allTags = remember { categories.flatMap { it.tags }.toSet() }
+    var selectedTags by remember { mutableStateOf(allTags) }
 
     Column(
         modifier = Modifier
@@ -114,6 +118,9 @@ fun TagSelectScreen(
                                 selectedTags + tag
                             }
                         },
+                        onClearAll = {
+                            selectedTags = selectedTags - category.tags.toSet()
+                        },
                         modifier = Modifier.padding(bottom = 24.dp)
                     )
                 }
@@ -148,6 +155,7 @@ private fun TagCategorySection(
     category: TagCategory,
     selectedTags: Set<String>,
     onTagClick: (String) -> Unit,
+    onClearAll: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
@@ -168,7 +176,11 @@ private fun TagCategorySection(
             Text(
                 text = "모두 해제",
                 fontSize = 12.sp,
-                color = Color.Gray
+                color = Color.Gray,
+                modifier = Modifier.clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { onClearAll() }
             )
         }
 
