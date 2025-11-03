@@ -158,6 +158,9 @@ private fun TagCategorySection(
     onClearAll: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // 해당 카테고리에서 선택된 태그 개수 계산
+    val selectedCount = category.tags.count { selectedTags.contains(it) }
+
     Column(modifier = modifier) {
         // Category Title
         Row(
@@ -198,6 +201,18 @@ private fun TagCategorySection(
             }
 
             AddButton()
+        }
+
+
+        // 경고 메시지
+        val minimumTags = 5
+        if (selectedCount < minimumTags) {
+            Text(
+                text = "${minimumTags}개 이상 선택해주세요.",
+                fontSize = 12.sp,
+                color = Color.Red,
+                modifier = Modifier.padding(top = 8.dp)
+            )
         }
     }
 }
