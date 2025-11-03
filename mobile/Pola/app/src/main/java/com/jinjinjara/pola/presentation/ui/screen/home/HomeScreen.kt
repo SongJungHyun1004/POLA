@@ -207,7 +207,7 @@ fun HomeScreen(
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
-                            ){
+                            ) {
                                 // 전체보기
                             },
                         text = "전체보기",
@@ -258,7 +258,11 @@ fun CategoryCard(
 ) {
     Column(
         modifier = modifier
-            .clickable(onClick = onClick),
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            ),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // 카드 스택 영역
