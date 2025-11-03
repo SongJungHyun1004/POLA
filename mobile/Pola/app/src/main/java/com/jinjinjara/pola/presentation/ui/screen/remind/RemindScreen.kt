@@ -6,11 +6,13 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,6 +55,7 @@ fun RemindScreen(modifier: Modifier = Modifier) {
     var displayIndex by remember { mutableStateOf(0) }
     var isAnimating by remember { mutableStateOf(false) }
     var animationDirection by remember { mutableStateOf("") }
+    var favoriteStates by remember { mutableStateOf(imageList.map { false }) }
 
     val scope = rememberCoroutineScope()
 
@@ -329,34 +332,6 @@ fun RemindScreen(modifier: Modifier = Modifier) {
 
                 // 하단 컨트롤
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    // 방향키
-                    Row(
-                        modifier = Modifier.padding(bottom = 24.dp),
-                        horizontalArrangement = Arrangement.spacedBy(70.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.arrow_left),
-                            contentDescription = "이전",
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clickable(enabled = !isAnimating) { scope.launch { moveToPrevious() } },
-                        )
-                        Image(
-                            painter = painterResource(id = R.drawable.star_primary_solid),
-                            contentDescription = "즐겨찾기",
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clickable(enabled = !isAnimating) { },
-                        )
-                        Image(
-                            painter = painterResource(id = R.drawable.arrow_right),
-                            contentDescription = "다음",
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clickable(enabled = !isAnimating) { scope.launch { moveToNext() } },
-                        )
-                    }
 
                     // 썸네일 리스트
                     Box(
@@ -391,7 +366,10 @@ fun RemindScreen(modifier: Modifier = Modifier) {
                                             scaleX = if (isFocused) 1.05f else 1f
                                             scaleY = if (isFocused) 1.05f else 1f
                                         }
-                                        .clickable {
+                                        .clickable(
+                                            indication = null,
+                                            interactionSource = remember { MutableInteractionSource() }
+                                        ) {
                                             if (!isAnimating) {
                                                 frontIndex = index
                                                 displayIndex = index
@@ -401,6 +379,53 @@ fun RemindScreen(modifier: Modifier = Modifier) {
                             }
                             Spacer(Modifier.width(8.dp))
                         }
+                    }
+
+                    // 방향키
+                    Row(
+                        modifier = Modifier.padding(bottom = 24.dp),
+                        horizontalArrangement = Arrangement.spacedBy(70.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.arrow_left),
+                            contentDescription = "이전",
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clickable(
+                                    enabled = !isAnimating,
+                                    indication = ripple(bounded = false, radius = 24.dp),
+                                    interactionSource = remember { MutableInteractionSource() }
+                                ) { scope.launch { moveToPrevious() } },
+                        )
+                        Image(
+                            painter = painterResource(
+                                id = if (favoriteStates[frontIndex]) R.drawable.star_primary_solid else R.drawable.star_primary
+                            ),
+                            contentDescription = "즐겨찾기",
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clickable(
+                                    enabled = !isAnimating,
+                                    indication = null,
+                                    interactionSource = remember { MutableInteractionSource() }
+                                ) {
+                                    favoriteStates = favoriteStates.toMutableList().also {
+                                        it[frontIndex] = !it[frontIndex]
+                                    }
+                                },
+                        )
+                        Image(
+                            painter = painterResource(id = R.drawable.arrow_right),
+                            contentDescription = "다음",
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clickable(
+                                    enabled = !isAnimating,
+                                    indication = ripple(bounded = false, radius = 24.dp),
+                                    interactionSource = remember { MutableInteractionSource() }
+                                ) { scope.launch { moveToNext() } },
+                        )
                     }
                 }
             }
