@@ -1,0 +1,85 @@
+pipeline {
+    agent any
+    
+    environment {
+        IMAGE_NAME = "pola-frontend"
+        IMAGE_TAG = "${BUILD_NUMBER}"
+        DEPLOY_NAMESPACE = "pola"
+    }
+    
+    stages {
+        stage("Checkout") {
+            steps {
+                echo "Cloning repository..."
+                git branch: "develop",
+                    credentialsId: "gitlab-credentials",
+                    url: "https://lab.ssafy.com/s13-final/S13P31D204.git"
+            }
+        }
+        
+        stage("Build") {
+            steps {
+                echo "Building Next.js application..."
+                dir("front") {
+                    sh '''
+                        npm ci
+                        npm run build
+                    '''
+                }
+            }
+        }
+        
+        stage("Docker Build") {
+            steps {
+                echo "Building Docker image..."
+                dir("front") {
+                    sh '''
+                        docker build -t ${IMAGE_NAME}:${IMAGE_TAG} -f Dockerfile .
+                        docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
+                    '''
+                }
+            }
+        }
+        
+        stage("Import to K3s") {
+            steps {
+                echo "Importing Docker image to K3s..."
+                sh '''
+                    docker save ${IMAGE_NAME}:${IMAGE_TAG} | sudo k3s ctr images import -
+                    docker save ${IMAGE_NAME}:latest | sudo k3s ctr images import -
+                '''
+            }
+        }
+        
+        stage("Deploy to K3s") {
+            steps {
+                echo "Deploying to K3s cluster..."
+                script {
+                    sh '''
+                        sudo kubectl set image deployment/frontend frontend=${IMAGE_NAME}:${IMAGE_TAG} -n ${DEPLOY_NAMESPACE}
+                        sudo kubectl rollout status deployment/frontend -n ${DEPLOY_NAMESPACE}
+                    '''
+                }
+            }
+        }
+        
+        stage("Cleanup") {
+            steps {
+                echo "Cleaning up old Docker images..."
+                sh '''
+                    # 최근 3개 빌드 제외하고 삭제
+                    docker images ${IMAGE_NAME} --format "{{.Tag}}" | grep -E "^[0-9]+$" | sort -nr | tail -n +4 | xargs -r -I {} docker rmi ${IMAGE_NAME}:{} || true
+                '''
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo "Frontend deployment successful!"
+        }
+        failure {
+            echo "Frontend deployment failed!"
+        }
+    }
+}
