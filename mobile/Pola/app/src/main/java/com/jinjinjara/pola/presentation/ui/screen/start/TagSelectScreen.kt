@@ -238,7 +238,7 @@ private fun TagChip(
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = text,
+            text = "#$text",
             fontSize = 14.sp,
             color = if (isSelected) Color.White else MaterialTheme.colorScheme.tertiary
         )
