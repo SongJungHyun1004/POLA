@@ -26,9 +26,12 @@ fun PolaNavHost(
     isLoggedIn: Boolean = false,
 ) {
 
+    // 테스트용: 이미지 클릭 시 토큰 없이 메인으로 이동
+    var isTestMode by remember { mutableStateOf(false) }
+
     NavHost(
         navController = navController,
-        startDestination = if (isLoggedIn) NavGraphs.MAIN else NavGraphs.AUTH,
+        startDestination = if (isLoggedIn || isTestMode) NavGraphs.MAIN else NavGraphs.AUTH,
         modifier = modifier
     ) {
         // Auth 네비게이션 그래프

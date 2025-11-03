@@ -1,14 +1,15 @@
 package com.jinjinjara.pola.auth.dto.response;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Getter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class TokenDto {
-    private String grantType;
+public class TokenResponse {
     private String accessToken;
-    private long   accessTokenExpiresIn;
     private String refreshToken;
 }

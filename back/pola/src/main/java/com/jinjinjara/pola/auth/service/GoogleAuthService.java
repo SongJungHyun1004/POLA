@@ -1,10 +1,11 @@
 package com.jinjinjara.pola.auth.service;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.jinjinjara.pola.auth.dto.response.TokenResponse;
 import com.jinjinjara.pola.auth.oauth.GoogleTokenVerifier;
 import com.jinjinjara.pola.auth.redis.RedisUtil;
 import com.jinjinjara.pola.auth.jwt.TokenProvider;
-import com.jinjinjara.pola.auth.dto.response.TokenDto;
+import com.jinjinjara.pola.auth.dto.common.TokenDto;
 import com.jinjinjara.pola.user.entity.Users;
 import com.jinjinjara.pola.user.repository.UsersRepository;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +29,7 @@ public class GoogleAuthService {
     private long refreshExpireMs;
 
     @Transactional
-    public TokenDto authenticate(String idToken) throws Exception {
+    public TokenResponse authenticate(String idToken) throws Exception {
         GoogleIdToken.Payload payload = googleTokenVerifier.verify(idToken);
 
         String sub = payload.getSubject(); // Google unique id
@@ -50,11 +51,15 @@ public class GoogleAuthService {
         var principal   = new User(user.getEmail(), "", authorities);
         var auth        = new UsernamePasswordAuthenticationToken(principal, null, authorities);
 
-        TokenDto token = tokenProvider.generateTokenDto(auth);
+        TokenDto token = tokenProvider.generateTokenDto(auth, user.getId());
+        TokenResponse res = new TokenResponse(
+                token.getAccessToken(),
+                token.getRefreshToken()
+        );
 
         // RefreshToken 저장
         redisUtil.save(user.getEmail(), token.getRefreshToken(), refreshExpireMs);
 
-        return token;
+        return res;
     }
 }
