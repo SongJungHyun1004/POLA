@@ -36,7 +36,7 @@ export default function HomePage() {
               <div key={category.id} className="w-full flex-shrink-0">
                 <TextLink
                   text={category.name}
-                  link={"/category/" + category.id}
+                  link={"/categories/" + category.id}
                 />
                 <CategoryRow imgSrc={imgSrc} />
               </div>

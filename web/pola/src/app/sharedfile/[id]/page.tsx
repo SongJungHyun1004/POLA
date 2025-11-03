@@ -1,4 +1,4 @@
-import PolaroidDetail from "@/app/category/[id]/components/PolaroidDetail";
+import PolaroidDetail from "@/app/categories/[id]/components/PolaroidDetail";
 import Image from "next/image";
 import { redirect } from "next/navigation";
 
