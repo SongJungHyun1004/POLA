@@ -13,6 +13,7 @@ import com.jinjinjara.pola.presentation.ui.screen.my.MyScreen
 import com.jinjinjara.pola.presentation.ui.screen.remind.RemindScreen
 import com.jinjinjara.pola.presentation.ui.screen.start.CategorySelectScreen
 import com.jinjinjara.pola.presentation.ui.screen.start.StartScreen
+import com.jinjinjara.pola.presentation.ui.screen.start.TagSelectScreen
 import com.jinjinjara.pola.presentation.ui.screen.timeline.TimelineScreen
 import com.jinjinjara.pola.presentation.ui.screen.upload.UploadScreen
 
@@ -47,10 +48,23 @@ fun NavGraphBuilder.authNavGraph(
         composable(route = Screen.CategorySelect.route) {
             CategorySelectScreen(
                 onCategorySelected = {
-                    // 카테고리 설정 완료 후 메인으로 이동
+                    // 태그 선택 화면으로 이동
+                    navController.navigate(Screen.TagSelect.route)
+                }
+            )
+        }
+
+        // 태그 선택 화면 추가
+        composable(route = Screen.TagSelect.route) {
+            TagSelectScreen(
+                onNextClick = { selectedTags ->
+                    // 태그 선택 완료 후 메인으로 이동
                     navController.navigate(NavGraphs.MAIN) {
                         popUpTo(NavGraphs.AUTH) { inclusive = true }
                     }
+                },
+                onBackClick = {
+                    navController.popBackStack()
                 }
             )
         }
