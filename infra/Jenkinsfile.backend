@@ -56,8 +56,8 @@ pipeline {
                 echo "Deploying to K3s cluster..."
                 script {
                     sh '''
-                        sudo kubectl set image deployment/backend backend=${IMAGE_NAME}:${IMAGE_TAG} -n ${DEPLOY_NAMESPACE}
-                        sudo kubectl rollout status deployment/backend -n ${DEPLOY_NAMESPACE}
+                        sudo kubectl --kubeconfig=/root/.kube/config set image deployment/backend backend=${IMAGE_NAME}:${IMAGE_TAG} -n ${DEPLOY_NAMESPACE}
+                        sudo kubectl --kubeconfig=/root/.kube/config rollout status deployment/backend -n ${DEPLOY_NAMESPACE}
                     '''
                 }
             }
