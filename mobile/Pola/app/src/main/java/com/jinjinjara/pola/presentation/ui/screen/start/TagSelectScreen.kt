@@ -56,6 +56,7 @@ fun TagSelectScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .statusBarsPadding()
     ) {
         // Top Bar
         Row(
