@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -30,24 +31,24 @@ fun TagSelectScreen(
 
     val categories = listOf(
         TagCategory(
-            title = "식음료",
-            tags = listOf("카페", "음식점", "디저트 / 베이커리", "바")
+            title = "간식",
+            tags = listOf("카페", "디저트", "스낵", "베이커리", "음료")
         ),
         TagCategory(
-            title = "여행",
-            tags = listOf("자연", "포토존", "관광지", "관광지", "지")
+            title = "장소",
+            tags = listOf("포토존", "공원", "루프탑", "전망대", "힐링스팟")
         ),
         TagCategory(
-            title = "종교시설",
-            tags = listOf("광장"),
+            title = "정보",
+            tags = listOf("핫플", "체험", "전시", "이벤트", "문화시설")
         ),
         TagCategory(
             title = "쇼핑",
-            tags = listOf("숍", "서점", "소핑몰", "시장"),
+            tags = listOf("컨셉스토어", "플리마켓", "빈티지샵", "쇼핑몰", "서점")
         ),
         TagCategory(
             title = "커스텀",
-            tags = listOf("#관광지", "관광지"),
+            tags = listOf(),
         )
     )
 
@@ -65,7 +66,7 @@ fun TagSelectScreen(
         ) {
             IconButton(onClick = onBackClick) {
                 Icon(
-                    imageVector = androidx.compose.material.icons.Icons.Default.ArrowBack,
+                    imageVector = Icons.Default.ArrowBack,
                     contentDescription = "뒤로가기"
                 )
             }
