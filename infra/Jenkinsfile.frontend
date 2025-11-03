@@ -8,10 +8,26 @@ pipeline {
     }
 
     stages {
+        stage("Cleanup Workspace") {
+            steps {
+                echo "Cleaning workspace..."
+                deleteDir()
+            }
+        }
+
         stage("Checkout") {
             steps {
                 echo "Checking out repository..."
-                checkout scm
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: '*/develop']],
+                    userRemoteConfigs: [[
+                        url: 'https://lab.ssafy.com/s13-final/S13P31D204.git',
+                        credentialsId: 'gitlab-credentials'
+                    ]]
+                ])
+                sh 'ls -la'
+                sh 'ls -la web/pola/'
             }
         }
 
