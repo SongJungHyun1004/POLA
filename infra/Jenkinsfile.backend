@@ -32,7 +32,7 @@ pipeline {
         stage("Docker Build") {
             steps {
                 echo "Building Docker image..."
-                dir("back") {
+                dir("back/pola") {
                     sh '''
                         docker build -t ${IMAGE_NAME}:${IMAGE_TAG} -f Dockerfile .
                         docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
