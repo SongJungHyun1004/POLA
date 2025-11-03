@@ -41,7 +41,7 @@ pipeline {
                             -v "$(pwd)":/app \
                             -w /app \
                             node:20-alpine \
-                            sh -c 'corepack enable && yarn install --frozen-lockfile && yarn build'
+                            sh -c "corepack enable && yarn install --frozen-lockfile && yarn build"
                     '''
                 }
             }
