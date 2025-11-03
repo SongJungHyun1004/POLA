@@ -18,31 +18,30 @@ pipeline {
         }
 
         stage("Build") {
-            steps {
-                echo "Building Next.js application..."
-                dir("web/pola") {
-                    sh '''
-                        #!/bin/bash
-                        
-                        # 1. nvm (Node Version Manager) 스크립트 로드
-                        export NVM_DIR="$HOME/.nvm"
-                        [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-                        
-                        # 2. Node.js 20 버전 설치 및 사용 (20.9.0 이상 버전)해라고 해서 하는데 
-                        nvm install 20
-                        nvm use 20
-                        
-                        # 3. 설치된 버전 확인 (빌드 로그에 표시)
-                        echo "Using Node.js version:"
-                        node -v
-                        
-                        # 4. 기존 빌드 명령어 실행
-                        corepack yarn install --frozen-lockfile 
-                        corepack yarn build
-                    '''
+                    agent {
+                        docker {
+                            image 'node:20-alpine' 
+                            args '-v $HOME/.npm:/root/.npm'
+                        }
+                    }
+                    steps {
+                        echo "Building Next.js application..."
+                        dir("web/pola") {
+                            sh '''
+                                #!/bin/sh
+                                
+                                # 이미 Node.js 20 환경이므로 nvm 설치가 필요 없습니다.
+                                echo "Using Node.js version:"
+                                node -v
+                                
+                                # 기존 빌드 명령어 실행
+                                corepack yarn install --frozen-lockfile 
+                                corepack yarn build
+                            '''
+                        }
+                    }
                 }
-            }
-        }
+
 
         stage("Docker Build") {
             steps {
