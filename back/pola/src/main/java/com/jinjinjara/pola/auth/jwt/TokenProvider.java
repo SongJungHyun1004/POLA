@@ -2,7 +2,7 @@ package com.jinjinjara.pola.auth.jwt;
 
 import com.jinjinjara.pola.auth.exception.InvalidTokenException;
 import com.jinjinjara.pola.auth.redis.RedisUtil;
-import com.jinjinjara.pola.auth.dto.response.TokenDto;
+import com.jinjinjara.pola.auth.dto.common.TokenDto;
 import io.jsonwebtoken.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;

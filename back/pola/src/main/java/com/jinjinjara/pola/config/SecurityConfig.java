@@ -41,15 +41,18 @@ public class SecurityConfig {
                 )
 
                 .authorizeHttpRequests(authorizeHttpRequests -> authorizeHttpRequests
-                        .requestMatchers("/api/v2/admin/**").hasAuthority("ROLE_ADMIN") // 관리자 페이지 role 추가
                         .requestMatchers(
-                                "/api/v1/oauth/**",
-                                "/swagger-ui/**",
                                 "/swagger-ui.html",
+                                "/swagger-ui/**",
                                 "/api-docs/**",
-                                "/oauth2/**"
+                                "/api-docs",
+                                "/v3/api-docs",
+                                "/v3/api-docs/**",
+
+                                "/api/v1/oauth/**"
                         ) // 로그인, 회원가입, 스웨거는 열어주기
                         .permitAll()
+                        .requestMatchers("/api/v2/admin/**").hasAuthority("ROLE_ADMIN") // 관리자 페이지 role 추가
                         .anyRequest().authenticated()
                 )
                 // JwtFilter 를 addFilterBefore 로 등록했던 JwtSecurityConfig 클래스를 적용
