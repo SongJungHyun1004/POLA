@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -23,8 +26,19 @@ android {
             useSupportLibrary = true
         }
 
-        // BuildConfig 필드 추가
+        // BuildConfig 필드
         buildConfigField("String", "BASE_URL", "\"https://api.example.com/\"")
+
+        // Web Client ID 불러오기
+        val properties = Properties()
+        val localFile = rootProject.file("local.properties")
+        if (localFile.exists()) properties.load(FileInputStream(localFile))
+
+        buildConfigField(
+            "String",
+            "WEB_CLIENT_ID",
+            "\"${properties.getProperty("WEB_CLIENT_ID", "")}\""
+        )
     }
 
     buildTypes {
@@ -132,4 +146,10 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+    // Android Credential Manager
+    implementation("androidx.credentials:credentials:1.3.0")
+
+    // Google Identity Services
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 }

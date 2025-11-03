@@ -220,8 +220,8 @@ fun RemindScreen(modifier: Modifier = Modifier) {
                     .pointerInput(Unit) {
                         detectHorizontalDragGestures { change, dragAmount ->
                             change.consume()
-                            if (dragAmount < -60) scope.launch { moveToNext() }
-                            else if (dragAmount > 60) scope.launch { moveToPrevious() }
+                            if (dragAmount < -30) scope.launch { moveToNext() }
+                            else if (dragAmount > 30) scope.launch { moveToPrevious() }
                         }
                     },
                 horizontalAlignment = Alignment.CenterHorizontally,
