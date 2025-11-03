@@ -7,7 +7,7 @@
   WORKDIR /app
 
   # Corepack 활성화 및 Yarn 설정
-  RUN corepack enable && corepack prepare yarn@stable --activate
+  RUN corepack enable
 
   # 의존성 파일 복사 및 설치
   COPY package.json yarn.lock ./
@@ -25,7 +25,7 @@
   WORKDIR /app
 
   # Corepack 활성화 및 Yarn 설정
-  RUN corepack enable && corepack prepare yarn@stable --activate
+  RUN corepack enable
 
   # 운영용 의존성 설치
   COPY --from=builder /app/package.json /app/yarn.lock ./
