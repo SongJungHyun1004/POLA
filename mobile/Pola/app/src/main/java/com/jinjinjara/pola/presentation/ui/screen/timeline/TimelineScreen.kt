@@ -99,7 +99,7 @@ fun TimelineScreen(modifier: Modifier = Modifier) {
                     )
                 }
 
-                // ✅ 각 타임라인 아이템
+                // 각 타임라인 아이템
                 itemsIndexed(timelineItems) { index, item ->
                     Box(modifier = Modifier.padding(start = 16.dp, top = if (index == 0) 8.dp else 0.dp)) {
                         TimelineItem(
@@ -244,7 +244,7 @@ fun TimelineItem(
                 )
             }
 
-            // ✅ 필름 스크롤 + 그라데이션
+            // 필름 스크롤 + 그라데이션
             Box(
                 modifier = Modifier
                     .padding(top = 6.dp)
@@ -290,7 +290,7 @@ fun TimelineItem(
                     Spacer(Modifier.width(16.dp))
                 }
 
-                // 🔹 왼쪽 그라데이션 (겹치기)
+                // 왼쪽 그라데이션 (겹치기)
                 Box(
                     modifier = Modifier
                         .width(10.dp)

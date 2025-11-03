@@ -6,11 +6,13 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,7 +38,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RemindScreen(modifier: Modifier = Modifier) {
-    // ▶ 이미지 리스트
+    // 이미지 리스트
     val imageList = listOf(
         "temp_image_1" to R.drawable.temp_image_1,
         "temp_image_2" to R.drawable.temp_image_2,
@@ -48,36 +50,48 @@ fun RemindScreen(modifier: Modifier = Modifier) {
         "temp_image_4" to R.drawable.temp_image_4
     )
 
-    // ▶ 상태 변수
+    // 상태 변수
     var frontIndex by remember { mutableStateOf(0) }
     var displayIndex by remember { mutableStateOf(0) }
     var isAnimating by remember { mutableStateOf(false) }
     var animationDirection by remember { mutableStateOf("") }
+    var favoriteStates by remember { mutableStateOf(imageList.map { false }) }
 
     val scope = rememberCoroutineScope()
 
-    // ▶ 애니메이션 상태
+    // 애니메이션 상태
     val frontOffsetX = remember { Animatable(0f) }
     val frontRotationZ = remember { Animatable(0f) }
     val frontAlpha = remember { Animatable(1f) }
 
-    val backOffsetX = remember { Animatable(-20f) }
-    val backRotationZ = remember { Animatable(-6f) }
+    val backOffsetX = remember { Animatable(20f) }
+    val backRotationZ = remember { Animatable(6f) }
     val backAlpha = remember { Animatable(1f) }
 
-    val nextOffsetX = remember { Animatable(400f) }
-    val nextRotationZ = remember { Animatable(6f) }
-    val nextAlpha = remember { Animatable(0f) }
+    val back2OffsetX = remember { Animatable(20f) }
+    val back2RotationZ = remember { Animatable(6f) }
+    val back2Alpha = remember { Animatable(0f) }
 
-    val newBackOffsetX = remember { Animatable(-20f) }
-    val newBackRotationZ = remember { Animatable(-6f) }
-    val newBackAlpha = remember { Animatable(0f) }
+    val prevOffsetX = remember { Animatable(-400f) }
+    val prevRotationZ = remember { Animatable(-6f) }
+    val prevAlpha = remember { Animatable(0f) }
 
-    val backIndex = (frontIndex - 1).coerceAtLeast(0)
-    val nextIndex = (frontIndex + 1).coerceAtMost(imageList.lastIndex)
-    val newBackIndex = (frontIndex - 2).coerceAtLeast(0)
+    val backIndex = (frontIndex + 1).coerceAtMost(imageList.lastIndex)
+    val back2Index = (frontIndex + 2).coerceAtMost(imageList.lastIndex)
+    val prevIndex = (frontIndex - 1).coerceAtLeast(0)
 
-    // ▶ 다음 이미지 이동
+    // frontIndex 변경 시 back2Alpha 조정
+    LaunchedEffect(frontIndex) {
+        if (!isAnimating) {
+            if (frontIndex < imageList.lastIndex - 1) {
+                back2Alpha.animateTo(1f, tween(300))
+            } else {
+                back2Alpha.animateTo(0f, tween(300))
+            }
+        }
+    }
+
+    // 다음 이미지 이동
     suspend fun moveToNext() {
         if (isAnimating || frontIndex >= imageList.lastIndex) return
         isAnimating = true
@@ -86,63 +100,25 @@ fun RemindScreen(modifier: Modifier = Modifier) {
 
         displayIndex = (frontIndex + 1).coerceAtMost(imageList.lastIndex)
 
-        scope.launch {
-            awaitAll(
-                async { frontOffsetX.animateTo(-20f, tween(dur)) },
-                async { frontRotationZ.animateTo(-6f, tween(dur)) }
-            )
+        // 새로운 back2 페이드인
+        val newFrontIndex = frontIndex + 1
+        val needsNewBack2 = newFrontIndex < imageList.lastIndex - 1
+        if (needsNewBack2) {
+            scope.launch {
+                back2Alpha.animateTo(1f, tween(dur))
+            }
         }
 
-        scope.launch {
-            nextAlpha.snapTo(0f)
-            awaitAll(
-                async { nextAlpha.animateTo(1f, tween(dur)) },
-                async { nextOffsetX.animateTo(0f, tween(dur)) },
-                async { nextRotationZ.animateTo(0f, tween(dur)) }
-            )
-        }
-
-        delay(dur.toLong())
-        frontIndex += 1
-
-        backOffsetX.snapTo(-20f)
-        backRotationZ.snapTo(-6f)
-        nextOffsetX.snapTo(400f)
-        nextRotationZ.snapTo(6f)
-        nextAlpha.snapTo(0f)
-        frontOffsetX.snapTo(0f)
-        frontRotationZ.snapTo(0f)
-        frontAlpha.snapTo(1f)
-
-        isAnimating = false
-        animationDirection = ""
-    }
-
-    // ▶ 이전 이미지 이동
-    suspend fun moveToPrevious() {
-        if (isAnimating || frontIndex <= 0) return
-        isAnimating = true
-        animationDirection = "right"
-        val dur = 520
-
-        displayIndex = (frontIndex - 1).coerceAtLeast(0)
-
-        val newBackIdx = (frontIndex - 2).coerceAtLeast(0)
-        if (newBackIdx >= 0) {
-            newBackOffsetX.snapTo(-20f)
-            newBackRotationZ.snapTo(-6f)
-            newBackAlpha.snapTo(0f)
-            scope.launch { awaitAll(async { newBackAlpha.animateTo(1f, tween(dur)) }) }
-        }
-
+        // 왼쪽으로 사라지는 애니메이션
         scope.launch {
             awaitAll(
-                async { frontOffsetX.animateTo(500f, tween(dur)) },
-                async { frontRotationZ.animateTo(6f, tween(dur)) },
+                async { frontOffsetX.animateTo(-500f, tween(dur)) },
+                async { frontRotationZ.animateTo(-6f, tween(dur)) },
                 async { frontAlpha.animateTo(0f, tween(dur)) }
             )
         }
 
+        // 앞으로 이동하는 애니메이션
         scope.launch {
             awaitAll(
                 async { backOffsetX.animateTo(0f, tween(dur)) },
@@ -151,23 +127,70 @@ fun RemindScreen(modifier: Modifier = Modifier) {
         }
 
         delay(dur.toLong())
-        frontIndex -= 1
+        frontIndex += 1
 
-        nextOffsetX.snapTo(400f)
-        nextRotationZ.snapTo(6f)
-        nextAlpha.snapTo(0f)
+        // 상태 리셋
+        backOffsetX.snapTo(20f)
+        backRotationZ.snapTo(6f)
+        back2OffsetX.snapTo(20f)
+        back2RotationZ.snapTo(6f)
         frontOffsetX.snapTo(0f)
         frontRotationZ.snapTo(0f)
         frontAlpha.snapTo(1f)
-        backOffsetX.snapTo(-20f)
-        backRotationZ.snapTo(-6f)
-        newBackAlpha.snapTo(0f)
 
         isAnimating = false
         animationDirection = ""
     }
 
-    // ▶ 썸네일 스크롤
+    // 이전 이미지 이동
+    suspend fun moveToPrevious() {
+        if (isAnimating || frontIndex <= 0) return
+        isAnimating = true
+        animationDirection = "right"
+        val dur = 520
+
+        displayIndex = (frontIndex - 1).coerceAtLeast(0)
+
+        // 오른쪽 뒤로 이동하는 애니메이션
+        scope.launch {
+            awaitAll(
+                async { frontOffsetX.animateTo(20f, tween(dur)) },
+                async { frontRotationZ.animateTo(6f, tween(dur)) }
+            )
+        }
+
+        // 왼쪽에서 등장하는 애니메이션
+        scope.launch {
+            prevAlpha.snapTo(0f)
+            prevOffsetX.snapTo(-400f)
+            prevRotationZ.snapTo(-6f)
+            awaitAll(
+                async { prevAlpha.animateTo(1f, tween(dur)) },
+                async { prevOffsetX.animateTo(0f, tween(dur)) },
+                async { prevRotationZ.animateTo(0f, tween(dur)) }
+            )
+        }
+
+        delay(dur.toLong())
+        frontIndex -= 1
+
+        // 상태 리셋
+        prevOffsetX.snapTo(-400f)
+        prevRotationZ.snapTo(-6f)
+        prevAlpha.snapTo(0f)
+        frontOffsetX.snapTo(0f)
+        frontRotationZ.snapTo(0f)
+        frontAlpha.snapTo(1f)
+        backOffsetX.snapTo(20f)
+        backRotationZ.snapTo(6f)
+        back2OffsetX.snapTo(20f)
+        back2RotationZ.snapTo(6f)
+
+        isAnimating = false
+        animationDirection = ""
+    }
+
+    // 썸네일 스크롤
     val scrollState = rememberScrollState()
     val density = LocalDensity.current
     var viewportWidthPx by remember { mutableStateOf(0f) }
@@ -190,7 +213,7 @@ fun RemindScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    // ▶ UI
+    // UI
     Scaffold(
         modifier = modifier.fillMaxSize(),
         contentWindowInsets = WindowInsets(0.dp),
@@ -212,11 +235,19 @@ fun RemindScreen(modifier: Modifier = Modifier) {
         }
     ) { innerPadding ->
         Box(
-            modifier = Modifier.fillMaxSize().padding(innerPadding)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .graphicsLayer {
+                    clip = false
+                }
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .graphicsLayer {
+                        clip = false
+                    }
                     .pointerInput(Unit) {
                         detectHorizontalDragGestures { change, dragAmount ->
                             change.consume()
@@ -225,64 +256,82 @@ fun RemindScreen(modifier: Modifier = Modifier) {
                         }
                     },
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceBetween // 하단 고정
+                verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // 상단: 이미지 카드 스택
+                // 이미지 카드 스택
                 Column(
+                    modifier = Modifier
+                        .graphicsLayer {
+                            clip = false
+                        },
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
 
 
                     Box(
-                        modifier = Modifier.padding(top = 24.dp),
+                        modifier = Modifier
+                            .padding(top = 24.dp)
+                            .graphicsLayer {
+                                clip = false
+                            },
                         contentAlignment = Alignment.Center,
                     ) {
-                        if (frontIndex > 1)
-                            RemindPolaCard(imageList[newBackIndex].second, newBackOffsetX.value, newBackRotationZ.value, newBackAlpha.value)
-                        if (frontIndex > 0)
-                            RemindPolaCard(imageList[backIndex].second, backOffsetX.value, backRotationZ.value, backAlpha.value)
-                        if (frontIndex < imageList.lastIndex) {
-                            if (animationDirection == "left" && isAnimating)
-                                FrontThenNextLayer(imageList.map { it.second }, frontIndex, nextIndex, frontOffsetX.value, frontRotationZ.value, frontAlpha.value, nextOffsetX.value, nextRotationZ.value, nextAlpha.value)
+                        // 뒤쪽 카드들
+                        if (frontIndex < imageList.lastIndex - 1 && back2Alpha.value > 0f)
+                            RemindPolaCard(
+                                imageResId = imageList[back2Index].second,
+                                translationX = back2OffsetX.value,
+                                rotationZ = back2RotationZ.value,
+                                alpha = 1f
+                            )
+                        if (frontIndex < imageList.lastIndex)
+                            RemindPolaCard(
+                                imageResId = imageList[backIndex].second,
+                                translationX = backOffsetX.value,
+                                rotationZ = backRotationZ.value,
+                                alpha = backAlpha.value
+                            )
+
+                        // 전면 카드 레이어
+                        if (frontIndex > 0) {
+                            if (animationDirection == "right" && isAnimating)
+                                PrevThenFrontLayer(
+                                    images = imageList.map { it.second },
+                                    frontIndex = frontIndex,
+                                    prevIndex = prevIndex,
+                                    frontOffsetX = frontOffsetX.value,
+                                    frontRotationZ = frontRotationZ.value,
+                                    frontAlpha = frontAlpha.value,
+                                    prevOffsetX = prevOffsetX.value,
+                                    prevRotationZ = prevRotationZ.value,
+                                    prevAlpha = prevAlpha.value
+                                )
                             else
-                                NextThenFrontLayer(imageList.map { it.second }, frontIndex, nextIndex, frontOffsetX.value, frontRotationZ.value, frontAlpha.value, nextOffsetX.value, nextRotationZ.value, nextAlpha.value)
+                                FrontThenPrevLayer(
+                                    images = imageList.map { it.second },
+                                    frontIndex = frontIndex,
+                                    prevIndex = prevIndex,
+                                    frontOffsetX = frontOffsetX.value,
+                                    frontRotationZ = frontRotationZ.value,
+                                    frontAlpha = frontAlpha.value,
+                                    prevOffsetX = prevOffsetX.value,
+                                    prevRotationZ = prevRotationZ.value,
+                                    prevAlpha = prevAlpha.value
+                                )
                         } else {
-                            RemindPolaCard(imageList[frontIndex].second, frontOffsetX.value, frontRotationZ.value, frontAlpha.value)
+                            RemindPolaCard(
+                                imageResId = imageList[frontIndex].second,
+                                translationX = frontOffsetX.value,
+                                rotationZ = frontRotationZ.value,
+                                alpha = frontAlpha.value
+                            )
                         }
                     }
                 }
 
-                // 하단: 방향키 + 썸네일 묶음
+                // 하단 컨트롤
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    // 방향키 (Image 사용)
-                    Row(
-                        modifier = Modifier.padding(bottom = 24.dp),
-                        horizontalArrangement = Arrangement.spacedBy(70.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.arrow_left),
-                            contentDescription = "이전",
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clickable(enabled = !isAnimating) { scope.launch { moveToPrevious() } },
-                        )
-                        Image(
-                            painter = painterResource(id = R.drawable.star_primary_solid),
-                            contentDescription = "즐겨찾기",
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clickable(enabled = !isAnimating) { },
-                        )
-                        Image(
-                            painter = painterResource(id = R.drawable.arrow_right),
-                            contentDescription = "다음",
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clickable(enabled = !isAnimating) { scope.launch { moveToNext() } },
-                        )
-                    }
 
                     // 썸네일 리스트
                     Box(
@@ -317,7 +366,10 @@ fun RemindScreen(modifier: Modifier = Modifier) {
                                             scaleX = if (isFocused) 1.05f else 1f
                                             scaleY = if (isFocused) 1.05f else 1f
                                         }
-                                        .clickable {
+                                        .clickable(
+                                            indication = null,
+                                            interactionSource = remember { MutableInteractionSource() }
+                                        ) {
                                             if (!isAnimating) {
                                                 frontIndex = index
                                                 displayIndex = index
@@ -327,6 +379,53 @@ fun RemindScreen(modifier: Modifier = Modifier) {
                             }
                             Spacer(Modifier.width(8.dp))
                         }
+                    }
+
+                    // 방향키
+                    Row(
+                        modifier = Modifier.padding(bottom = 24.dp),
+                        horizontalArrangement = Arrangement.spacedBy(70.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.arrow_left),
+                            contentDescription = "이전",
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clickable(
+                                    enabled = !isAnimating,
+                                    indication = ripple(bounded = false, radius = 24.dp),
+                                    interactionSource = remember { MutableInteractionSource() }
+                                ) { scope.launch { moveToPrevious() } },
+                        )
+                        Image(
+                            painter = painterResource(
+                                id = if (favoriteStates[frontIndex]) R.drawable.star_primary_solid else R.drawable.star_primary
+                            ),
+                            contentDescription = "즐겨찾기",
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clickable(
+                                    enabled = !isAnimating,
+                                    indication = null,
+                                    interactionSource = remember { MutableInteractionSource() }
+                                ) {
+                                    favoriteStates = favoriteStates.toMutableList().also {
+                                        it[frontIndex] = !it[frontIndex]
+                                    }
+                                },
+                        )
+                        Image(
+                            painter = painterResource(id = R.drawable.arrow_right),
+                            contentDescription = "다음",
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clickable(
+                                    enabled = !isAnimating,
+                                    indication = ripple(bounded = false, radius = 24.dp),
+                                    interactionSource = remember { MutableInteractionSource() }
+                                ) { scope.launch { moveToNext() } },
+                        )
                     }
                 }
             }
@@ -360,33 +459,53 @@ private fun RemindPolaCard(
 
 // 카드 순서 조합
 @Composable
-private fun NextThenFrontLayer(
+private fun FrontThenPrevLayer(
     images: List<Int>,
     frontIndex: Int,
-    nextIndex: Int,
+    prevIndex: Int,
     frontOffsetX: Float,
     frontRotationZ: Float,
     frontAlpha: Float,
-    nextOffsetX: Float,
-    nextRotationZ: Float,
-    nextAlpha: Float
+    prevOffsetX: Float,
+    prevRotationZ: Float,
+    prevAlpha: Float
 ) {
-    RemindPolaCard(images[nextIndex], nextOffsetX, nextRotationZ, nextAlpha)
-    RemindPolaCard(images[frontIndex], frontOffsetX, frontRotationZ, frontAlpha)
+    RemindPolaCard(
+        imageResId = images[prevIndex],
+        translationX = prevOffsetX,
+        rotationZ = prevRotationZ,
+        alpha = prevAlpha
+    )
+    RemindPolaCard(
+        imageResId = images[frontIndex],
+        translationX = frontOffsetX,
+        rotationZ = frontRotationZ,
+        alpha = frontAlpha
+    )
 }
 
 @Composable
-private fun FrontThenNextLayer(
+private fun PrevThenFrontLayer(
     images: List<Int>,
     frontIndex: Int,
-    nextIndex: Int,
+    prevIndex: Int,
     frontOffsetX: Float,
     frontRotationZ: Float,
     frontAlpha: Float,
-    nextOffsetX: Float,
-    nextRotationZ: Float,
-    nextAlpha: Float
+    prevOffsetX: Float,
+    prevRotationZ: Float,
+    prevAlpha: Float
 ) {
-    RemindPolaCard(images[frontIndex], frontOffsetX, frontRotationZ, frontAlpha)
-    RemindPolaCard(images[nextIndex], nextOffsetX, nextRotationZ, nextAlpha)
+    RemindPolaCard(
+        imageResId = images[frontIndex],
+        translationX = frontOffsetX,
+        rotationZ = frontRotationZ,
+        alpha = frontAlpha
+    )
+    RemindPolaCard(
+        imageResId = images[prevIndex],
+        translationX = prevOffsetX,
+        rotationZ = prevRotationZ,
+        alpha = prevAlpha
+    )
 }

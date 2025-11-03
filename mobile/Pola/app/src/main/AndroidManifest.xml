@@ -23,15 +23,23 @@
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.Pola">
+
+            <!-- 홈 화면 아이콘용 -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-                <action android:name="android.intent.action.VIEW"/>
-                <category android:name="android.intent.category.DEFAULT"/>
-                <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="com.jinjinjara.pola.debug" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!-- 구글 로그인 / 딥링크용 -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="com.jinjinjara.pola.debug" />
+            </intent-filter>
+
         </activity>
+
     </application>
 
 </manifest>
