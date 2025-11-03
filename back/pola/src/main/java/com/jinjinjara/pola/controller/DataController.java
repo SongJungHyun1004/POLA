@@ -7,11 +7,14 @@ import com.jinjinjara.pola.data.dto.response.*;
 import com.jinjinjara.pola.data.entity.FileEntity;
 import com.jinjinjara.pola.data.service.DataService;
 import com.jinjinjara.pola.user.dto.response.UserInfoResponse;
+import com.jinjinjara.pola.user.entity.Users;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -33,12 +36,20 @@ public class DataController {
     )
     @PostMapping("/complete")
     public ApiResponse<FileEntity> saveUploadedFile(
-            @AuthenticationPrincipal(expression = "id") Long userId, // JWT로부터 userId 추출
+            @AuthenticationPrincipal Users user,
             @RequestBody FileUploadCompleteRequest request
     ) {
-        FileEntity savedFile = dataService.saveUploadedFile(userId, request);
+        if (user == null) {
+            throw new RuntimeException("인증 정보가 유효하지 않습니다.");
+            // TODO 나중에 에러코드 변환
+        }
+
+        FileEntity savedFile = dataService.saveUploadedFile(user, request);
         return ApiResponse.ok(savedFile, "파일이 성공적으로 등록되었습니다.");
     }
+
+
+
 
     @Operation(summary = "데이터 삭제", description = "사용자가 지정한 파일을 제거합니다.")
     @DeleteMapping("/{id}")
