@@ -61,7 +61,9 @@ data class Category(
 )
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    onNavigateToCategory: (String) -> Unit = {}
+) {
     val recentItems = remember {
         listOf(
             RecentItem("BLOG", "Lorem ipsum", "dolor sit amet, consectetur adipiscing elit..."),
@@ -230,7 +232,11 @@ fun HomeScreen() {
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     for (item in rowItems) {
-                        CategoryCard(item, Modifier.weight(1f))
+                        CategoryCard(
+                            item,
+                            Modifier.weight(1f),
+                            onClick = { onNavigateToCategory(item.name) }
+                        )
                     }
 
                     // 홀수 개일 경우 오른쪽 칸 비워주기
@@ -245,9 +251,14 @@ fun HomeScreen() {
 }
 
 @Composable
-fun CategoryCard(category: Category, modifier: Modifier = Modifier) {
+fun CategoryCard(
+    category: Category,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
+) {
     Column(
-        modifier = modifier,
+        modifier = modifier
+            .clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // 카드 스택 영역

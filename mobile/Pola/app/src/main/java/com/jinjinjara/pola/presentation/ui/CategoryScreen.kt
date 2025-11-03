@@ -35,8 +35,11 @@ data class CategoryItem(
 )
 
 @Composable
-fun CategoryScreen() {
-    var selectedTab by remember { mutableStateOf("간식") }
+fun CategoryScreen(
+    categoryName: String = "카테고리",
+    onBackClick: () -> Unit = {}
+) {
+    var selectedTab by remember { mutableStateOf(categoryName) }
     var isMenuExpanded by remember { mutableStateOf(false) }
     var selectedSort by remember { mutableStateOf("최신순") }
 
@@ -66,11 +69,18 @@ fun CategoryScreen() {
                 imageVector = Icons.Default.ArrowBackIosNew,
                 contentDescription = "뒤로가기",
                 tint = MaterialTheme.colorScheme.tertiary,
-                modifier = Modifier.size(30.dp)
+                modifier = Modifier
+                    .size(30.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {
+                        onBackClick()
+                    }
             )
 
             Text(
-                text = "간식",
+                text = categoryName,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.tertiary
