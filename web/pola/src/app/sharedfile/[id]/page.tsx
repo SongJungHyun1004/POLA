@@ -1,5 +1,6 @@
-import PolaroidDetail from "@/app/category/[id]/components/PolaroidDetail";
+import PolaroidDetail from "@/app/categories/[id]/components/PolaroidDetail";
 import Image from "next/image";
+import { redirect } from "next/navigation";
 
 type Params = { id: string };
 type Search = { user?: string };
@@ -23,6 +24,10 @@ export default async function SharedFilePage({
     contexts: "내용을 입력하세요...",
     date: "2025.10.30",
   };
+
+  if (username === "fired") {
+    redirect(`/sharedfile/fired`);
+  }
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-[#FFFEF8] text-[#4C3D25] px-4 py-10">
