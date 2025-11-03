@@ -20,14 +20,16 @@ pipeline {
         stage("Build") {
             steps {
                 echo "Building Next.js application..."
-                sh '''
-                    # 절대 경로로 Docker 컨테이너에서 빌드 실행
-                    docker run --rm \
-                        -v "${WORKSPACE}/web/pola":/app \
-                        -w /app \
-                        node:20-alpine \
-                        sh -c "corepack enable && yarn install --frozen-lockfile && yarn build"
-                '''
+                dir("web/pola") {
+                    sh '''
+                        # Docker 컨테이너에서 빌드 실행
+                        docker run --rm \
+                            -v "$(pwd)":/app \
+                            -w /app \
+                            node:20-alpine \
+                            sh -c 'corepack enable && yarn install --frozen-lockfile && yarn build'
+                    '''
+                }
             }
         }
 
