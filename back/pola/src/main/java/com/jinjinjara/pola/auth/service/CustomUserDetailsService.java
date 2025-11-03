@@ -86,7 +86,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         UserDetails principal = new org.springframework.security.core.userdetails.User(user.getEmail(), "", authorities);
         Authentication authentication = new UsernamePasswordAuthenticationToken(principal, null, authorities);
 
-        TokenDto token = tokenProvider.generateTokenDto(authentication);
+        TokenDto token = tokenProvider.generateTokenDto(authentication, user.getId());
         TokenResponse res = new TokenResponse(
                 token.getAccessToken(),
                 token.getRefreshToken()

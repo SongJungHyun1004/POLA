@@ -28,6 +28,7 @@ public class TokenProvider {
 
     private static final String AUTHORITIES_KEY = "auth";
     private static final String BEARER_TYPE = "Bearer";
+    private static final String USER_ID_KEY = "uid";
 
     private final Key key;
     private final RedisUtil redisUtil;
@@ -48,14 +49,14 @@ public class TokenProvider {
         this.refreshExpireMs = refreshExpireMs;
     }
 
-    public TokenDto generateTokenDto(Authentication authentication) {
+    public TokenDto generateTokenDto(Authentication authentication, Long userId) {
         // 권한들 가져오기
         String authorities = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.joining(","));
 
-        String accessToken = generateAccessToken(authentication.getName(), authorities);
-        String refreshToken = generateRefreshToken(authentication.getName(), authorities);
+        String accessToken = generateAccessToken(authentication.getName(), authorities, userId);
+        String refreshToken = generateRefreshToken(authentication.getName(), authorities, userId);
 
         long now = (new Date()).getTime();
 
@@ -79,9 +80,10 @@ public class TokenProvider {
 
         String email = claims.getSubject();
         String authorities = claims.get(AUTHORITIES_KEY).toString();
+        Long userId = claims.get(USER_ID_KEY, Number.class).longValue();
 
-        String newAccessToken = generateAccessToken(email, authorities);
-        String newRefreshToken = generateRefreshToken(email, authorities);
+        String newAccessToken = generateAccessToken(email, authorities, userId);
+        String newRefreshToken = generateRefreshToken(email, authorities, userId);
 
         redisUtil.save(email, newRefreshToken, refreshExpireMs);
         log.info("[REDIS] saved refresh for {}: {}...", email, newRefreshToken.substring(0,16));
@@ -94,22 +96,24 @@ public class TokenProvider {
                 .build();
     }
 
-    private String generateAccessToken(String email, String authorities) {
+    private String generateAccessToken(String email, String authorities, Long userId) {
         long now = (new Date()).getTime();
         Date accessTokenExpiresIn = new Date(now + accessExpireMs);
         return Jwts.builder()
                 .setSubject(email)
                 .claim(AUTHORITIES_KEY, authorities)
+                .claim(USER_ID_KEY, userId)
                 .setExpiration(accessTokenExpiresIn)
                 .signWith(key, SignatureAlgorithm.HS512)
                 .compact();
     }
 
-    private String generateRefreshToken(String email, String authorities) {
+    private String generateRefreshToken(String email, String authorities, Long userId) {
         long now = (new Date()).getTime();
         return Jwts.builder()
                 .setSubject(email)
                 .claim(AUTHORITIES_KEY, authorities)
+                .claim(USER_ID_KEY, userId)
                 .setExpiration(new Date(now + refreshExpireMs))
                 .claim("isRefreshToken", true) // refreshToken 임을 나타내는 클레임 추가
                 .signWith(key, SignatureAlgorithm.HS512)
@@ -131,9 +135,17 @@ public class TokenProvider {
                         .collect(Collectors.toList());
 
         // UserDetails 객체를 만들어서 Authentication 리턴
-        UserDetails principal = new User(claims.getSubject(), "", authorities);
+        String email = claims.getSubject();
+        Long userId = claims.get(USER_ID_KEY, Number.class).longValue();
 
-        return new UsernamePasswordAuthenticationToken(principal, "", authorities);
+        UserDetails principal = new User(email, "", authorities);
+
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(principal, "", authorities);
+
+        authentication.setDetails(userId);
+
+        return authentication;
     }
 
     public boolean validateToken(String token) {
@@ -160,5 +172,11 @@ public class TokenProvider {
             log.error("만료된 JWT 토큰입니다.",e);
             return e.getClaims();
         }
+    }
+
+    public Long getUserId(String token) {
+        Claims c = parseClaims(token);
+        Number n = c.get(USER_ID_KEY, Number.class);
+        return (n == null) ? null : n.longValue();
     }
 }
