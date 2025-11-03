@@ -6,6 +6,8 @@ package com.jinjinjara.pola.navigation
 sealed class Screen(val route: String) {
     // Auth
     data object Start : Screen("start")
+    data object CategorySelect : Screen("category_select")
+    data object TagSelect : Screen("tag_select")
 
     // Main
     data object Home : Screen("home")
