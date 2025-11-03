@@ -7,11 +7,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -110,7 +113,10 @@ fun HomeScreen() {
                     contentDescription = "Favorites",
                     tint = MaterialTheme.colorScheme.tertiary,
                     modifier = Modifier
-                        .clickable {
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
                             // 즐겨찾기 이동
                         }
                         .size(30.dp)
@@ -147,7 +153,7 @@ fun HomeScreen() {
                         val ratio = painter.intrinsicSize.width / painter.intrinsicSize.height
                         Box(
                             modifier = Modifier
-                                .height(150.dp)
+                                .height(120.dp)
                                 .aspectRatio(ratio)
                         ) {
                             Image(
@@ -158,7 +164,7 @@ fun HomeScreen() {
                             )
                             Box(
                                 modifier = Modifier
-                                    .size(110.dp)
+                                    .size(88.dp)
                                     .clip(RoundedCornerShape(5.dp))
                                     .align(Alignment.Center)
                             ) {
@@ -196,7 +202,10 @@ fun HomeScreen() {
                     )
                     Text(
                         modifier = Modifier
-                            .clickable{
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ){
                                 // 전체보기
                             },
                         text = "전체보기",
@@ -311,7 +320,7 @@ fun CategoryCard(category: Category, modifier: Modifier = Modifier) {
             text = category.name,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFF333333)
+            color = MaterialTheme.colorScheme.tertiary
         )
     }
 }

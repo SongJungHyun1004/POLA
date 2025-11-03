@@ -10,19 +10,19 @@ import kotlinx.coroutines.flow.Flow
 interface AuthRepository {
 
     /**
-     * 로그인
-     * @param email 이메일
-     * @param password 비밀번호
-     * @return 로그인된 사용자 정보
+     * 이메일/비밀번호 로그인
      */
     suspend fun login(email: String, password: String): Result<User>
 
     /**
+     * Google 로그인
+     * @param idToken Google ID Token
+     * @return 로그인된 사용자 정보
+     */
+    suspend fun loginWithGoogle(idToken: String): Result<User>
+
+    /**
      * 회원가입
-     * @param email 이메일
-     * @param password 비밀번호
-     * @param name 이름
-     * @return 생성된 사용자 정보
      */
     suspend fun signUp(email: String, password: String, name: String): Result<User>
 
@@ -33,19 +33,16 @@ interface AuthRepository {
 
     /**
      * 토큰 갱신
-     * @param refreshToken 리프레시 토큰
-     * @return 새로운 액세스 토큰
      */
     suspend fun refreshToken(refreshToken: String): Result<String>
 
     /**
-     * 현재 로그인 상태 확인
-     * @return 로그인 여부
+     * 로그인 상태 확인
      */
     suspend fun isLoggedIn(): Boolean
 
     /**
-     * 로그인 상태를 Flow로 관찰
+     * 로그인 상태 관찰
      */
     fun observeLoginState(): Flow<Boolean>
 

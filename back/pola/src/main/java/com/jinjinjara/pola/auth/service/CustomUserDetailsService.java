@@ -1,13 +1,14 @@
 package com.jinjinjara.pola.auth.service;
 
+import com.jinjinjara.pola.auth.dto.response.TokenResponse;
 import com.jinjinjara.pola.auth.exception.InvalidRefreshTokenException;
 import com.jinjinjara.pola.auth.exception.MultipleLoginException;
 import com.jinjinjara.pola.auth.redis.RedisUtil;
 import com.jinjinjara.pola.auth.jwt.TokenProvider;
 import com.jinjinjara.pola.auth.dto.common.Role;
-import com.jinjinjara.pola.auth.dto.request.SignInDto;
-import com.jinjinjara.pola.auth.dto.request.SignUpDto;
-import com.jinjinjara.pola.auth.dto.response.TokenDto;
+import com.jinjinjara.pola.auth.dto.request.SignInRequest;
+import com.jinjinjara.pola.auth.dto.request.SignUpRequest;
+import com.jinjinjara.pola.auth.dto.common.TokenDto;
 import com.jinjinjara.pola.user.entity.Users;
 import com.jinjinjara.pola.user.repository.UsersRepository;
 import lombok.RequiredArgsConstructor;
@@ -59,39 +60,44 @@ public class CustomUserDetailsService implements UserDetailsService {
     }
 
     @Transactional
-    public void signup(SignUpDto signUpDto) {
-        if (usersRepository.existsByEmail(signUpDto.getEmail())) {
+    public void signup(SignUpRequest signUpRequest) {
+        if (usersRepository.existsByEmail(signUpRequest.getEmail())) {
             throw new MultipleLoginException("이미 가입되어 있는 유저입니다");
         }
 
         Users user = Users.builder()
-                .email(signUpDto.getEmail())
-                .displayName(signUpDto.getUsername())
+                .email(signUpRequest.getEmail())
+                .displayName(signUpRequest.getUsername())
                 .role(Role.ROLE_USER)
                 .favoriteSum(0)
-                .googleSub(signUpDto.getEmail())
+                .googleSub(signUpRequest.getEmail())
                 .build();
 
         usersRepository.save(user);
     }
 
     @Transactional
-    public TokenDto signIn(SignInDto signInDto) {
-        Users user = usersRepository.findByEmail(signInDto.getEmail())
-                .orElseThrow(() -> new UsernameNotFoundException("존재하지 않는 이메일: " + signInDto.getEmail()));
+    public TokenResponse signIn(SignInRequest signInRequest) {
+        Users user = usersRepository.findByEmail(signInRequest.getEmail())
+                .orElseThrow(() -> new UsernameNotFoundException("존재하지 않는 이메일: " + signInRequest.getEmail()));
 
         var authorities = Collections.singletonList(new SimpleGrantedAuthority(user.getRole().toString()));
 
         UserDetails principal = new org.springframework.security.core.userdetails.User(user.getEmail(), "", authorities);
         Authentication authentication = new UsernamePasswordAuthenticationToken(principal, null, authorities);
 
-        TokenDto tokenDto = tokenProvider.generateTokenDto(authentication);
+        TokenDto token = tokenProvider.generateTokenDto(authentication, user.getId());
+        TokenResponse res = new TokenResponse(
+                token.getAccessToken(),
+                token.getRefreshToken()
+        );
 
-        redisUtil.save(user.getEmail(), tokenDto.getRefreshToken(), refreshTokenExpireTime);
+
+        redisUtil.save(user.getEmail(), token.getRefreshToken(), refreshTokenExpireTime);
         log.info("[REDIS] saved refresh for {}: {}...",
                 user.getEmail(),
-                tokenDto.getRefreshToken().substring(0, 16));
-        return tokenDto;
+                token.getRefreshToken().substring(0, 16));
+        return res;
     }
 
     @Transactional(readOnly = true)

@@ -1,5 +1,6 @@
 package com.jinjinjara.pola.data.remote.api
 
+import com.jinjinjara.pola.data.remote.dto.request.GoogleLoginRequest
 import com.jinjinjara.pola.data.remote.dto.request.LoginRequest
 import com.jinjinjara.pola.data.remote.dto.request.RefreshTokenRequest
 import com.jinjinjara.pola.data.remote.dto.request.SignUpRequest
@@ -19,6 +20,12 @@ interface AuthApi {
     @POST("auth/login")
     suspend fun login(
         @Body request: LoginRequest
+    ): Response<AuthResponse>
+
+    // Google
+    @POST("auth/google")
+    suspend fun loginWithGoogle(
+        @Body request: GoogleLoginRequest
     ): Response<AuthResponse>
 
     @POST("auth/signup")
