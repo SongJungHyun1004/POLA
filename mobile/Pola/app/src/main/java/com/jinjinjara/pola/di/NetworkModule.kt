@@ -46,7 +46,7 @@ object NetworkModule {
     @Singleton
     fun provideHttpLoggingInterceptor(): HttpLoggingInterceptor {
         return HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY  // 👈 항상 BODY 로그
+            level = HttpLoggingInterceptor.Level.BODY  // 항상 BODY 로그
             // 또는 릴리즈에서 끄고 싶다면:
             // level = HttpLoggingInterceptor.Level.NONE
         }
@@ -91,7 +91,7 @@ object NetworkModule {
         moshi: Moshi
     ): Retrofit {
         return Retrofit.Builder()
-            .baseUrl(Constants.BASE_URL)  // 👈 Constants 사용
+            .baseUrl(Constants.BASE_URL)  // Constants 사용
             .client(okHttpClient)
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()

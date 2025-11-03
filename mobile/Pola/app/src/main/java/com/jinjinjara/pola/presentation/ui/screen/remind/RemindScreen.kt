@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
@@ -347,6 +348,11 @@ private fun RemindPolaCard(
         modifier = Modifier
             .height(410.dp)
             .aspectRatio(0.7816f)
+            .shadow(
+                elevation = (12.dp * alpha).coerceAtLeast(0.dp),
+                shape = RoundedCornerShape(5.dp),
+                clip = false
+            )
             .graphicsLayer {
                 this.translationX = translationX
                 this.rotationZ = rotationZ
