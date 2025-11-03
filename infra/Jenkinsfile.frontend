@@ -20,7 +20,7 @@ pipeline {
         stage("Build") {
                     agent {
                         docker {
-                            image 'node:20-alpine' 
+                            image 'node:20-alpine'
                             args '-v $HOME/.npm:/root/.npm'
                         }
                     }
@@ -29,13 +29,16 @@ pipeline {
                         dir("web/pola") {
                             sh '''
                                 #!/bin/sh
-                                
-                                # 이미 Node.js 20 환경이므로 nvm 설치가 필요 없습니다.
+
+                                # Corepack 활성화 및 Node.js 버전 확인
+                                corepack enable
                                 echo "Using Node.js version:"
                                 node -v
-                                
-                                # 기존 빌드 명령어 실행
-                                corepack yarn install --frozen-lockfile 
+                                echo "Using Yarn version:"
+                                corepack yarn --version
+
+                                # 빌드 실행
+                                corepack yarn install --frozen-lockfile
                                 corepack yarn build
                             '''
                         }
