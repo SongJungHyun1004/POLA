@@ -33,32 +33,38 @@ fun TagSelectScreen(
     var currentCategory by remember { mutableStateOf<TagCategory?>(null) }
     var customTagsMap by remember { mutableStateOf<Map<String, List<String>>>(emptyMap()) }
 
-    val categories = listOf(
-        TagCategory(
-            title = "간식",
-            tags = listOf("카페", "디저트", "스낵", "베이커리", "음료")
-        ),
-        TagCategory(
-            title = "장소",
-            tags = listOf("포토존", "공원", "루프탑", "전망대", "힐링스팟")
-        ),
-        TagCategory(
-            title = "정보",
-            tags = listOf("핫플", "체험", "전시", "이벤트", "문화시설")
-        ),
-        TagCategory(
-            title = "쇼핑",
-            tags = listOf("컨셉스토어", "플리마켓", "빈티지샵", "쇼핑몰", "서점")
-        ),
-        TagCategory(
-            title = "커스텀",
-            tags = listOf(),
+    val categories = remember(customTagsMap) {
+        listOf(
+            TagCategory(
+                title = "간식",
+                tags = listOf("카페", "디저트", "스낵", "베이커리", "음료") + (customTagsMap["간식"] ?: emptyList())  // 추가
+            ),
+            TagCategory(
+                title = "장소",
+                tags = listOf("포토존", "공원", "루프탑", "전망대", "힐링스팟") + (customTagsMap["장소"] ?: emptyList())  // 추가
+            ),
+            TagCategory(
+                title = "정보",
+                tags = listOf("핫플", "체험", "전시", "이벤트", "문화시설") + (customTagsMap["정보"] ?: emptyList())  // 추가
+            ),
+            TagCategory(
+                title = "쇼핑",
+                tags = listOf("컨셉스토어", "플리마켓", "빈티지샵", "쇼핑몰", "서점") + (customTagsMap["쇼핑"] ?: emptyList())  // 추가
+            ),
+            TagCategory(
+                title = "커스텀",
+                tags = customTagsMap["커스텀"] ?: emptyList()  // 수정
+            )
         )
-    )
+    }
 
     // 모든 태그를 초기 선택 상태로 설정
-    val allTags = remember { categories.flatMap { it.tags }.toSet() }
+    val allTags = remember(categories) { categories.flatMap { it.tags }.toSet() }
     var selectedTags by remember { mutableStateOf(allTags) }
+
+    LaunchedEffect(categories) {
+        selectedTags = selectedTags + categories.flatMap { it.tags }.toSet()
+    }
 
     Column(
         modifier = Modifier
@@ -159,6 +165,7 @@ fun TagSelectScreen(
 
     if (showAddDialog && currentCategory != null) {
         AddTagDialog(
+            categoryTitle = currentCategory?.title ?: "커스텀",
             onDismiss = { showAddDialog = false },
             onConfirm = { newTags ->
                 customTagsMap = customTagsMap + (currentCategory!!.title to
@@ -292,6 +299,7 @@ private fun AddButton(onClick: () -> Unit = {}) {
 
 @Composable
 fun AddTagDialog(
+    categoryTitle: String,
     onDismiss: () -> Unit,
     onConfirm: (List<String>) -> Unit
 ) {
@@ -308,7 +316,7 @@ fun AddTagDialog(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "쇼핑 태그 추가",
+                    text = "$categoryTitle 태그 추가",
                     color = MaterialTheme.colorScheme.tertiary,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold
@@ -334,7 +342,7 @@ fun AddTagDialog(
                     },
                     placeholder = {
                         Text(
-                            text = "#태그",
+                            text = "태그 입력 후 스페이스바 입력",
                             color = Color.Gray
                         )
                     },
