@@ -2,9 +2,7 @@ pipeline {
     agent any
     
     environment {
-        GITLAB_REGISTRY = "registry.lab.ssafy.com"
-        PROJECT_NAME = "s13-final/s13p31d204"
-        IMAGE_NAME = "${GITLAB_REGISTRY}/${PROJECT_NAME}/backend"
+        IMAGE_NAME = "pola-backend"
         IMAGE_TAG = "${BUILD_NUMBER}"
         DEPLOY_NAMESPACE = "pola"
     }
@@ -23,26 +21,33 @@ pipeline {
             steps {
                 echo "Building Spring Boot application..."
                 dir("back/pola") {
-                    sh """
+                    sh '''
                         chmod +x ./gradlew
                         ./gradlew clean bootJar
-                    """
+                    '''
                 }
             }
         }
         
-        stage("Docker Build & Push") {
+        stage("Docker Build") {
             steps {
-                echo "Building and pushing Docker image..."
-                script {
-                    docker.withRegistry("https://${GITLAB_REGISTRY}", "gitlab-credentials") {
-                        dir("back") {
-                            def customImage = docker.build("${IMAGE_NAME}:${IMAGE_TAG}", "-f Dockerfile .")
-                            customImage.push()
-                            customImage.push("latest")
-                        }
-                    }
+                echo "Building Docker image..."
+                dir("back") {
+                    sh '''
+                        docker build -t ${IMAGE_NAME}:${IMAGE_TAG} -f Dockerfile .
+                        docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
+                    '''
                 }
+            }
+        }
+        
+        stage("Import to K3s") {
+            steps {
+                echo "Importing Docker image to K3s..."
+                sh '''
+                    docker save ${IMAGE_NAME}:${IMAGE_TAG} | sudo k3s ctr images import -
+                    docker save ${IMAGE_NAME}:latest | sudo k3s ctr images import -
+                '''
             }
         }
         
@@ -50,11 +55,21 @@ pipeline {
             steps {
                 echo "Deploying to K3s cluster..."
                 script {
-                    sh """
-                        kubectl set image deployment/backend backend=${IMAGE_NAME}:${IMAGE_TAG} -n ${DEPLOY_NAMESPACE}
-                        kubectl rollout status deployment/backend -n ${DEPLOY_NAMESPACE}
-                    """
+                    sh '''
+                        sudo kubectl set image deployment/backend backend=${IMAGE_NAME}:${IMAGE_TAG} -n ${DEPLOY_NAMESPACE}
+                        sudo kubectl rollout status deployment/backend -n ${DEPLOY_NAMESPACE}
+                    '''
                 }
+            }
+        }
+        
+        stage("Cleanup") {
+            steps {
+                echo "Cleaning up old Docker images..."
+                sh '''
+                    # 최근 3개 빌드 제외하고 삭제
+                    docker images ${IMAGE_NAME} --format "{{.Tag}}" | grep -E "^[0-9]+$" | sort -nr | tail -n +4 | xargs -r -I {} docker rmi ${IMAGE_NAME}:{} || true
+                '''
             }
         }
     }
