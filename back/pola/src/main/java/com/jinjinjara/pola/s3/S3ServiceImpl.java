@@ -18,7 +18,7 @@ import java.util.UUID;
 public class S3ServiceImpl implements S3Service {
     private final AmazonS3 amazonS3;
 
-    @Value("${cloud.aws.s3.bucket}")
+    @Value("${aws.s3.bucket}")
     private String bucket;
 
     // 파일 업로드

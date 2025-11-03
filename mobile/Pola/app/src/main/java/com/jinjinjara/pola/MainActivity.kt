@@ -14,7 +14,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+//<<<<<<< HEAD
 import com.jinjinjara.pola.domain.repository.AuthRepository
+//=======
+import com.jinjinjara.pola.navigation.PolaNavHost
+//>>>>>>> develop
 import com.jinjinjara.pola.presentation.ui.screen.MainScreen
 import com.jinjinjara.pola.presentation.ui.screen.start.StartScreen
 import com.jinjinjara.pola.presentation.ui.theme.PolaTheme
@@ -39,6 +43,7 @@ class MainActivity : ComponentActivity() {
                 // 테스트용: 이미지 클릭 시 토큰 없이 메인으로 이동
                 var isTestMode by remember { mutableStateOf(false) }
 
+//<<<<<<< HEAD
                 LaunchedEffect(isLoggedIn) {
                     Log.d("MainActivity", "isLoggedIn changed: $isLoggedIn")
                     val token = authRepository.getAccessToken()
@@ -60,6 +65,30 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize()
                     )
                 }
+//=======
+//                PolaNavHost(
+//                    modifier = Modifier.fillMaxSize(),
+//                    isLoggedIn = isLoggedIn,
+//                    onLoginSuccess = {
+//                        isLoggedIn = true
+//                    }
+//                )
+//
+////                if (isLoggedIn) {
+////                    // 로그인 되어있으면 메인 화면
+////                    MainScreen(
+////                        modifier = Modifier.fillMaxSize()
+////                    )
+////                } else {
+////                    // 로그인 안 되어있으면 로그인 화면
+////                    StartScreen(
+////                        onLoginSuccess = {
+////                            isLoggedIn = true
+////                        },
+////                        modifier = Modifier.fillMaxSize()
+////                    )
+////                }
+//>>>>>>> develop
             }
         }
     }

@@ -13,7 +13,7 @@ export default function CategoryRow({ imgSrc }: { imgSrc: string }) {
           grid 
           grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-5 
           gap-3
-          px-10              /* 🔹 좌우 패딩 추가 (잘림 방지) */
+          px-10
           overflow-visible
           justify-items-center
         "

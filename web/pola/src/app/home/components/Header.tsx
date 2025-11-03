@@ -2,23 +2,26 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function Header() {
   const [query, setQuery] = useState("");
 
   return (
-    <header className="flex justify-between items-center w-full mb-8">
+    <header className="flex justify-between items-center w-full pb-12 px-8 pt-6">
       {/* 왼쪽 - 로고 */}
-      <Image
-        src="/images/POLA_logo_2.png"
-        alt="pola logo"
-        width={140}
-        height={40}
-        className="object-contain"
-        priority
-      />
+      <Link href="/home" className="flex items-center">
+        <Image
+          src="/images/POLA_logo_2.png"
+          alt="pola logo"
+          width={140}
+          height={40}
+          className="object-contain cursor-pointer"
+          priority
+        />
+      </Link>
 
-      {/* ✅ 중앙 - 검색창 + AI 버튼 묶음 */}
+      {/* 중앙 - 검색창 + AI 버튼 */}
       <div className="flex items-center w-1/2 gap-2">
         <div className="flex items-center flex-grow bg-white border rounded-full px-4 py-2">
           <input

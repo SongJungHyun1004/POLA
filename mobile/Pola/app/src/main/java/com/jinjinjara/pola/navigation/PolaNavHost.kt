@@ -8,7 +8,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.jinjinjara.pola.presentation.ui.screen.MainScreen
 
 /**
  * 앱의 메인 네비게이션 호스트
@@ -21,10 +23,9 @@ import androidx.navigation.compose.rememberNavController
 fun PolaNavHost(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
-    startDestination: String = NavGraphs.AUTH, // 기본은 로그인 화면
+    isLoggedIn: Boolean = false,
+    onLoginSuccess: () -> Unit = {}
 ) {
-    // 로그인 상태 관리 (실제로는 ViewModel이나 DataStore에서 관리)
-    var isLoggedIn by remember { mutableStateOf(false) }
 
     NavHost(
         navController = navController,
@@ -35,7 +36,7 @@ fun PolaNavHost(
         authNavGraph(
             navController = navController,
             onLoginSuccess = {
-                isLoggedIn = true
+                onLoginSuccess()
                 navController.navigate(NavGraphs.MAIN) {
                     // 뒤로가기 시 로그인 화면으로 안 가도록 설정
                     popUpTo(NavGraphs.AUTH) { inclusive = true }
@@ -44,9 +45,7 @@ fun PolaNavHost(
         )
 
         // Main 네비게이션 그래프
-        mainNavGraph(
-            navController = navController
-        )
+        mainNavGraph()
     }
 }
 

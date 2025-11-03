@@ -48,6 +48,6 @@ sealed class BottomNavItem(
     )
 
     companion object {
-        val items = listOf(Home, Timeline, Upload, Remind, My)
+        val items by lazy { listOf(Home, Timeline, Upload, Remind, My) }
     }
 }
