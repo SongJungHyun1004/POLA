@@ -1,0 +1,70 @@
+pipeline {
+    agent any
+    
+    environment {
+        GITLAB_REGISTRY = "registry.lab.ssafy.com"
+        PROJECT_NAME = "s13-final/s13p31d204"
+        IMAGE_NAME = "${GITLAB_REGISTRY}/${PROJECT_NAME}/frontend"
+        IMAGE_TAG = "${BUILD_NUMBER}"
+        DEPLOY_NAMESPACE = "pola"
+    }
+    
+    stages {
+        stage("Checkout") {
+            steps {
+                echo "Cloning repository..."
+                git branch: "develop",
+                    credentialsId: "gitlab-credentials",
+                    url: "https://lab.ssafy.com/s13-final/S13P31D204.git"
+            }
+        }
+        
+        stage("Build") {
+            steps {
+                echo "Building Next.js application..."
+                dir("web/pola") {
+                    sh """
+                        npm install
+                        npm run build
+                    """
+                }
+            }
+        }
+        
+        stage("Docker Build & Push") {
+            steps {
+                echo "Building and pushing Docker image..."
+                script {
+                    docker.withRegistry("https://${GITLAB_REGISTRY}", "gitlab-credentials") {
+                        dir("web/pola") {
+                            def customImage = docker.build("${IMAGE_NAME}:${IMAGE_TAG}", "-f Dockerfile .")
+                            customImage.push()
+                            customImage.push("latest")
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage("Deploy to K3s") {
+            steps {
+                echo "Deploying to K3s cluster..."
+                script {
+                    sh """
+                        kubectl set image deployment/frontend frontend=${IMAGE_NAME}:${IMAGE_TAG} -n ${DEPLOY_NAMESPACE}
+                        kubectl rollout status deployment/frontend -n ${DEPLOY_NAMESPACE}
+                    """
+                }
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo "Frontend deployment successful!"
+        }
+        failure {
+            echo "Frontend deployment failed!"
+        }
+    }
+}
