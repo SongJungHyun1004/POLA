@@ -9,8 +9,7 @@ import PolaroidDetail from "../categories/[id]/components/PolaroidDetail";
 export default function FilesPage() {
   const searchParams = useSearchParams();
 
-  const search =
-    searchParams.get("search") ?? searchParams.get("keyword") ?? "";
+  const search = searchParams.get("search") ?? "";
   const tags = searchParams.get("tags") ?? "";
   const category = searchParams.get("category") ?? "";
 
