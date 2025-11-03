@@ -1,9 +1,11 @@
 package com.jinjinjara.pola.data.service;
 
 import com.jinjinjara.pola.data.dto.common.Platform;
+import com.jinjinjara.pola.data.dto.request.FileUploadCompleteRequest;
 import com.jinjinjara.pola.data.dto.response.InsertDataResponse;
+import com.jinjinjara.pola.data.entity.FileEntity;
+import com.jinjinjara.pola.data.repository.FileRepository;
 import lombok.RequiredArgsConstructor;
-import org.joda.time.Instant;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -12,6 +14,22 @@ import java.time.LocalDateTime;
 @Service
 @RequiredArgsConstructor
 public class DataService {
+    private final FileRepository fileRepository;
+
+
+    public FileEntity saveUploadedFile(Long userId, FileUploadCompleteRequest request) {
+        FileEntity file = FileEntity.builder()
+                .userId(userId)
+                .src(request.getKey())
+                .type(request.getType())
+                .fileSize(request.getFileSize())
+                .originUrl(request.getOriginUrl())
+                .build();
+        // 파일 등록시 벡터 디비에도 저장을 해야함
+        return fileRepository.save(file);
+    }
+
+
 
     public InsertDataResponse insertData(MultipartFile file, String originUrl, Platform platform) {
         if (file == null || file.isEmpty()) {
