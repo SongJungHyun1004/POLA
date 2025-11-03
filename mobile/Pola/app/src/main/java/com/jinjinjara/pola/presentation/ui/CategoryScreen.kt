@@ -55,7 +55,6 @@ fun CategoryScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .statusBarsPadding()
     ) {
         // Top App Bar
         Row(
