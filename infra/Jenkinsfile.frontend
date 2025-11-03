@@ -10,10 +10,8 @@ pipeline {
     stages {
         stage("Checkout") {
             steps {
-                echo "Cloning repository..."
-                git branch: "develop",
-                    credentialsId: "gitlab-credentials",
-                    url: "https://lab.ssafy.com/s13-final/S13P31D204.git"
+                echo "Checking out repository..."
+                checkout scm
             }
         }
 
