@@ -1,5 +1,6 @@
 package com.jinjinjara.pola.s3;
 
+import com.jinjinjara.pola.s3.dto.response.S3PresignedUrlResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -64,5 +65,5 @@ public class S3Service {
         String uuid = UUID.randomUUID().toString();
         return "home/" + uuid + extension; // home/UUID.png
     }
-    
+
 }

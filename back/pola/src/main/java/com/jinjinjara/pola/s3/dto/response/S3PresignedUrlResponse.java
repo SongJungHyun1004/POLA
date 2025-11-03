@@ -1,4 +1,4 @@
-package com.jinjinjara.pola.s3;
+package com.jinjinjara.pola.s3.dto.response;
 
 
 import lombok.AllArgsConstructor;
