@@ -1,6 +1,7 @@
 package com.jinjinjara.pola.presentation.ui.screen.start
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -28,6 +29,9 @@ fun TagSelectScreen(
     onNextClick: (Set<String>) -> Unit = {},
     onBackClick: () -> Unit = {}
 ) {
+    var showAddDialog by remember { mutableStateOf(false) }
+    var currentCategory by remember { mutableStateOf<TagCategory?>(null) }
+    var customTagsMap by remember { mutableStateOf<Map<String, List<String>>>(emptyMap()) }
 
     val categories = listOf(
         TagCategory(
@@ -121,6 +125,10 @@ fun TagSelectScreen(
                         onClearAll = {
                             selectedTags = selectedTags - category.tags.toSet()
                         },
+                        onAddClick = {
+                            currentCategory = category
+                            showAddDialog = true
+                        },
                         modifier = Modifier.padding(bottom = 24.dp)
                     )
                 }
@@ -148,6 +156,18 @@ fun TagSelectScreen(
             Spacer(modifier = Modifier.height(40.dp))
         }
     }
+
+    if (showAddDialog && currentCategory != null) {
+        AddTagDialog(
+            onDismiss = { showAddDialog = false },
+            onConfirm = { newTags ->
+                customTagsMap = customTagsMap + (currentCategory!!.title to
+                        ((customTagsMap[currentCategory!!.title] ?: emptyList()) + newTags))
+                selectedTags = selectedTags + newTags.toSet()
+                showAddDialog = false
+            }
+        )
+    }
 }
 
 @Composable
@@ -156,6 +176,7 @@ private fun TagCategorySection(
     selectedTags: Set<String>,
     onTagClick: (String) -> Unit,
     onClearAll: () -> Unit,
+    onAddClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     // 해당 카테고리에서 선택된 태그 개수 계산
@@ -200,7 +221,7 @@ private fun TagCategorySection(
                 )
             }
 
-            AddButton()
+            AddButton(onClick = onAddClick)
         }
 
 
@@ -246,7 +267,7 @@ private fun TagChip(
 }
 
 @Composable
-private fun AddButton() {
+private fun AddButton(onClick: () -> Unit = {}) {
     Box(
         modifier = Modifier
             .shadow(
@@ -257,7 +278,7 @@ private fun AddButton() {
                 color = MaterialTheme.colorScheme.secondary,
                 shape = RoundedCornerShape(20.dp)
             )
-            .clickable { }
+            .clickable { onClick() }
             .padding(horizontal = 20.dp, vertical = 8.dp), // horizontal padding 증가
         contentAlignment = Alignment.Center
     ) {
@@ -267,6 +288,131 @@ private fun AddButton() {
             color = Color.White
         )
     }
+}
+
+@Composable
+fun AddTagDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (List<String>) -> Unit
+) {
+    var text by remember { mutableStateOf("") }
+    var addedTags by remember { mutableStateOf(listOf<String>()) }
+
+    AlertDialog(
+        modifier = Modifier.width(250.dp),
+        containerColor = MaterialTheme.colorScheme.background,
+        onDismissRequest = onDismiss,
+        title = {
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "쇼핑 태그 추가",
+                    color = MaterialTheme.colorScheme.tertiary,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        },
+        text = {
+            Column {
+                Spacer(Modifier.height(24.dp))
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { newValue ->
+                        if (newValue.endsWith(" ") && text.isNotBlank()) {
+                            // 스페이스바가 입력되면 태그 추가
+                            val newTag = text.trim()
+                            if (newTag.isNotEmpty()) {
+                                addedTags = addedTags + newTag
+                                text = ""
+                            }
+                        } else {
+                            text = newValue
+                        }
+                    },
+                    placeholder = {
+                        Text(
+                            text = "#태그",
+                            color = Color.Gray
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(
+                            width = 2.dp,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            shape = RoundedCornerShape(24.dp)
+                        ),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color.Transparent,
+                        unfocusedBorderColor = Color.Transparent,
+                    )
+                )
+
+                // 추가된 태그들 표시
+                if (addedTags.isNotEmpty()) {
+                    Spacer(Modifier.height(16.dp))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        addedTags.forEach { tag ->
+                            Box(
+                                modifier = Modifier
+                                    .background(
+                                        color = MaterialTheme.colorScheme.primary,
+                                        shape = RoundedCornerShape(20.dp)
+                                    )
+                                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                            ) {
+                                Text(
+                                    text = "#$tag",
+                                    fontSize = 14.sp,
+                                    color = Color.White
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(onClick = onDismiss) {
+                    Text(
+                        "취소",
+                        color = Color.Gray,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
+                TextButton(
+                    onClick = {
+                        if (addedTags.isNotEmpty()) {
+                            onConfirm(addedTags)
+                        }
+                    },
+                    enabled = addedTags.isNotEmpty()
+                ) {
+                    Text(
+                        "확인",
+                        color = if (addedTags.isNotEmpty()) MaterialTheme.colorScheme.tertiary else Color.Gray,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
+            }
+        },
+        dismissButton = null,
+        shape = RoundedCornerShape(16.dp)
+    )
 }
 
 data class TagCategory(
