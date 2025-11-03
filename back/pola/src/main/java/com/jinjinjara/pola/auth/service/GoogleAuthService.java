@@ -51,7 +51,7 @@ public class GoogleAuthService {
         var principal   = new User(user.getEmail(), "", authorities);
         var auth        = new UsernamePasswordAuthenticationToken(principal, null, authorities);
 
-        TokenDto token = tokenProvider.generateTokenDto(auth);
+        TokenDto token = tokenProvider.generateTokenDto(auth, user.getId());
         TokenResponse res = new TokenResponse(
                 token.getAccessToken(),
                 token.getRefreshToken()
