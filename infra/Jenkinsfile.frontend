@@ -18,32 +18,20 @@ pipeline {
         }
 
         stage("Build") {
-                    agent {
-                        docker {
-                            image 'node:20-alpine'
-                            args '-v $HOME/.npm:/root/.npm'
-                        }
-                    }
-                    steps {
-                        echo "Building Next.js application..."
-                        dir("web/pola") {
-                            sh '''
-                                #!/bin/sh
-
-                                # Corepack 활성화 및 Node.js 버전 확인
-                                corepack enable
-                                echo "Using Node.js version:"
-                                node -v
-                                echo "Using Yarn version:"
-                                corepack yarn --version
-
-                                # 빌드 실행
-                                corepack yarn install --frozen-lockfile
-                                corepack yarn build
-                            '''
-                        }
-                    }
+            steps {
+                echo "Building Next.js application..."
+                dir("web/pola") {
+                    sh '''
+                        # Node.js 20 Docker 컨테이너에서 빌드 실행
+                        docker run --rm \
+                            -v "$(pwd)":/app \
+                            -w /app \
+                            node:20-alpine \
+                            sh -c "corepack enable && yarn install --frozen-lockfile && yarn build"
+                    '''
                 }
+            }
+        }
 
 
         stage("Docker Build") {
