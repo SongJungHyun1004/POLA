@@ -104,6 +104,17 @@ aws:
     auto: false
 
 # ===============================
+# Cloud AWS (For S3Config.java)
+# ===============================
+cloud:
+  aws:
+    credentials:
+      access-key: ${AWS_ACCESS_KEY_ID}
+      secret-key: ${AWS_SECRET_ACCESS_KEY}
+    region:
+      static: ap-northeast-2
+
+# ===============================
 # Google Allowed Client IDs (From develop)
 # ===============================
 google:
