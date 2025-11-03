@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -44,6 +45,7 @@ fun StartScreen(
     viewModel: StartViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
 
     Column(
         modifier = modifier
@@ -100,7 +102,7 @@ fun StartScreen(
         Button(
             onClick = {
                 // ViewModel에서 로그인 처리 호출
-                viewModel.signIn()
+                viewModel.signIn(context)
             },
             modifier = Modifier
                 .padding(horizontal = 24.dp)

@@ -55,25 +55,30 @@ class AuthRepositoryImpl @Inject constructor(
     override suspend fun loginWithGoogle(idToken: String): Result<User> {
         return withContext(ioDispatcher) {
             try {
+                android.util.Log.d("AuthRepository", "loginWithGoogle called")
                 val response = authApi.loginWithGoogle(GoogleLoginRequest(idToken))
 
                 if (response.isSuccessful && response.body() != null) {
                     val googleLoginResponse = response.body()!!
+                    android.util.Log.d("AuthRepository", "API response success")
 
                     // 토큰 저장
                     saveTokens(
                         accessToken = googleLoginResponse.accessToken,
                         refreshToken = googleLoginResponse.refreshToken
                     )
+                    android.util.Log.d("AuthRepository", "Tokens saved")
 
                     Result.Success(googleLoginResponse.user.toUser())
                 } else {
+                    android.util.Log.e("AuthRepository", "API response failed: ${response.code()} ${response.message()}")
                     Result.Error(
                         exception = Exception(response.message()),
                         message = "Google 로그인에 실패했습니다."
                     )
                 }
             } catch (e: Exception) {
+                android.util.Log.e("AuthRepository", "Exception: ${e.message}", e)
                 Result.Error(
                     exception = e,
                     message = e.message ?: "Google 로그인 중 오류가 발생했습니다."

@@ -26,9 +26,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class GoogleSignInManager @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val appContext: Context
 ) {
-    private val credentialManager = CredentialManager.create(context)
 
     companion object {
         private const val TAG = "GoogleSignInManager"
@@ -37,42 +36,33 @@ class GoogleSignInManager @Inject constructor(
 
     /**
      * 구글 로그인 시작
+     * @param context - Activity context (필수)
      * @param onSuccess - 성공 시 ID Token 반환
      * @param onError - 실패 시 에러 메시지 반환
      */
     suspend fun signIn(
+        context: Context,
         onSuccess: (String) -> Unit,
         onError: (String) -> Unit
     ) {
         try {
-            val saved = trySignInWithSavedAccount()
-            if (saved != null) {
-                onSuccess(saved)
-                return
-            }
+            Log.d(TAG, "signIn() started")
+            Log.d(TAG, "WEB_CLIENT_ID: ${WEB_CLIENT_ID.take(20)}...${WEB_CLIENT_ID.takeLast(10)}")
+            Log.d(TAG, "Context type: ${context.javaClass.simpleName}")
+            Log.d(TAG, "Package name: ${context.packageName}")
 
-            val newToken = signInWithNewAccount()
-            onSuccess(newToken)
+            val credentialManager = CredentialManager.create(context)
 
-        } catch (e: GetCredentialCancellationException) {
-            onError("로그인이 취소되었습니다.")
-        } catch (e: NoCredentialException) {
-            onError("저장된 계정이 없습니다.")
-        } catch (e: GetCredentialException) {
-            onError("로그인 실패: ${e.message}")
-        } catch (e: Exception) {
-            Log.e(TAG, "Google login failed: ${e::class.java.simpleName} - ${e.message}", e)
-            onError("알 수 없는 오류: ${e.message}")
-        }
-    }
+            val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+            Log.d(TAG, "Using package: ${packageInfo.packageName}")
+            Log.d(TAG, "CredentialManager available: ${CredentialManager.create(context) != null}")
 
-    /** 저장된 구글 계정으로 로그인 (One Tap) */
-    private suspend fun trySignInWithSavedAccount(): String? {
-        return try {
+
+            // 직접 계정 선택 UI를 표시 (filterByAuthorizedAccounts = false)
             val option = GetGoogleIdOption.Builder()
-                .setFilterByAuthorizedAccounts(true)
+                .setFilterByAuthorizedAccounts(false)  // 🔥 모든 계정 표시
                 .setServerClientId(WEB_CLIENT_ID)
-                .setAutoSelectEnabled(true)
+                .setAutoSelectEnabled(false)  // 자동 선택 비활성화 -> 무조건 UI 표시
                 .setNonce(generateNonce())
                 .build()
 
@@ -80,28 +70,32 @@ class GoogleSignInManager @Inject constructor(
                 .addCredentialOption(option)
                 .build()
 
+            Log.d(TAG, "Requesting credentials...")
             val result = credentialManager.getCredential(context, request)
-            handleSignInResult(result)
-        } catch (_: NoCredentialException) {
-            null
+            Log.d(TAG, "Credential received")
+
+            val idToken = handleSignInResult(result)
+            if (idToken != null) {
+                Log.d(TAG, "ID Token extracted successfully")
+                onSuccess(idToken)
+            } else {
+                Log.e(TAG, "Failed to extract ID Token from credential")
+                onError("ID Token을 가져올 수 없습니다.")
+            }
+
+        } catch (e: GetCredentialCancellationException) {
+            Log.e(TAG, "User cancelled sign in", e)
+            onError("로그인이 취소되었습니다.")
+        } catch (e: NoCredentialException) {
+            Log.e(TAG, "No credential available - Details: ${e.message}", e)
+            onError("구글 로그인을 사용할 수 없습니다.\n\n가능한 원인:\n- 기기에 구글 계정이 없음\n- Google Cloud Console SHA-1 미등록\n- Google Play Services 버전 낮음")
+        } catch (e: GetCredentialException) {
+            Log.e(TAG, "GetCredentialException: ${e.type} - ${e.message}", e)
+            onError("로그인 실패: ${e.message}")
+        } catch (e: Exception) {
+            Log.e(TAG, "Google login failed: ${e::class.java.simpleName} - ${e.message}", e)
+            onError("알 수 없는 오류: ${e.message}")
         }
-    }
-
-    /** 새 계정으로 로그인 */
-    private suspend fun signInWithNewAccount(): String {
-        val option = GetGoogleIdOption.Builder()
-            .setFilterByAuthorizedAccounts(false)
-            .setServerClientId(WEB_CLIENT_ID)
-            .setNonce(generateNonce())
-            .build()
-
-        val request = GetCredentialRequest.Builder()
-            .addCredentialOption(option)
-            .build()
-
-        val result = credentialManager.getCredential(context, request)
-        return handleSignInResult(result)
-            ?: throw Exception("ID Token을 가져올 수 없습니다.")
     }
 
     /** Credential Manager 응답 처리 */
