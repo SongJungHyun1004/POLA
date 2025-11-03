@@ -43,7 +43,6 @@ corepack enable
 yarn install --frozen-lockfile
 yarn build
 EOF
-                        chmod +x /tmp/build.sh
 
                         # Docker 컨테이너에서 빌드 실행
                         docker run --rm \
@@ -51,7 +50,7 @@ EOF
                             -v /tmp/build.sh:/build.sh \
                             -w /app \
                             node:20-alpine \
-                            /build.sh
+                            sh /build.sh
                     '''
                 }
             }
