@@ -56,7 +56,7 @@ export default function Timeline() {
                 {/* 중앙 이미지 */}
                 <div className="absolute top-1/2 left-1/2 w-[120px] h-[120px] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-md bg-[#FFFEF8]">
                   <Image
-                    src="/images/POLA_logo_1.png"
+                    src={"/images/dummy_image_1.png"}
                     alt="pola"
                     fill
                     className="object-cover object-center select-none pointer-events-none"
