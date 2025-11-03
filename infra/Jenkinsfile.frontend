@@ -22,9 +22,8 @@ pipeline {
                 echo "Building Next.js application..."
                 dir("web/pola") {
                     sh '''
-                        corepack enable 
-                        yarn install --frozen-lockfile
-                        yarn build
+                        corepack yarn install --frozen-lockfile 
+                        corepack yarn build
                     '''
                 }
             }
@@ -46,8 +45,8 @@ pipeline {
             steps {
                 echo "Importing Docker image to K3s..."
                 sh '''
-                    docker save ${IMAGE_NAME}:${IMAGE_TAG} | k3s ctr images import -
-                    docker save ${IMAGE_NAME}:latest | k3s ctr images import -
+                    docker save ${IMAGE_NAME}:${IMAGE_TAG} | sudo k3s ctr images import -
+                    docker save ${IMAGE_NAME}:latest | sudo k3s ctr images import -
                 '''
             }
         }
