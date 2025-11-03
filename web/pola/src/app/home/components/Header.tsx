@@ -3,9 +3,17 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function Header() {
   const [query, setQuery] = useState("");
+  const router = useRouter();
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      router.push(query ? `/files?search=${query}` : "/files");
+    }
+  };
 
   return (
     <header className="flex justify-between items-center w-full pb-12 px-8 pt-6">
@@ -29,11 +37,14 @@ export default function Header() {
             placeholder="검색어"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={handleKeyDown}
             className="flex-grow outline-none text-tertiary placeholder:text-tertiary/50"
           />
-          <span className="material-symbols-outlined text-tertiary cursor-pointer">
-            search
-          </span>
+          <Link href={query ? `/files?search=${query}` : "/files"}>
+            <span className="material-symbols-outlined text-tertiary cursor-pointer">
+              search
+            </span>
+          </Link>
         </div>
 
         <button className="w-10 h-10 bg-black text-white border rounded-full font-semibold flex items-center justify-center">
