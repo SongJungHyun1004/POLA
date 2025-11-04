@@ -21,6 +21,9 @@ sealed class Screen(val route: String) {
     data object HomeDetail : Screen("home/detail/{itemId}") {
         fun createRoute(itemId: String) = "home/detail/$itemId"
     }
+    data object Category : Screen("category/{categoryName}") {
+        fun createRoute(categoryName: String) = "category/$categoryName"
+    }
 
     // Timeline 탭 내부 화면들
     data object TimelineDetail : Screen("timeline/detail/{postId}") {

@@ -2,6 +2,7 @@ import CategoryBox from "./components/CategoryBox";
 import Timeline from "./components/Timeline";
 import CategoryRow from "./components/CategoryRow";
 import TextLink from "./components/TextLink";
+import Link from "next/link";
 
 export default function HomePage() {
   return (
@@ -10,9 +11,13 @@ export default function HomePage() {
         {/* 좌측 영역 */}
         <div className="flex flex-col items-center justify-start gap-12 w-full mt-16">
           <div className="flex justify-center gap-10 w-full">
-            <CategoryBox text="Favorite" />
+            <Link href={"/favorite"}>
+              <CategoryBox text="Favorite" />
+            </Link>
             <div className="flex w-8" />
-            <CategoryBox text="Remind" />
+            <Link href={"/remind"}>
+              <CategoryBox text="Remind" />
+            </Link>
           </div>
 
           <div className="flex flex-col items-center justify-center w-full mt-8">
