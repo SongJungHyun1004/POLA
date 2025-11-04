@@ -1,4 +1,4 @@
-package com.jinjinjara.pola.presentation.ui
+package com.jinjinjara.pola.presentation.ui.screen.category
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border

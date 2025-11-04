@@ -7,8 +7,8 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import androidx.navigation.navigation
-import com.jinjinjara.pola.presentation.ui.CategoryScreen
 import com.jinjinjara.pola.presentation.ui.screen.MainScreen
+import com.jinjinjara.pola.presentation.ui.screen.category.CategoryScreen
 import com.jinjinjara.pola.presentation.ui.screen.home.HomeScreen
 import com.jinjinjara.pola.presentation.ui.screen.my.MyScreen
 import com.jinjinjara.pola.presentation.ui.screen.remind.RemindScreen
