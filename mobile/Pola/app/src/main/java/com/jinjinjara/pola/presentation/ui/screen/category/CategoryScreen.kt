@@ -46,7 +46,16 @@ fun CategoryScreen(
     val categories = listOf(
         CategoryItem("1", "반찬"),
         CategoryItem("2", "초코"),
-        CategoryItem("3", "딸기")
+        CategoryItem("3", "딸기"),
+        CategoryItem("1", "반찬"),
+        CategoryItem("2", "초코"),
+        CategoryItem("3", "딸기"),
+        CategoryItem("1", "반찬"),
+        CategoryItem("2", "초코"),
+        CategoryItem("3", "딸기"),
+        CategoryItem("1", "반찬"),
+        CategoryItem("2", "초코"),
+        CategoryItem("3", "딸기"),
     )
 
     var searchText by remember { mutableStateOf("") }
@@ -126,7 +135,7 @@ fun CategoryScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = 16.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -191,7 +200,7 @@ fun CategoryScreen(
             columns = GridCells.Fixed(3),
             contentPadding = PaddingValues(16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             items(categories) { category ->
                 PolaCard(
