@@ -87,6 +87,12 @@ fun TagScreen(
         ContentsItem("1", tags = listOf("말차", "라떼", "스타벅스")),
         ContentsItem("2", tags = listOf("말차", "과자", "초코송이")),
         ContentsItem("3", tags = listOf("말차", "라떼", "스타벅스")),
+        ContentsItem("1", tags = listOf("말차", "라떼", "스타벅스")),
+        ContentsItem("2", tags = listOf("말차", "과자", "초코송이")),
+        ContentsItem("3", tags = listOf("말차", "라떼", "스타벅스")),
+        ContentsItem("1", tags = listOf("말차", "라떼", "스타벅스")),
+        ContentsItem("2", tags = listOf("말차", "과자", "초코송이")),
+        ContentsItem("3", tags = listOf("말차", "라떼", "스타벅스")),
     )
 
     var searchText by remember { mutableStateOf("") }
