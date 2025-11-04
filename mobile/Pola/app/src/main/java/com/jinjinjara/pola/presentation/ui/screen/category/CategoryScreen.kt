@@ -65,7 +65,8 @@ enum class ViewMode {
 @Composable
 fun CategoryScreen(
     categoryName: String = "카테고리",
-    onBackClick: () -> Unit = {}
+    onBackClick: () -> Unit = {},
+    onNavigateToTag: (String) -> Unit = {}
 ) {
     var selectedTab by remember { mutableStateOf("전체") }
     var isMenuExpanded by remember { mutableStateOf(false) }
@@ -164,6 +165,10 @@ fun CategoryScreen(
             ViewMode.GRID_3 -> {
                 ItemGrid3View(
                     items = categories,
+                    onItemClick = { item ->
+                        val tagName = if (item is CategoryItem) item.name else item.tags.firstOrNull() ?: ""
+                        onNavigateToTag(tagName)
+                    },
                     onFavoriteToggle = { }, // 빈 람다 (기능 없음)
                     state = gridState,
                     contentPadding = PaddingValues(
@@ -179,6 +184,10 @@ fun CategoryScreen(
             ViewMode.GRID_2 -> {
                 ItemGrid2View(
                     items = categories,
+                    onItemClick = { item ->
+                        val tagName = if (item is CategoryItem) item.name else item.tags.firstOrNull() ?: ""
+                        onNavigateToTag(tagName)
+                    },
                     onFavoriteToggle = { }, // 빈 람다 (기능 없음)
                     state = gridState,
                     contentPadding = PaddingValues(
