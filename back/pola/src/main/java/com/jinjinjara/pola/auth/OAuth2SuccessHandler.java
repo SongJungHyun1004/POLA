@@ -6,7 +6,9 @@ import com.jinjinjara.pola.auth.repository.UserRepository;
 import com.jinjinjara.pola.user.entity.Users;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.env.Environment; // Environment import 추가
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken; // OAuth2AuthenticationToken import 추가
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
@@ -23,6 +25,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
     private final TokenProvider tokenProvider;
     private final UserRepository userRepository;
+    private final Environment env; // Environment 주입
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication)
@@ -42,8 +45,21 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         String accessToken = tokenDto.getAccessToken();
         String refreshToken = tokenDto.getRefreshToken();
 
+        // 클라이언트 등록 ID를 통해 웹/모바일 클라이언트 구분
+        String clientRegistrationId = ((OAuth2AuthenticationToken) authentication).getAuthorizedClientRegistrationId();
+        String redirectUri = "";
+
+        if ("google-web".equals(clientRegistrationId)) {
+            redirectUri = env.getProperty("app.oauth2.redirect-uri.web");
+        } else if ("google-android".equals(clientRegistrationId)) {
+            redirectUri = env.getProperty("app.oauth2.redirect-uri.mobile");
+        } else {
+            // 기본 리디렉션 또는 에러 처리
+            redirectUri = "/login-failure"; // 적절한 기본값 또는 에러 페이지로 설정
+        }
+
         // 클라이언트에게 리디렉션할 URL 생성 (토큰 포함)
-        String targetUrl = UriComponentsBuilder.fromUriString("/login/oauth2/success")
+        String targetUrl = UriComponentsBuilder.fromUriString(redirectUri)
                 .queryParam("accessToken", accessToken)
                 .queryParam("refreshToken", refreshToken)
                 .build().toUriString();

@@ -130,3 +130,12 @@ cloud:
 # ===============================
 google:
   client-ids: ${GOOGLE_WEB_CLIENT_ID},${GOOGLE_ANDROID_CLIENT_ID}
+
+# ===============================
+# Custom Application Properties
+# ===============================
+app:
+  oauth2:
+    redirect-uri:
+      web: https://k13d204.p.ssafy.io/oauth2/redirect
+      mobile: pola-app://oauth2/redirect
