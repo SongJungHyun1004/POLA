@@ -1,0 +1,78 @@
+package com.jinjinjara.pola.data.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "files")
+@Getter
+@Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class File {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
+
+    @Column(name = "category_id", nullable = false)
+    private Long categoryId;
+
+    @Column(nullable = false, length = 255)
+    private String src; // S3 링크
+
+    @Column(nullable = false, length = 255)
+    private String type; // 파일 MIME 타입
+
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt;
+
+    @Column(nullable = false, length = 255)
+    private String context; // LLM 컨텍스트 (기본값 Llava)
+
+    @Column(name = "ocr_text", columnDefinition = "TEXT")
+    private String ocrText; // OCR 결과
+
+    @Column(name = "vector_id", length = 255)
+    private String vectorId; // OpenSearch 벡터 ID 등
+
+    @Column(name = "file_size", nullable = false)
+    private Long fileSize;
+
+    @Column(name = "share_status", nullable = false)
+    private Boolean shareStatus;
+
+    @Column(nullable = false)
+    private Boolean favorite;
+
+    @Column(name = "favorite_sort", nullable = false)
+    private Integer favoriteSort;
+
+    @Column(name = "favorited_at", nullable = false)
+    private LocalDateTime favoritedAt;
+
+    @Column(nullable = false)
+    private Integer views;
+
+    @Column(length = 255)
+    private String platform; // 업로드 플랫폼 (웹, 앱 등)
+
+    @Column(name = "origin_url", length = 255)
+    private String originUrl; // 원본 URL (선택)
+
+    @PrePersist
+    public void prePersist() {
+        if (createdAt == null) createdAt = LocalDateTime.now();
+        if (context == null) context = "Llava";
+        if (shareStatus == null) shareStatus = false;
+        if (favorite == null) favorite = false;
+        if (favoriteSort == null) favoriteSort = 0;
+        if (favoritedAt == null) favoritedAt = LocalDateTime.now();
+        if (views == null) views = 0;
+    }
+}

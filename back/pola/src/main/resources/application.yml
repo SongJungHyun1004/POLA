@@ -34,6 +34,12 @@ spring:
       host: k13d204.p.ssafy.io
       port: 6379
       password: ${REDIS_PASSWORD}
+      # opensearch
+    elasticsearch:
+      client:
+        uris: http://k13d204.p.ssafy.io:30920
+      repositories:
+        enabled: true
 
   # ===============================
   # Security & OAuth2

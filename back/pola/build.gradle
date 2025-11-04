@@ -6,7 +6,7 @@ plugins {
 
 group = 'com.jinjinjara'
 version = '0.0.1-SNAPSHOT'
-description = '싸피 자율 프로젝트 '
+description = '싸피 자율 프로젝트'
 
 java {
     toolchain {
@@ -16,6 +16,8 @@ java {
 
 repositories {
     mavenCentral()
+    // 필요 시 추가 (AWS SDK snapshot이나 Opensearch 내부 lib용)
+    maven { url "https://opensearch-project.jfrog.io/artifactory/maven/" }
 }
 
 dependencies {
@@ -41,13 +43,10 @@ dependencies {
     runtimeOnly   'io.jsonwebtoken:jjwt-jackson:0.11.5'
 
     // --- AWS (S3) ---
-//    implementation 'org.springframework.cloud:spring-cloud-starter-aws:2.2.6.RELEASE'
-    // --- AWS SDK v2 (BOM 기반 관리) ---
     implementation platform('software.amazon.awssdk:bom:2.25.37')
     implementation 'software.amazon.awssdk:s3'
     implementation 'software.amazon.awssdk:auth'
     implementation 'software.amazon.awssdk:regions'
-
 
     // --- DB ---
     runtimeOnly 'org.postgresql:postgresql'
@@ -62,9 +61,9 @@ dependencies {
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
-    // 오픈서치 의존성
-    implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
-
+    // --- OpenSearch (공식 권장 방식: Java Client) ---
+    implementation 'org.opensearch.client:opensearch-java:2.13.0'
+    implementation 'org.opensearch.client:opensearch-rest-client:2.13.0'
 }
 
 tasks.named('test') {

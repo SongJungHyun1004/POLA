@@ -6,7 +6,7 @@ WORKDIR /app
 COPY build.gradle settings.gradle gradlew ./ 
 #gradle
 COPY gradle ./gradle
-#  src
+# src
 COPY src ./src
 
 #  /app/gradlew 를 실행
