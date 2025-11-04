@@ -1,5 +1,7 @@
 package com.jinjinjara.pola.data.service;
 
+import com.jinjinjara.pola.common.CustomException;
+import com.jinjinjara.pola.common.ErrorCode;
 import com.jinjinjara.pola.data.dto.response.CategoryTagResponse;
 import com.jinjinjara.pola.data.dto.response.TagResponse;
 import com.jinjinjara.pola.data.entity.Category;
@@ -26,63 +28,99 @@ public class CategoryTagService {
     // 카테고리에 태그 추가
     public CategoryTagResponse addTagToCategory(Long categoryId, Long tagId) {
         Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new IllegalArgumentException("Category not found"));
+                .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
         Tag tag = tagRepository.findById(tagId)
-                .orElseThrow(() -> new IllegalArgumentException("Tag not found"));
+                .orElseThrow(() -> new CustomException(ErrorCode.TAG_NOT_FOUND));
 
         categoryTagRepository.findByCategoryAndTag(category, tag)
                 .ifPresent(ct -> {
-                    throw new IllegalStateException("Tag already linked to category");
+                    throw new CustomException(ErrorCode.TAG_LINK_DUPLICATE);
                 });
 
-        CategoryTag categoryTag = CategoryTag.builder()
-                .category(category)
-                .tag(tag)
-                .build();
+        try {
+            CategoryTag categoryTag = CategoryTag.builder()
+                    .category(category)
+                    .tag(tag)
+                    .build();
 
-        return CategoryTagResponse.fromEntity(categoryTagRepository.save(categoryTag));
+            CategoryTag saved = categoryTagRepository.save(categoryTag);
+            return CategoryTagResponse.fromEntity(saved);
+        } catch (Exception e) {
+            throw new CustomException(ErrorCode.TAG_CREATE_FAIL, e.getMessage());
+        }
     }
 
     // 카테고리에서 태그 제거
     public void removeTagFromCategory(Long categoryId, Long tagId) {
         Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new IllegalArgumentException("Category not found"));
+                .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
         Tag tag = tagRepository.findById(tagId)
-                .orElseThrow(() -> new IllegalArgumentException("Tag not found"));
+                .orElseThrow(() -> new CustomException(ErrorCode.TAG_NOT_FOUND));
 
-        categoryTagRepository.deleteByCategoryAndTag(category, tag);
+        try {
+            categoryTagRepository.deleteByCategoryAndTag(category, tag);
+        } catch (Exception e) {
+            throw new CustomException(ErrorCode.DATA_DELETE_FAIL, e.getMessage());
+        }
     }
 
     // 특정 카테고리의 모든 태그 조회
     @Transactional(readOnly = true)
     public List<TagResponse> getTagsByCategory(Long categoryId) {
         Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new IllegalArgumentException("Category not found"));
+                .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
 
-        return categoryTagRepository.findByCategory(category)
+        List<TagResponse> tags = categoryTagRepository.findByCategory(category)
                 .stream()
                 .map(CategoryTag::getTag)
                 .map(TagResponse::fromEntity)
                 .toList();
+
+        if (tags.isEmpty()) {
+            throw new CustomException(ErrorCode.TAG_NOT_FOUND);
+        }
+
+        return tags;
     }
 
     // 전체 태그 조회
     @Transactional(readOnly = true)
     public List<TagResponse> getAllTags() {
-        return tagRepository.findAll()
+        List<TagResponse> tags = tagRepository.findAll()
                 .stream()
                 .map(TagResponse::fromEntity)
                 .toList();
+
+        if (tags.isEmpty()) {
+            throw new CustomException(ErrorCode.TAG_NOT_FOUND);
+        }
+
+        return tags;
     }
 
     // 새 태그 생성
     public TagResponse createTag(String tagName) {
-        Tag tag = tagRepository.save(Tag.builder().tagName(tagName).build());
-        return TagResponse.fromEntity(tag);
+        if (tagRepository.findByTagName(tagName).isPresent()) {
+            throw new CustomException(ErrorCode.TAG_ALREADY_EXISTS);
+        }
+
+        try {
+            Tag tag = tagRepository.save(Tag.builder().tagName(tagName).build());
+            return TagResponse.fromEntity(tag);
+        } catch (Exception e) {
+            throw new CustomException(ErrorCode.TAG_CREATE_FAIL, e.getMessage());
+        }
     }
 
     // 태그 삭제
     public void deleteTag(Long tagId) {
-        tagRepository.deleteById(tagId);
+        if (!tagRepository.existsById(tagId)) {
+            throw new CustomException(ErrorCode.TAG_NOT_FOUND);
+        }
+        try {
+            tagRepository.deleteById(tagId);
+        } catch (Exception e) {
+            throw new CustomException(ErrorCode.DATA_DELETE_FAIL, e.getMessage());
+        }
     }
 }
