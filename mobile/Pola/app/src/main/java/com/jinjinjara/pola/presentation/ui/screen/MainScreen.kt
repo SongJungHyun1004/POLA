@@ -63,7 +63,7 @@ fun MainScreen(
 //        BottomNavItem.Upload.route,
         BottomNavItem.Remind.route,
         BottomNavItem.My.route,
-        Screen.Category.route
+        Screen.Category.route,
     )
     Scaffold(
         modifier = modifier,
