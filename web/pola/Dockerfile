@@ -10,8 +10,8 @@
   RUN corepack enable
 
   # 의존성 파일 복사 및 설치
-  COPY package.json yarn.lock ./
-  RUN yarn install --frozen-lockfile
+  COPY package.json yarn.lock .yarnrc.yml ./
+  RUN yarn install --immutable
 
   # 소스 복사 및 빌드
   COPY . .
@@ -24,18 +24,15 @@
 
   WORKDIR /app
 
-  # Corepack 활성화 및 Yarn 설정
-  RUN corepack enable
+  # 환경 변수 설정
+  ENV NODE_ENV=production
 
-  # 운영용 의존성 설치
-  COPY --from=builder /app/package.json /app/yarn.lock ./
-  RUN yarn install --production --frozen-lockfile
-
-  # Next.js 빌드 결과물 및 설정 파일 복사
-  COPY --from=builder /app/.next ./.next
+  # Next.js standalone 빌드 결과물 복사
+  COPY --from=builder /app/.next/standalone ./
+  COPY --from=builder /app/.next/static ./.next/static
   COPY --from=builder /app/public ./public
-  COPY --from=builder /app/next.config.ts ./
 
   EXPOSE 3000
 
-  CMD ["yarn", "start"]
+  # standalone 모드에서는 server.js를 직접 실행
+  CMD ["node", "server.js"]

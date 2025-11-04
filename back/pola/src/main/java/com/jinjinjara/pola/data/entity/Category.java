@@ -29,4 +29,14 @@ public class Category {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "category_sort", nullable = false)
+    private Integer categorySort;
+
+    @PrePersist
+    private void prePersist() {
+        if (categorySort == null) {
+            categorySort = 0;
+        }
+    }
 }
