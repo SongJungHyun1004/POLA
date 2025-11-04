@@ -9,7 +9,7 @@ COPY gradle ./gradle
 # src
 COPY src ./src
 
-#  /app/gradlew 를 실행
+# /app/gradlew 를 실행
 RUN chmod +x ./gradlew
 RUN ./gradlew bootjar
 
