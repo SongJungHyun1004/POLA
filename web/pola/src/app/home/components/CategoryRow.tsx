@@ -26,9 +26,11 @@ export default function CategoryRow({ imgSrc }: { imgSrc: string }) {
               transition: "transform 0.2s ease",
               transformOrigin: "center bottom",
             }}
-            className="w-fit pointer-events-none"
+            className="w-fit"
           >
-            <PolaroidCard src={imgSrc} />
+            <div className="hover:scale-[1.08] transition-transform">
+              <PolaroidCard src={imgSrc} />
+            </div>
           </div>
         ))}
       </div>

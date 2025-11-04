@@ -62,7 +62,8 @@ data class Category(
 
 @Composable
 fun HomeScreen(
-    onNavigateToCategory: (String) -> Unit = {}
+    onNavigateToCategory: (String) -> Unit = {},
+    onNavigateToFavorite: () -> Unit = {}
 ) {
     val recentItems = remember {
         listOf(
@@ -119,7 +120,7 @@ fun HomeScreen(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
                         ) {
-                            // 즐겨찾기 이동
+                            onNavigateToFavorite()
                         }
                         .size(30.dp)
                 )

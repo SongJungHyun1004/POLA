@@ -35,12 +35,12 @@ public class UserController {
                 ),"사용자 정보 조회에 성공했습니다.");
     }
 
-    @Operation(summary = "카테고리 정보 조회", description = "로그인한 사용자의 카테고리 정보를 조회합니다.")
-    @GetMapping("/me/categories")
-    public ApiResponse<List<CategoryResponse>> getUserCategories() {
-        List<CategoryResponse> userCategories = new ArrayList<>();
-        userCategories.add(new CategoryResponse(10L, "UI"));
-        userCategories.add(new CategoryResponse(11L, "디자인시스템"));
-        return ApiResponse.ok(userCategories,"카테고리 태그 목록 조회에 성공했습니다.");
-    }
+//    @Operation(summary = "카테고리 정보 조회", description = "로그인한 사용자의 카테고리 정보를 조회합니다.")
+//    @GetMapping("/me/categories")
+//    public ApiResponse<List<CategoryResponse>> getUserCategories() {
+//        List<CategoryResponse> userCategories = new ArrayList<>();
+//        userCategories.add(new CategoryResponse(10L, "UI"));
+//        userCategories.add(new CategoryResponse(11L, "디자인시스템"));
+//        return ApiResponse.ok(userCategories,"카테고리 태그 목록 조회에 성공했습니다.");
+//    }
 }

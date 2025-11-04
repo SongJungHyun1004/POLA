@@ -24,6 +24,7 @@ sealed class Screen(val route: String) {
     data object Category : Screen("category/{categoryName}") {
         fun createRoute(categoryName: String) = "category/$categoryName"
     }
+    data object Favorite : Screen("favorite")
 
     // Timeline 탭 내부 화면들
     data object TimelineDetail : Screen("timeline/detail/{postId}") {
