@@ -152,7 +152,7 @@ fun CategoryChips(
             .horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Spacer(Modifier.width(16.dp))
+        Spacer(Modifier.width(8.dp))
         categories.forEach { category ->
             val isSelected = category == selectedCategory
             Surface(

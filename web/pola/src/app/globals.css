@@ -85,3 +85,16 @@ body {
     animation: fadeSlideIn 0.25s ease-out;
   }
 }
+
+.no-scrollbar::-webkit-scrollbar {
+  height: 8px;
+}
+
+.no-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #d1c7a1;
+  border-radius: 9999px;
+}
+
+.no-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
