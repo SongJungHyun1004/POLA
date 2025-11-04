@@ -325,7 +325,7 @@ fun TagScreen(
                                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                                     )
 
-                                    val sortOptions = listOf("태그순", "최신순", "오래된순")
+                                    val sortOptions = listOf("최신순", "오래된순")
                                     sortOptions.forEachIndexed { index, sort ->
                                         Row(
                                             modifier = Modifier
