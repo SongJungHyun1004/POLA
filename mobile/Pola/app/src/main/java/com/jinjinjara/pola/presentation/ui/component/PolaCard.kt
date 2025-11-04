@@ -14,9 +14,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -24,6 +27,59 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jinjinjara.pola.R
+
+@Composable
+fun ClippedTagRowForCard(
+    tags: List<String>,
+    fontSize: TextUnit,
+    color: Color,
+    spacing: Dp = 4.dp,
+    modifier: Modifier = Modifier
+) {
+    Layout(
+        modifier = modifier,
+        content = {
+            tags.forEach { tag ->
+                Text(
+                    text = "#$tag",
+                    fontSize = fontSize,
+                    color = color,
+                    maxLines = 1
+                )
+            }
+        }
+    ) { measurables, constraints ->
+        val looseConstraints = constraints.copy(minWidth = 0, maxWidth = Constraints.Infinity)
+        val placeables = measurables.map { it.measure(looseConstraints) }
+        val spacingPx = spacing.roundToPx()
+
+        var currentX = 0
+        val visiblePlaceables = mutableListOf<androidx.compose.ui.layout.Placeable>()
+
+        for (i in placeables.indices) {
+            val placeable = placeables[i]
+            val spaceNeeded = if (i > 0) spacingPx else 0
+
+            if (currentX + spaceNeeded + placeable.width <= constraints.maxWidth) {
+                visiblePlaceables.add(placeable)
+                currentX += spaceNeeded + placeable.width
+            } else {
+                break
+            }
+        }
+
+        val height = visiblePlaceables.maxOfOrNull { it.height } ?: 0
+
+        layout(constraints.maxWidth, height) {
+            var x = 0
+            visiblePlaceables.forEachIndexed { index, placeable ->
+                if (index > 0) x += spacingPx
+                placeable.placeRelative(x, 0)
+                x += placeable.width
+            }
+        }
+    }
+}
 
 @Composable
 fun PolaCard(
@@ -41,6 +97,7 @@ fun PolaCard(
     textList: List<String> = emptyList(),
     textSize: TextUnit = 24.sp,
     textSpacing: Dp = 8.dp,
+    clipTags: Boolean = false,
     content: @Composable (() -> Unit)? = null
 ) {
     // 전체 폴라로이드 카드
@@ -81,18 +138,31 @@ fun PolaCard(
                 )
             }
             // 정보 영역
-            Row(
-                modifier = Modifier
-                    .fillMaxSize(),
-                horizontalArrangement = Arrangement.spacedBy(textSpacing),
-                verticalAlignment = Alignment.CenterVertically
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.CenterStart
             ) {
-                textList.forEach { text ->
-                    Text(
-                        text = "#$text",
+                if (clipTags) {
+                    ClippedTagRowForCard(
+                        tags = textList,
                         fontSize = textSize,
                         color = MaterialTheme.colorScheme.tertiary,
+                        spacing = textSpacing,
+                        modifier = Modifier.fillMaxWidth()
                     )
+                } else {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(textSpacing),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        textList.forEach { text ->
+                            Text(
+                                text = "#$text",
+                                fontSize = textSize,
+                                color = MaterialTheme.colorScheme.tertiary,
+                            )
+                        }
+                    }
                 }
             }
 
