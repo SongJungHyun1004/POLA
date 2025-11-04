@@ -7,6 +7,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import androidx.navigation.navigation
+import com.jinjinjara.pola.presentation.ui.CategoryScreen
 import com.jinjinjara.pola.presentation.ui.screen.MainScreen
 import com.jinjinjara.pola.presentation.ui.screen.home.HomeScreen
 import com.jinjinjara.pola.presentation.ui.screen.my.MyScreen
@@ -90,10 +91,9 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
     ) {
         composable(Screen.Home.route) {
             HomeScreen(
-                // 필요한 네비게이션 콜백 추가
-                // onNavigateToDetail = { itemId ->
-                //     navController.navigate(Screen.HomeDetail.createRoute(itemId))
-                // }
+                onNavigateToCategory = { categoryName ->
+                    navController.navigate(Screen.Category.createRoute(categoryName))
+                }
             )
         }
 
@@ -111,6 +111,19 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
             //     onNavigateBack = { navController.popBackStack() }
             // )
         }
+        composable(
+            route = Screen.Category.route,
+            arguments = listOf(
+                navArgument("categoryName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val categoryName = backStackEntry.arguments?.getString("categoryName") ?: ""
+            CategoryScreen(
+                categoryName = categoryName,
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
     }
 }
 
