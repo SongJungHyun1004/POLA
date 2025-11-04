@@ -1,46 +1,74 @@
 pipeline {
     agent any
-    
+
     environment {
         IMAGE_NAME = "pola-frontend"
         IMAGE_TAG = "${BUILD_NUMBER}"
         DEPLOY_NAMESPACE = "pola"
     }
-    
+
     stages {
-        stage("Checkout") {
+        stage("Cleanup Workspace") {
             steps {
-                echo "Cloning repository..."
-                git branch: "develop",
-                    credentialsId: "gitlab-credentials",
-                    url: "https://lab.ssafy.com/s13-final/S13P31D204.git"
+                echo "Cleaning workspace..."
+                deleteDir()
             }
         }
-        
+
+        stage("Checkout") {
+            steps {
+                echo "Checking out repository..."
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: '*/develop']],
+                    userRemoteConfigs: [[
+                        url: 'https://lab.ssafy.com/s13-final/S13P31D204.git',
+                        credentialsId: 'gitlab-credentials'
+                    ]]
+                ])
+                sh 'ls -la'
+                sh 'ls -la web/pola/'
+            }
+        }
+
         stage("Build") {
             steps {
                 echo "Building Next.js application..."
-                dir("web") {
+                dir("web/pola") {
                     sh '''
-                        npm ci
-                        npm run build
+                        # 빌드 스크립트 생성
+                        cat > /tmp/build.sh << 'EOF'
+#!/bin/sh
+corepack enable
+yarn install --frozen-lockfile
+yarn build
+EOF
+
+                        # Docker 컨테이너에서 빌드 실행
+                        docker run --rm \
+                            -v "$(pwd)":/app \
+                            -v /tmp/build.sh:/build.sh \
+                            -w /app \
+                            node:20-alpine \
+                            sh /build.sh
                     '''
                 }
             }
         }
-        
+
+
         stage("Docker Build") {
             steps {
                 echo "Building Docker image..."
-                dir("web") {
+                dir("web/pola") {
                     sh '''
-                        docker build -t ${IMAGE_NAME}:${IMAGE_TAG} -f Dockerfile .
+                        docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
                         docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
                     '''
                 }
             }
         }
-        
+
         stage("Import to K3s") {
             steps {
                 echo "Importing Docker image to K3s..."
@@ -50,30 +78,28 @@ pipeline {
                 '''
             }
         }
-        
+
         stage("Deploy to K3s") {
             steps {
                 echo "Deploying to K3s cluster..."
-                script {
-                    sh '''
-                        sudo kubectl set image deployment/frontend frontend=${IMAGE_NAME}:${IMAGE_TAG} -n ${DEPLOY_NAMESPACE}
-                        sudo kubectl rollout status deployment/frontend -n ${DEPLOY_NAMESPACE}
-                    '''
-                }
+                sh '''
+                    kubectl set image deployment/frontend frontend=${IMAGE_NAME}:${IMAGE_TAG} -n ${DEPLOY_NAMESPACE}
+                    kubectl rollout status deployment/frontend -n ${DEPLOY_NAMESPACE}
+                '''
             }
         }
-        
+
         stage("Cleanup") {
             steps {
                 echo "Cleaning up old Docker images..."
                 sh '''
-                    # 최근 3개 빌드 제외하고 삭제
-                    docker images ${IMAGE_NAME} --format "{{.Tag}}" | grep -E "^[0-9]+$" | sort -nr | tail -n +4 | xargs -r -I {} docker rmi ${IMAGE_NAME}:{} || true
+                    docker images ${IMAGE_NAME} --format "{{.Tag}}" | grep -E "^[0-9]+$" | sort -nr | tail -n +4 | xargs -r -I {} docker
+rmi ${IMAGE_NAME}:{} || true
                 '''
             }
         }
     }
-    
+
     post {
         success {
             echo "Frontend deployment successful!"
