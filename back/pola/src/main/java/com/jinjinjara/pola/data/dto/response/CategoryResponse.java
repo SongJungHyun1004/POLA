@@ -1,18 +1,30 @@
 package com.jinjinjara.pola.data.dto.response;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+
+import com.jinjinjara.pola.data.entity.Category;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-@Builder
+import java.time.LocalDateTime;
+
+@Getter
 @NoArgsConstructor
 @AllArgsConstructor
 public class CategoryResponse {
-
-    @JsonProperty("id")
     private Long id;
-
-    @JsonProperty("category_name")
     private String categoryName;
+    private Integer categorySort;
+    private LocalDateTime createdAt;
+    private String userEmail;
+
+    public static CategoryResponse fromEntity(Category category) {
+        return new CategoryResponse(
+                category.getId(),
+                category.getCategoryName(),
+                category.getCategorySort(),
+                category.getCreatedAt(),
+                category.getUser().getEmail()
+        );
+    }
 }

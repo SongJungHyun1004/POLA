@@ -4,7 +4,7 @@ import com.jinjinjara.pola.data.dto.common.Platform;
 import com.jinjinjara.pola.data.dto.request.FileUploadCompleteRequest;
 import com.jinjinjara.pola.data.dto.response.InsertDataResponse;
 import com.jinjinjara.pola.data.entity.Category;
-import com.jinjinjara.pola.data.entity.FileEntity;
+import com.jinjinjara.pola.data.entity.File;
 import com.jinjinjara.pola.data.repository.CategoryRepository;
 import com.jinjinjara.pola.data.repository.FileRepository;
 import com.jinjinjara.pola.user.entity.Users;
@@ -24,7 +24,7 @@ public class DataService {
 
 
     @Transactional
-    public FileEntity saveUploadedFile(Users user, FileUploadCompleteRequest request) {
+    public File saveUploadedFile(Users user, FileUploadCompleteRequest request) {
 
         Category uncategorized = categoryRepository
                 .findByUserIdAndCategoryName(user, "미분류")
@@ -36,7 +36,7 @@ public class DataService {
                     return categoryRepository.save(newCategory);
                 });
 
-        FileEntity file = FileEntity.builder()
+        File file = File.builder()
                 .userId(user.getId())
                 .categoryId(uncategorized.getId().intValue()) // 🔹 category_id FK 저장
                 .src(request.getKey())

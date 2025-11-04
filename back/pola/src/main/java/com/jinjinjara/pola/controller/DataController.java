@@ -1,22 +1,17 @@
 package com.jinjinjara.pola.controller;
 
 import com.jinjinjara.pola.common.ApiResponse;
-import com.jinjinjara.pola.data.dto.common.Platform;
 import com.jinjinjara.pola.data.dto.request.FileUploadCompleteRequest;
 import com.jinjinjara.pola.data.dto.response.*;
-import com.jinjinjara.pola.data.entity.FileEntity;
+import com.jinjinjara.pola.data.entity.File;
 import com.jinjinjara.pola.data.service.DataService;
 import com.jinjinjara.pola.user.dto.response.UserInfoResponse;
 import com.jinjinjara.pola.user.entity.Users;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.MediaType;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -35,7 +30,7 @@ public class DataController {
             description = "클라이언트에서 Presigned URL로 S3 업로드가 끝난 후, 해당 파일 메타데이터를 DB에 저장합니다."
     )
     @PostMapping("/complete")
-    public ApiResponse<FileEntity> saveUploadedFile(
+    public ApiResponse<File> saveUploadedFile(
             @AuthenticationPrincipal Users user,
             @RequestBody FileUploadCompleteRequest request
     ) {
@@ -44,7 +39,7 @@ public class DataController {
             // TODO 나중에 에러코드 변환
         }
 
-        FileEntity savedFile = dataService.saveUploadedFile(user, request);
+        File savedFile = dataService.saveUploadedFile(user, request);
         return ApiResponse.ok(savedFile, "파일이 성공적으로 등록되었습니다.");
     }
 
