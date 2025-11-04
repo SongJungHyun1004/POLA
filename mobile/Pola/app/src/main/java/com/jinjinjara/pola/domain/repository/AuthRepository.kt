@@ -22,6 +22,14 @@ interface AuthRepository {
     suspend fun loginWithGoogle(idToken: String): Result<User>
 
     /**
+     * OAuth 2.0 Google 로그인 (새로운 플로우)
+     * @param idToken Google ID Token
+     * @param displayName Google 계정 이름
+     * @return 로그인된 사용자 정보
+     */
+    suspend fun googleLoginWithOAuth(idToken: String, displayName: String): Result<User>
+
+    /**
      * 회원가입
      */
     suspend fun signUp(email: String, password: String, name: String): Result<User>

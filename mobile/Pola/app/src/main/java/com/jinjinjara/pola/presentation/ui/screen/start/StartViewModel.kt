@@ -27,10 +27,15 @@ class StartViewModel @Inject constructor(
         viewModelScope.launch {
             googleSignInManager.signIn(
                 context = context,
-                onSuccess = { idToken ->
-                    Log.d("StartViewModel", "Google signIn success, idToken received")
+                onSuccess = { signInResult ->
+                    Log.d("StartViewModel", "Google signIn success: ${signInResult.displayName}")
                     viewModelScope.launch {
-                        when (val result = loginUseCase(LoginUseCase.Params.Google(idToken))) {
+                        when (val result = loginUseCase(
+                            LoginUseCase.Params.Google(
+                                idToken = signInResult.idToken,
+                                displayName = signInResult.displayName
+                            )
+                        )) {
                             is Result.Success -> {
                                 Log.d("StartViewModel", "Login success: ${result.data}")
                                 _uiState.value = StartUiState.Success

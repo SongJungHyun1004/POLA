@@ -21,8 +21,9 @@ class LoginUseCase @Inject constructor(
                 email = params.email,
                 password = params.password
             )
-            is Params.Google -> authRepository.loginWithGoogle(
-                idToken = params.idToken
+            is Params.Google -> authRepository.googleLoginWithOAuth(
+                idToken = params.idToken,
+                displayName = params.displayName
             )
         }
     }
@@ -43,7 +44,8 @@ class LoginUseCase @Inject constructor(
          * Google 로그인
          */
         data class Google(
-            val idToken: String
+            val idToken: String,
+            val displayName: String
         ) : Params()
     }
 }

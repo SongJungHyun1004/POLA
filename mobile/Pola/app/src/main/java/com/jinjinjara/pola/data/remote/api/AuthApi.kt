@@ -2,9 +2,15 @@ package com.jinjinjara.pola.data.remote.api
 
 import com.jinjinjara.pola.data.remote.dto.request.GoogleLoginRequest
 import com.jinjinjara.pola.data.remote.dto.request.LoginRequest
+import com.jinjinjara.pola.data.remote.dto.request.OAuthSigninRequest
+import com.jinjinjara.pola.data.remote.dto.request.OAuthSignupRequest
+import com.jinjinjara.pola.data.remote.dto.request.OAuthTokenRequest
 import com.jinjinjara.pola.data.remote.dto.request.RefreshTokenRequest
 import com.jinjinjara.pola.data.remote.dto.request.SignUpRequest
 import com.jinjinjara.pola.data.remote.dto.response.AuthResponse
+import com.jinjinjara.pola.data.remote.dto.response.OAuthApiResponse
+import com.jinjinjara.pola.data.remote.dto.response.OAuthReissueResponse
+import com.jinjinjara.pola.data.remote.dto.response.OAuthTokenData
 import com.jinjinjara.pola.data.remote.dto.response.RefreshTokenResponse
 import com.jinjinjara.pola.data.remote.dto.response.UserResponse
 import retrofit2.Response
@@ -43,4 +49,23 @@ interface AuthApi {
 
     @GET("auth/me")
     suspend fun getCurrentUser(): Response<UserResponse>
+
+    // OAuth 2.0 엔드포인트
+    @POST("oauth/token")
+    suspend fun getOAuthToken(
+        @Body request: OAuthTokenRequest
+    ): Response<OAuthApiResponse<OAuthTokenData>>
+
+    @POST("oauth/signup")
+    suspend fun oauthSignup(
+        @Body request: OAuthSignupRequest
+    ): Response<OAuthApiResponse<OAuthTokenData>>
+
+    @POST("oauth/signin")
+    suspend fun oauthSignin(
+        @Body request: OAuthSigninRequest
+    ): Response<OAuthApiResponse<OAuthTokenData>>
+
+    @POST("oauth/reissue")
+    suspend fun oauthReissue(): Response<OAuthReissueResponse>
 }

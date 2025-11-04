@@ -20,6 +20,14 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
+ * Google 로그인 결과 데이터
+ */
+data class GoogleSignInResult(
+    val idToken: String,
+    val displayName: String
+)
+
+/**
  *  Google 로그인 매니저 (Credential Manager 기반)
  * - Google ID Token을 발급받는 역할만 담당
  * - 이후 AuthRepositoryImpl에서 서버로 전달하여 로그인 처리
@@ -37,12 +45,12 @@ class GoogleSignInManager @Inject constructor(
     /**
      * 구글 로그인 시작
      * @param context - Activity context (필수)
-     * @param onSuccess - 성공 시 ID Token 반환
+     * @param onSuccess - 성공 시 GoogleSignInResult 반환
      * @param onError - 실패 시 에러 메시지 반환
      */
     suspend fun signIn(
         context: Context,
-        onSuccess: (String) -> Unit,
+        onSuccess: (GoogleSignInResult) -> Unit,
         onError: (String) -> Unit
     ) {
         try {
@@ -74,13 +82,13 @@ class GoogleSignInManager @Inject constructor(
             val result = credentialManager.getCredential(context, request)
             Log.d(TAG, "Credential received")
 
-            val idToken = handleSignInResult(result)
-            if (idToken != null) {
-                Log.d(TAG, "ID Token extracted successfully")
-                onSuccess(idToken)
+            val signInResult = handleSignInResult(result)
+            if (signInResult != null) {
+                Log.d(TAG, "Sign in successful: ${signInResult.displayName}")
+                onSuccess(signInResult)
             } else {
-                Log.e(TAG, "Failed to extract ID Token from credential")
-                onError("ID Token을 가져올 수 없습니다.")
+                Log.e(TAG, "Failed to extract credentials")
+                onError("로그인 정보를 가져올 수 없습니다.")
             }
 
         } catch (e: GetCredentialCancellationException) {
@@ -99,12 +107,16 @@ class GoogleSignInManager @Inject constructor(
     }
 
     /** Credential Manager 응답 처리 */
-    private fun handleSignInResult(result: GetCredentialResponse): String? {
+    private fun handleSignInResult(result: GetCredentialResponse): GoogleSignInResult? {
         return when (val credential = result.credential) {
             is CustomCredential -> {
                 if (credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
                     try {
-                        GoogleIdTokenCredential.createFrom(credential.data).idToken
+                        val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                        GoogleSignInResult(
+                            idToken = googleIdTokenCredential.idToken,
+                            displayName = googleIdTokenCredential.displayName ?: "사용자"
+                        )
                     } catch (e: GoogleIdTokenParsingException) {
                         Log.e(TAG, "Invalid Google ID token", e)
                         null
