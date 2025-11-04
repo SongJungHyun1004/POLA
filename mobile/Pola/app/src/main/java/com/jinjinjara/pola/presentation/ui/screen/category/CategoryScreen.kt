@@ -38,6 +38,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.window.Popup
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -275,7 +276,10 @@ fun CategoryScreen(
                     )
                     Box {
                         Row(
-                            modifier = Modifier.clickable { isMenuExpanded = true },
+                            modifier = Modifier.clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { isMenuExpanded = true },
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
@@ -290,36 +294,57 @@ fun CategoryScreen(
                                 tint = MaterialTheme.colorScheme.tertiary
                             )
                         }
-                        DropdownMenu(expanded = isMenuExpanded, onDismissRequest = {
-                            isMenuExpanded = false
-                        }, modifier = Modifier.background(Color.White)) {
-                            listOf(
-                                "태그순",
-                                "최신순",
-                                "오래된순"
-                            ).forEach { sort ->
-                                DropdownMenuItem(text = {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(
-                                            sort,
-                                            color = MaterialTheme.colorScheme.tertiary
-                                        )
-                                        if (sort == selectedSort) {
-                                            Icon(
-                                                imageVector = Icons.Default.Check,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.tertiary
+                        if (isMenuExpanded) {
+                            Popup(
+                                alignment = Alignment.TopEnd,
+                                onDismissRequest = { isMenuExpanded = false },
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .width(140.dp)
+                                        .shadow(12.dp, RoundedCornerShape(12.dp))
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(Color.White)
+                                        .padding(vertical = 8.dp)
+                                ) {
+                                    // 상단 제목
+                                    Text(
+                                        text = "정렬",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp,
+                                        color = MaterialTheme.colorScheme.tertiary,
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                                    )
+
+                                    val sortOptions = listOf("태그순", "최신순", "오래된순")
+                                    sortOptions.forEachIndexed { index, sort ->
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    selectedSort = sort
+                                                    isMenuExpanded = false
+                                                }
+                                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = sort,
+                                                color = MaterialTheme.colorScheme.tertiary,
+                                                fontSize = 12.sp
                                             )
+                                            if (sort == selectedSort) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Check,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.tertiary,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
                                         }
                                     }
-                                }, onClick = {
-                                    selectedSort = sort
-                                    isMenuExpanded = false
                                 }
-                                )
                             }
                         }
                     }
