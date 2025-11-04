@@ -34,7 +34,7 @@ public class DataController {
             summary = "파일 업로드 완료 처리",
             description = "클라이언트에서 Presigned URL로 S3 업로드가 끝난 후, 해당 파일 메타데이터를 DB에 저장합니다."
     )
-    @PostMapping("/complete")
+    @PostMapping("")
     public ApiResponse<FileEntity> saveUploadedFile(
             @AuthenticationPrincipal Users user,
             @RequestBody FileUploadCompleteRequest request
