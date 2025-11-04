@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,7 +20,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.jinjinjara.pola.R
 
 @Composable
@@ -28,13 +31,16 @@ fun PolaCard(
     backgroundColor: Color = Color.White,
     imageResId: Int? = null,
     ratio: Float = 3f / 4f,
-    imageRatio: Float  = 1f,
+    imageRatio: Float = 1f,
     paddingValues: PaddingValues = PaddingValues(
         top = 32.dp,
         start = 32.dp,
         end = 32.dp
     ),
     borderColor: Color = MaterialTheme.colorScheme.tertiary,
+    textList: List<String> = emptyList(),
+    textSize: TextUnit = 24.sp,
+    textSpacing: Dp = 8.dp,
     content: @Composable (() -> Unit)? = null
 ) {
     // 전체 폴라로이드 카드
@@ -75,6 +81,20 @@ fun PolaCard(
                 )
             }
             // 정보 영역
+            Row(
+                modifier = Modifier
+                    .fillMaxSize(),
+                horizontalArrangement = Arrangement.spacedBy(textSpacing),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                textList.forEach { text ->
+                    Text(
+                        text = "#$text",
+                        fontSize = textSize,
+                        color = MaterialTheme.colorScheme.tertiary,
+                    )
+                }
+            }
 
         }
     }
