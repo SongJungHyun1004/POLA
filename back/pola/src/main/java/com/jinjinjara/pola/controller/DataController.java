@@ -43,6 +43,19 @@ public class DataController {
         return ApiResponse.ok(savedFile, "파일이 성공적으로 등록되었습니다.");
     }
 
+    @PutMapping("/{fileId}/category")
+    public ApiResponse<File> updateFileCategory(
+            @AuthenticationPrincipal Users user,
+            @PathVariable Long fileId,
+            @RequestParam String categoryName
+    ) {
+        try {
+            File updated = dataService.updateFileCategory(fileId, categoryName, user);
+            return ApiResponse.ok(updated, "파일의 카테고리가 성공적으로 변경되었습니다.");
+        } catch (Exception e) {
+            return ApiResponse.fail("FILE_CATEGORY_UPDATE_FAIL", e.getMessage());
+        }
+    }
 
 
 
