@@ -51,7 +51,7 @@ class AuthRepositoryImpl @Inject constructor(
         }
     }
 
-    /** ✅ Google 로그인 */
+    /** Google 로그인 */
     override suspend fun loginWithGoogle(idToken: String): Result<User> {
         return withContext(ioDispatcher) {
             try {

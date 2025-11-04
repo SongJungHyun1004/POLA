@@ -60,7 +60,7 @@ class GoogleSignInManager @Inject constructor(
 
             // 직접 계정 선택 UI를 표시 (filterByAuthorizedAccounts = false)
             val option = GetGoogleIdOption.Builder()
-                .setFilterByAuthorizedAccounts(false)  // 🔥 모든 계정 표시
+                .setFilterByAuthorizedAccounts(false)  // 모든 계정 표시
                 .setServerClientId(WEB_CLIENT_ID)
                 .setAutoSelectEnabled(false)  // 자동 선택 비활성화 -> 무조건 UI 표시
                 .setNonce(generateNonce())

@@ -166,6 +166,7 @@ fun TagSelectScreen(
     if (showAddDialog && currentCategory != null) {
         AddTagDialog(
             categoryTitle = currentCategory?.title ?: "커스텀",
+            existingTags = currentCategory?.tags ?: emptyList(),
             onDismiss = { showAddDialog = false },
             onConfirm = { newTags ->
                 customTagsMap = customTagsMap + (currentCategory!!.title to
@@ -300,11 +301,13 @@ private fun AddButton(onClick: () -> Unit = {}) {
 @Composable
 fun AddTagDialog(
     categoryTitle: String,
+    existingTags: List<String> = emptyList(),
     onDismiss: () -> Unit,
     onConfirm: (List<String>) -> Unit
 ) {
     var text by remember { mutableStateOf("") }
     var addedTags by remember { mutableStateOf(listOf<String>()) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     AlertDialog(
         modifier = Modifier.width(250.dp),
@@ -330,19 +333,36 @@ fun AddTagDialog(
                     value = text,
                     onValueChange = { newValue ->
                         if (newValue.endsWith(" ") && text.isNotBlank()) {
-                            // 스페이스바가 입력되면 태그 추가
                             val newTag = text.trim()
-                            if (newTag.isNotEmpty()) {
-                                addedTags = addedTags + newTag
-                                text = ""
+                            when {
+                                newTag.isEmpty() -> {
+                                    text = ""
+                                }
+                                existingTags.contains(newTag) -> {
+                                    errorMessage = "이미 존재하는 태그입니다"
+                                    text = ""
+                                }
+                                addedTags.contains(newTag) -> {
+                                    errorMessage = "이미 추가한 태그입니다"
+                                    text = ""
+                                }
+                                else -> {
+                                    addedTags = addedTags + newTag
+                                    text = ""
+                                    errorMessage = null
+                                }
                             }
                         } else {
                             text = newValue
+                            if (errorMessage != null) {
+                                errorMessage = null
+                            }
                         }
                     },
                     placeholder = {
                         Text(
                             text = "태그 입력 후 스페이스바 입력",
+                            fontSize = 12.sp,
                             color = Color.Gray
                         )
                     },
@@ -357,8 +377,18 @@ fun AddTagDialog(
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Color.Transparent,
                         unfocusedBorderColor = Color.Transparent,
-                    )
+                    ),
+                    isError = errorMessage != null
                 )
+
+                if (errorMessage != null) {
+                    Text(
+                        text = errorMessage!!,
+                        fontSize = 12.sp,
+                        color = Color.Red,
+                        modifier = Modifier.padding(top = 4.dp, start = 4.dp)
+                    )
+                }
 
                 // 추가된 태그들 표시
                 if (addedTags.isNotEmpty()) {
