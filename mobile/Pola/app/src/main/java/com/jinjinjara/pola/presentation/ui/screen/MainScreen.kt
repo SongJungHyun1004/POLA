@@ -63,7 +63,8 @@ fun MainScreen(
 //        BottomNavItem.Upload.route,
         BottomNavItem.Remind.route,
         BottomNavItem.My.route,
-        Screen.Category.route
+        Screen.Category.route,
+        Screen.Tag.route,
     )
     Scaffold(
         modifier = modifier,
@@ -82,7 +83,12 @@ fun MainScreen(
                     ) {
                         BottomNavItem.items.forEach { item ->
                             val selected = currentDestination?.hierarchy?.any {
-                                it.route == item.route
+                                when (item.route) {
+                                    Screen.Home.route -> it.route == NavGraphs.HOME_TAB || it.route == item.route
+                                    Screen.Timeline.route -> it.route == NavGraphs.TIMELINE_TAB || it.route == item.route
+                                    Screen.My.route -> it.route == NavGraphs.MY_TAB || it.route == item.route
+                                    else -> it.route == item.route
+                                }
                             } == true
 
                             Box(

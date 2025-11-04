@@ -1,17 +1,19 @@
 package com.jinjinjara.pola.data.dto.response;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+
+import com.jinjinjara.pola.data.entity.Tag;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-@Builder
+@Getter
 @NoArgsConstructor
 @AllArgsConstructor
 public class TagResponse {
-    @JsonProperty("id")
     private Long id;
-
-    @JsonProperty("tag_name")
     private String tagName;
+
+    public static TagResponse fromEntity(Tag tag) {
+        return new TagResponse(tag.getId(), tag.getTagName());
+    }
 }

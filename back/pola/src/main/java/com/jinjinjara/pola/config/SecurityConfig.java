@@ -1,5 +1,6 @@
 package com.jinjinjara.pola.config;
 
+import com.jinjinjara.pola.auth.OAuth2SuccessHandler;
 import com.jinjinjara.pola.auth.jwt.JwtAccessDeniedHandler;
 import com.jinjinjara.pola.auth.jwt.JwtAuthenticationEntryPoint;
 import com.jinjinjara.pola.auth.jwt.TokenProvider;
@@ -23,6 +24,7 @@ public class SecurityConfig {
     private final CorsFilter corsFilter;
     private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private final OAuth2SuccessHandler oAuth2SuccessHandler;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -51,12 +53,15 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/swagger-resources/**",
                                 "/webjars/**",
-
+                                "/login/oauth2/success",
                                 "/api/v1/oauth/**"
                         ) // 로그인, 회원가입, 스웨거는 열어주기
                         .permitAll()
                         .requestMatchers("/api/v2/admin/**").hasAuthority("ROLE_ADMIN") // 관리자 페이지 role 추가
                         .anyRequest().authenticated()
+                )
+                .oauth2Login(oauth2 -> oauth2
+                        .successHandler(oAuth2SuccessHandler)
                 )
                 // JwtFilter 를 addFilterBefore 로 등록했던 JwtSecurityConfig 클래스를 적용
                 .with(new JwtSecurityConfig(tokenProvider), customizer -> customizer.getClass());

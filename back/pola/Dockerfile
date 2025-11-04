@@ -4,12 +4,12 @@ WORKDIR /app
 
 # build.gradle
 COPY build.gradle settings.gradle gradlew ./ 
-#gradle
+# gradle
 COPY gradle ./gradle
-#  src
+# src
 COPY src ./src
 
-#  /app/gradlew 를 실행
+# /app/gradlew 를 실행
 RUN chmod +x ./gradlew
 RUN ./gradlew bootjar
 

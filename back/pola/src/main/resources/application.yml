@@ -7,7 +7,6 @@ spring:
   # ===============================
   datasource:
     driver-class-name: org.postgresql.Driver
-    # [Note] Use container name (postgres) instead of localhost in Docker
     #    url: jdbc:postgresql://postgres:5432/pola_db
     url: jdbc:postgresql://k13d204.p.ssafy.io:30432/pola_db
     username: ${DB_USERNAME}
@@ -34,6 +33,12 @@ spring:
       host: k13d204.p.ssafy.io
       port: 6379
       password: ${REDIS_PASSWORD}
+      # opensearch
+    elasticsearch:
+      client:
+        uris: http://k13d204.p.ssafy.io:30920
+      repositories:
+        enabled: true
 
   # ===============================
   # Security & OAuth2
@@ -124,3 +129,12 @@ cloud:
 # ===============================
 google:
   client-ids: ${GOOGLE_WEB_CLIENT_ID},${GOOGLE_ANDROID_CLIENT_ID}
+
+# ===============================
+# Custom Application Properties
+# ===============================
+app:
+  oauth2:
+    redirect-uri:
+      web: https://k13d204.p.ssafy.io/oauth2/redirect
+      mobile: pola-app://oauth2/redirect
