@@ -52,7 +52,7 @@ data class OAuthApiResponse<T>(
     val status: String,
 
     @Json(name = "code")
-    val code: String
+    val code: String? = null
 )
 
 // OAuth 토큰 데이터
