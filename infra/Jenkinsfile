@@ -101,8 +101,6 @@ pipeline {
                         IMAGE_NAME = "pola-frontend"
                         IMAGE_TAG = "${BUILD_NUMBER}"
                         DEPLOY_NAMESPACE = "pola"
-                        NEXT_PUBLIC_API_URL = "https://k13d204.p.ssafy.io/api"
-                        NEXT_PUBLIC_GOOGLE_CLIENT_ID = "263989749255-e66idiieu47nridhgicm05e5a3vragnv.apps.googleusercontent.com"
                     }
                     stages {
                         stage("Build") {
@@ -110,6 +108,13 @@ pipeline {
                                 echo "Building Next.js application..."
                                 dir("web/pola") {
                                     sh '''
+                                        # Kubernetes Secret에서 환경변수 가져오기
+                                        export NEXT_PUBLIC_API_URL=$(kubectl get secret frontend-build-env -n pola -o jsonpath='{.data.NEXT_PUBLIC_API_URL}' | base64 -d)
+                                        export NEXT_PUBLIC_GOOGLE_CLIENT_ID=$(kubectl get secret frontend-build-env -n pola -o jsonpath='{.data.NEXT_PUBLIC_GOOGLE_CLIENT_ID}' | base64 -d)
+
+                                        echo "Using NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}"
+                                        echo "Using NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID:0:20}..."
+
                                         # 빌드 스크립트 생성
                                         cat > /tmp/build.sh << 'EOF'
 #!/bin/sh
