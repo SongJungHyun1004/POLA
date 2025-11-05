@@ -1,46 +1,24 @@
-
-  # ---------------------------------
-  # Stage 1: Build
-  # ---------------------------------
   FROM node:20-alpine AS builder
-
   WORKDIR /app
-
-  # Corepack 활성화 및 Yarn 설정
   RUN corepack enable
-
-  # 의존성 파일 복사 및 설치
   COPY package.json yarn.lock .yarnrc.yml ./
   RUN yarn install --immutable
 
-  # 빌드 인자 선언
   ARG NEXT_PUBLIC_API_URL
   ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID
-
-  # 환경변수로 설정
   ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
   ENV NEXT_PUBLIC_GOOGLE_CLIENT_ID=${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
 
-  # 소스 복사 및 빌드
   COPY . .
   RUN yarn build
 
-  # ---------------------------------
-  # Stage 2: Production
-  # ---------------------------------
   FROM node:20-alpine
-
   WORKDIR /app
-
-  # 환경 변수 설정
   ENV NODE_ENV=production
-
-  # Next.js standalone 빌드 결과물 복사
-  COPY --from=builder /app/.next/standalone ./
-  COPY --from=builder /app/.next/static ./.next/static
+  RUN corepack enable
+  COPY --from=builder /app/package.json /app/yarn.lock /app/.yarnrc.yml ./
+  COPY --from=builder /app/.next ./.next
   COPY --from=builder /app/public ./public
-
+  RUN yarn install --production --immutable
   EXPOSE 3000
-
-  # standalone 모드에서는 server.js를 직접 실행
-  CMD ["node", "server.js"]
+  CMD ["yarn", "start"]
