@@ -1,23 +1,35 @@
 package com.jinjinjara.pola.data.service;
 
+import com.jinjinjara.pola.auth.repository.UserRepository;
 import com.jinjinjara.pola.common.CustomException;
 import com.jinjinjara.pola.common.ErrorCode;
+import com.jinjinjara.pola.data.dto.request.CategoryWithTags;
+import com.jinjinjara.pola.data.dto.request.InitCategoryTagRequest;
 import com.jinjinjara.pola.data.dto.response.CategoryResponse;
 import com.jinjinjara.pola.data.entity.Category;
+import com.jinjinjara.pola.data.entity.CategoryTag;
 import com.jinjinjara.pola.data.repository.CategoryRepository;
+import com.jinjinjara.pola.data.repository.CategoryTagRepository;
+import com.jinjinjara.pola.data.repository.TagRepository;
 import com.jinjinjara.pola.user.entity.Users;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.util.List;
+import java.util.stream.Collectors;
+import com.jinjinjara.pola.data.dto.response.RecommendedCategory;
+import com.jinjinjara.pola.data.dto.response.RecommendedCategoryList;
+import com.jinjinjara.pola.data.entity.Tag;
 
+import java.util.*;
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class CategoryService {
 
     private final CategoryRepository categoryRepository;
+    private final TagRepository tagRepository;
+    private final CategoryTagRepository categoryTagRepository;
 
     /**
      * CREATE - 카테고리 생성
@@ -127,4 +139,26 @@ public class CategoryService {
             throw new CustomException(ErrorCode.CATEGORY_DELETE_FAIL, e.getMessage());
         }
     }
+
+
+
+    /**
+     * 기본 카테고리별 추천 태그 리스트 반환
+     */
+    public RecommendedCategoryList getRecommendations() {
+        List<RecommendedCategory> recs = List.of(
+                new RecommendedCategory("업무", List.of("회의", "보고서", "프로젝트", "결제")),
+                new RecommendedCategory("스터디", List.of("공부", "과제", "정리필요", "노트")),
+                new RecommendedCategory("아이디어", List.of("영감", "브레인스토밍", "기획", "메모")),
+                new RecommendedCategory("사진", List.of("추억", "여행", "가족", "풍경")),
+                new RecommendedCategory("영수증", List.of("지출", "정산", "회계", "보관"))
+        );
+
+        return RecommendedCategoryList.builder()
+                .recommendations(recs)
+                .build();
+    }
+
+
+
 }
