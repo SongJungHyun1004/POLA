@@ -35,9 +35,22 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         String email = oAuth2User.getAttribute("email");
         log.info("OAuth2 로그인 성공. 사용자 이메일: {}", email);
 
-        // DB에서 사용자 정보 조회
-        Users user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("가입되지 않은 사용자입니다."));
+        // DB에서 사용자 정보 조회 또는 생성
+        Users user = userRepository.findByEmail(email).orElseGet(() -> {
+            // 신규 사용자 자동 생성
+            String name = oAuth2User.getAttribute("name");
+            String picture = oAuth2User.getAttribute("picture");
+            String sub = oAuth2User.getAttribute("sub");
+
+            Users newUser = Users.builder()
+                    .email(email)
+                    .displayName(name)
+                    .profileImageUrl(picture)
+                    .googleSub(sub)
+                    .role("ROLE_USER")
+                    .build();
+            return userRepository.save(newUser);
+        });
         Long userId = user.getId();
 
         // TokenProvider를 사용하여 JWT 토큰 생성
