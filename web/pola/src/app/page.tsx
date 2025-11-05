@@ -18,7 +18,9 @@ export default function LandingPage() {
     if (res.ok) {
       window.location.href = "/home";
     } else {
-      alert("로그인 실패");
+      window.location.href = "/onboarding";
+      // alert("로그인 실패");
+      // TODO: 이후에 실제 API 연결 필요
     }
   };
 
