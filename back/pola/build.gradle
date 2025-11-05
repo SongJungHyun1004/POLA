@@ -64,6 +64,12 @@ dependencies {
     // --- OpenSearch (공식 권장 방식: Java Client) ---
     implementation 'org.opensearch.client:opensearch-java:2.13.0'
     implementation 'org.opensearch.client:opensearch-rest-client:2.13.0'
+
+    // Google Cloud BOM
+    implementation platform('com.google.cloud:libraries-bom:26.70.0')
+
+    // Vision API
+    implementation 'com.google.cloud:google-cloud-vision'
 }
 
 tasks.named('test') {
