@@ -1,6 +1,10 @@
 package com.jinjinjara.pola.controller;
 
 import com.jinjinjara.pola.common.ApiResponse;
+import com.jinjinjara.pola.common.CustomException;
+import com.jinjinjara.pola.common.dto.FileResponseDto;
+import com.jinjinjara.pola.common.dto.PageRequestDto;
+import com.jinjinjara.pola.common.dto.PagedResponseDto;
 import com.jinjinjara.pola.data.dto.request.FileUploadCompleteRequest;
 import com.jinjinjara.pola.data.dto.response.*;
 import com.jinjinjara.pola.data.entity.File;
@@ -11,6 +15,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -87,31 +92,28 @@ public class DataController {
     ) {
         File updated = dataService.removeFavorite(fileId, user);
         return ApiResponse.ok(updated, "파일이 즐겨찾기에서 제거되었습니다.");
-    }
-
-    // 즐겨찾기된 파일 조회
-    @Operation(summary = "즐겨찾기된 파일 조회", description = "현재 로그인된 유저의 즐겨찾기 파일 목록을 조회합니다.")
-    @GetMapping("/favorites")
-    public ApiResponse<List<File>> getFavoriteFiles(@AuthenticationPrincipal Users user) {
-        List<File> favorites = dataService.getFavoriteFiles(user);
-        return ApiResponse.ok(favorites, "즐겨찾기된 파일 목록 조회 성공");
-    }
+    }//    // 즐겨찾기된 파일 조회
+//    @Operation(summary = "즐겨찾기된 파일 조회", description = "현재 로그인된 유저의 즐겨찾기 파일 목록을 조회합니다.")
+//    @GetMapping("/favorites")
+//    public ApiResponse<List<File>> getFavoriteFiles(@AuthenticationPrincipal Users user) {
+//        List<File> favorites = dataService.getFavoriteFiles(user);
+//        return ApiResponse.ok(favorites, "즐겨찾기된 파일 목록 조회 성공");
+//    }
 
 
-    // ==========================================
-    //  즐겨찾기 정렬순서 변경
-    // ==========================================
-    @Operation(summary = "즐겨찾기 순서 변경", description = "즐겨찾기 상태인 파일의 정렬 우선순위를 변경합니다.")
-    @PutMapping("/{fileId}/favorite/sort")
+
+
+    @Operation(summary = "즐겨찾기 순서 변경", description = "특정 파일의 즐겨찾기 순서를 변경합니다.\n" +
+            "예: 파일 5번을 2~3 사이에 넣으면 3번이 되고, 나머지는 한 칸씩 밀립니다. 앞이아닌 뒤에끼어넣기도 가능")
+    @PutMapping("/{fileId}/sort")
     public ApiResponse<File> updateFavoriteSort(
             @AuthenticationPrincipal Users user,
-            @Parameter(description = "파일 ID", example = "101") @PathVariable Long fileId,
-            @Parameter(description = "새 정렬 우선순위", example = "2") @RequestParam Integer sort
+            @Parameter(description = "파일 ID", example = "5") @PathVariable Long fileId,
+            @Parameter(description = "새로운 정렬 순서", example = "3") @RequestParam int newSort
     ) {
-        File updated = dataService.updateFavoriteSort(fileId, sort, user);
-        return ApiResponse.ok(updated, "즐겨찾기 순서가 변경되었습니다.");
+        File updated = dataService.updateFavoriteSort(fileId, newSort, user);
+        return ApiResponse.ok(updated, "즐겨찾기 순서 변경 완료");
     }
-
     // ==========================================
     // 파일 삭제 (임시)
     // ==========================================
@@ -174,4 +176,37 @@ public class DataController {
 
         return ApiResponse.ok(data, "데이터 목록 조회에 성공했습니다.");
     }
+    @Operation(
+            summary = "파일 목록 조회",
+            description = """
+                    유저별 파일 목록을 페이징, 정렬, 필터 조건으로 조회합니다.  
+                    - filterType: category, favorite, (없음)
+                    - filterId: categoryId (category일 때만 필요)
+                    - sortBy, direction 으로 정렬 지정 가능
+                    """
+    )
+    @PostMapping("/list")
+    public ApiResponse<PagedResponseDto<FileResponseDto>> getFileList(
+            @AuthenticationPrincipal Users user,
+            @RequestBody PageRequestDto request
+    ) {
+        Page<File> filePage = dataService.getFiles(user, request);
+
+        List<FileResponseDto> fileResponses = filePage.getContent().stream()
+                .map(FileResponseDto::fromEntity)
+                .toList();
+
+        PagedResponseDto<FileResponseDto> response = PagedResponseDto.<FileResponseDto>builder()
+                .content(fileResponses)
+                .page(filePage.getNumber())
+                .size(filePage.getSize())
+                .totalElements(filePage.getTotalElements())
+                .totalPages(filePage.getTotalPages())
+                .last(filePage.isLast())
+                .build();
+
+        return ApiResponse.ok(response, "파일 목록 조회 성공");
+    }
+
+
 }
