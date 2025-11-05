@@ -3,13 +3,7 @@ package com.jinjinjara.pola.presentation.ui.component
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Icon
@@ -20,6 +14,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -31,16 +27,25 @@ import com.jinjinjara.pola.R
 fun PolaSearchBar(
     searchText: String,
     onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onSearchClick: () -> Unit = {},
+    focusRequester: FocusRequester? = null
 ) {
     BasicTextField(
         value = searchText,
         onValueChange = onValueChange,
         modifier = modifier
-            .height(48.dp),
+            .height(48.dp)
+            .then(
+                if (focusRequester != null) {
+                    Modifier.focusRequester(focusRequester)
+                } else {
+                    Modifier
+                }
+            ),
         singleLine = true,
         textStyle = TextStyle(
-            fontSize = 14.sp,
+            fontSize = 16.sp,
             color = Color.Black
         ),
         decorationBox = { innerTextField ->
@@ -56,47 +61,19 @@ fun PolaSearchBar(
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(start = 8.dp, end = 16.dp),
+                        .padding(horizontal = 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .padding(vertical = 8.dp),
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null
-                                ) {
-                                    // ai 모드 변경
-                                },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = "AI",
-                                color = Color.White,
-                                fontSize = 12.sp,
-                                modifier = Modifier.padding(horizontal = 20.dp)
-                            )
-                        }
-                    }
-
                     Box(
                         modifier = Modifier
-                            .weight(1f)
-                            .padding(horizontal = 12.dp),
+                            .weight(1f),
                         contentAlignment = Alignment.CenterStart
                     ) {
                         if (searchText.isEmpty()) {
                             Text(
                                 text = "검색어를 입력하세요",
                                 color = Color.Gray,
-                                fontSize = 14.sp
+                                fontSize = 16.sp
                             )
                         }
                         innerTextField()
@@ -109,6 +86,12 @@ fun PolaSearchBar(
                         modifier = Modifier
                             .width(25.dp)
                             .fillMaxHeight()
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
+                                onSearchClick()
+                            }
                     )
                 }
             }

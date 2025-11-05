@@ -28,6 +28,8 @@ sealed class Screen(val route: String) {
         fun createRoute(tagName: String) = "tag/$tagName"
     }
     data object Favorite : Screen("favorite")
+    data object SearchScreen : Screen("search_screen")
+    data object Chatbot : Screen("chatbot")
 
     // Timeline 탭 내부 화면들
     data object TimelineDetail : Screen("timeline/detail/{postId}") {

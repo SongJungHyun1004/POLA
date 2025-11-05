@@ -13,6 +13,8 @@ import com.jinjinjara.pola.presentation.ui.screen.favorite.FavoriteScreen
 import com.jinjinjara.pola.presentation.ui.screen.home.HomeScreen
 import com.jinjinjara.pola.presentation.ui.screen.my.MyScreen
 import com.jinjinjara.pola.presentation.ui.screen.remind.RemindScreen
+import com.jinjinjara.pola.presentation.ui.screen.search.ChatbotScreen
+import com.jinjinjara.pola.presentation.ui.screen.search.SearchScreen
 import com.jinjinjara.pola.presentation.ui.screen.start.CategorySelectScreen
 import com.jinjinjara.pola.presentation.ui.screen.start.StartScreen
 import com.jinjinjara.pola.presentation.ui.screen.start.TagSelectScreen
@@ -98,8 +100,30 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
                 },
                 onNavigateToFavorite = {
                     navController.navigate(Screen.Favorite.route)
+                },
+                onNavigateToSearch = {
+                    navController.navigate(Screen.SearchScreen.route)
+                },
+                onNavigateToChatbot = {
+                    navController.navigate(Screen.Chatbot.route)
                 }
             )
+        }
+
+        composable(Screen.SearchScreen.route) {
+            SearchScreen(
+                onBackClick = { navController.popBackStack() },
+                onTagClick = { tagName ->
+                    navController.navigate(Screen.Tag.createRoute(tagName.removePrefix("#")))
+                },
+                onSearchClick = { searchQuery ->
+                    // TODO: 검색 버튼 클릭 시 동작 구현
+                }
+            )
+        }
+
+        composable(Screen.Chatbot.route) {
+            ChatbotScreen()
         }
 
         // Home Detail 화면 예시
