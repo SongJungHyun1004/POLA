@@ -1,0 +1,185 @@
+pipeline {
+    agent any
+
+    stages {
+        // 저장소를 체크아웃하는 공통 단계
+        stage("Checkout") {
+            steps {
+                echo "Cleaning workspace and checking out repository..."
+                deleteDir()
+                git branch: "develop",
+                    credentialsId: "gitlab-credentials",
+                    url: "https://lab.ssafy.com/s13-final/S13P31D204.git"
+            }
+        }
+
+        // 백엔드와 프론트엔드 파이프라인을 병렬로 실행
+        stage("Build & Deploy") {
+            parallel {
+                // =================================================================
+                // Backend Pipeline
+                // back/** 경로에 변경이 있을 때만 실행됩니다.
+                // =================================================================
+                stage("Backend") {
+                    when {
+                        changeset "back/**"
+                    }
+                    environment {
+                        IMAGE_NAME = "pola-backend"
+                        IMAGE_TAG = "${BUILD_NUMBER}"
+                        DEPLOY_NAMESPACE = "pola"
+                    }
+                    stages {
+                        stage("Build") {
+                            steps {
+                                echo "Building Spring Boot application..."
+                                dir("back/pola") {
+                                    sh '''
+                                        chmod +x ./gradlew
+                                        ./gradlew clean bootJar
+                                    '''
+                                }
+                            }
+                        }
+                        stage("Docker Build") {
+                            steps {
+                                echo "Building Backend Docker image..."
+                                dir("back/pola") {
+                                    sh '''
+                                        docker build -t ${IMAGE_NAME}:${IMAGE_TAG} -f Dockerfile .
+                                        docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
+                                    '''
+                                }
+                            }
+                        }
+                        stage("Import to K3s") {
+                            steps {
+                                echo "Importing Backend Docker image to K3s..."
+                                sh '''
+                                    docker save ${IMAGE_NAME}:${IMAGE_TAG} | sudo k3s ctr images import -
+                                    docker save ${IMAGE_NAME}:latest | sudo k3s ctr images import -
+                                '''
+                            }
+                        }
+                        stage("Deploy to K3s") {
+                            steps {
+                                echo "Deploying Backend to K3s cluster..."
+                                sh '''
+                                    kubectl set image deployment/backend backend=${IMAGE_NAME}:${IMAGE_TAG} -n ${DEPLOY_NAMESPACE}
+                                    kubectl rollout status deployment/backend -n ${DEPLOY_NAMESPACE}
+                                '''
+                            }
+                        }
+                        stage("Cleanup") {
+                            steps {
+                                echo "Cleaning up old Backend Docker images..."
+                                sh '''
+                                    docker images ${IMAGE_NAME} --format "{{.Tag}}" | grep -E "^[0-9]+$" | sort -nr | tail -n +4 | xargs -r -I {} docker rmi ${IMAGE_NAME}:{} || true
+                                '''
+                            }
+                        }
+                    }
+                    post {
+                        success {
+                            echo "Backend deployment successful!"
+                        }
+                        failure {
+                            echo "Backend deployment failed!"
+                        }
+                    }
+                }
+
+                // =================================================================
+                // Frontend Pipeline
+                // web/** 경로에 변경이 있을 때만 실행됩니다.
+                // =================================================================
+                stage("Frontend") {
+                    when {
+                        changeset "web/**"
+                    }
+                    environment {
+                        IMAGE_NAME = "pola-frontend"
+                        IMAGE_TAG = "${BUILD_NUMBER}"
+                        DEPLOY_NAMESPACE = "pola"
+                    }
+                    stages {
+                        stage("Build") {
+                            steps {
+                                echo "Building Next.js application..."
+                                dir("web/pola") {
+                                    sh '''
+                                        # 빌드 스크립트 생성
+                                        cat > /tmp/build.sh << 'EOF'
+#!/bin/sh
+corepack enable
+yarn install --frozen-lockfile
+yarn build
+EOF
+
+                                        # Docker 컨테이너에서 빌드 실행
+                                        docker run --rm \
+                                            -v "$(pwd)":/app \
+                                            -v /tmp/build.sh:/build.sh \
+                                            -w /app \
+                                            node:20-alpine \
+                                            sh /build.sh
+                                    '''
+                                }
+                            }
+                        }
+                        stage("Docker Build") {
+                            steps {
+                                echo "Building Frontend Docker image..."
+                                dir("web/pola") {
+                                    sh '''
+                                        docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+                                        docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
+                                    '''
+                                }
+                            }
+                        }
+                        stage("Import to K3s") {
+                            steps {
+                                echo "Importing Frontend Docker image to K3s..."
+                                sh '''
+                                    docker save ${IMAGE_NAME}:${IMAGE_TAG} | sudo k3s ctr images import -
+                                    docker save ${IMAGE_NAME}:latest | sudo k3s ctr images import -
+                                '''
+                            }
+                        }
+                        stage("Deploy to K3s") {
+                            steps {
+                                echo "Deploying Frontend to K3s cluster..."
+                                sh '''
+                                    kubectl set image deployment/frontend frontend=${IMAGE_NAME}:${IMAGE_TAG} -n ${DEPLOY_NAMESPACE}
+                                    kubectl rollout status deployment/frontend -n ${DEPLOY_NAMESPACE}
+                                '''
+                            }
+                        }
+                        stage("Cleanup") {
+                            steps {
+                                echo "Cleaning up old Frontend Docker images..."
+                                sh '''
+                                    docker images ${IMAGE_NAME} --format "{{.Tag}}" | grep -E "^[0-9]+$" | sort -nr | tail -n +4 | xargs -r -I {} docker rmi ${IMAGE_NAME}:{} || true
+                                '''
+                            }
+                        }
+                    }
+                    post {
+                        success {
+                            echo "Frontend deployment successful!"
+                        }
+                        failure {
+                            echo "Frontend deployment failed!"
+                        }
+                    }
+                }
+            }
+        }
+    }
+    post {
+        always {
+            echo "Pipeline finished."
+        }
+    }
+}
