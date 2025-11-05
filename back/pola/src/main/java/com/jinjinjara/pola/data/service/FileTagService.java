@@ -1,5 +1,7 @@
 package com.jinjinjara.pola.data.service;
 
+import com.jinjinjara.pola.common.CustomException;
+import com.jinjinjara.pola.common.ErrorCode;
 import com.jinjinjara.pola.data.dto.response.FileTagResponse;
 import com.jinjinjara.pola.data.dto.response.TagResponse;
 import com.jinjinjara.pola.data.entity.File;
@@ -23,46 +25,67 @@ public class FileTagService {
     private final TagRepository tagRepository;
     private final FileTagRepository fileTagRepository;
 
-    // 파일에 태그 추가
+    /**
+     * 파일에 태그 추가
+     */
     public FileTagResponse addTagToFile(Long fileId, Long tagId) {
         File file = fileRepository.findById(fileId)
-                .orElseThrow(() -> new IllegalArgumentException("File not found"));
+                .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
         Tag tag = tagRepository.findById(tagId)
-                .orElseThrow(() -> new IllegalArgumentException("Tag not found"));
+                .orElseThrow(() -> new CustomException(ErrorCode.TAG_NOT_FOUND));
 
         fileTagRepository.findByFileAndTag(file, tag)
                 .ifPresent(ft -> {
-                    throw new IllegalStateException("Tag already linked to file");
+                    throw new CustomException(ErrorCode.TAG_LINK_DUPLICATE);
                 });
 
-        FileTag fileTag = FileTag.builder()
-                .file(file)
-                .tag(tag)
-                .build();
+        try {
+            FileTag fileTag = FileTag.builder()
+                    .file(file)
+                    .tag(tag)
+                    .build();
 
-        return FileTagResponse.fromEntity(fileTagRepository.save(fileTag));
+            FileTag saved = fileTagRepository.save(fileTag);
+            return FileTagResponse.fromEntity(saved);
+        } catch (Exception e) {
+            throw new CustomException(ErrorCode.TAG_CREATE_FAIL, e.getMessage());
+        }
     }
 
-    // 파일에서 태그 제거
+    /**
+     * 파일에서 태그 제거
+     */
     public void removeTagFromFile(Long fileId, Long tagId) {
         File file = fileRepository.findById(fileId)
-                .orElseThrow(() -> new IllegalArgumentException("File not found"));
+                .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
         Tag tag = tagRepository.findById(tagId)
-                .orElseThrow(() -> new IllegalArgumentException("Tag not found"));
+                .orElseThrow(() -> new CustomException(ErrorCode.TAG_NOT_FOUND));
 
-        fileTagRepository.deleteByFileAndTag(file, tag);
+        try {
+            fileTagRepository.deleteByFileAndTag(file, tag);
+        } catch (Exception e) {
+            throw new CustomException(ErrorCode.DATA_DELETE_FAIL, e.getMessage());
+        }
     }
 
-    // 파일에 연결된 모든 태그 조회
+    /**
+     * 파일에 연결된 모든 태그 조회
+     */
     @Transactional(readOnly = true)
     public List<TagResponse> getTagsByFile(Long fileId) {
         File file = fileRepository.findById(fileId)
-                .orElseThrow(() -> new IllegalArgumentException("File not found"));
+                .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
 
-        return fileTagRepository.findByFile(file)
+        List<TagResponse> tags = fileTagRepository.findByFile(file)
                 .stream()
                 .map(FileTag::getTag)
                 .map(TagResponse::fromEntity)
                 .toList();
+
+        if (tags.isEmpty()) {
+            throw new CustomException(ErrorCode.TAG_NOT_FOUND);
+        }
+
+        return tags;
     }
 }

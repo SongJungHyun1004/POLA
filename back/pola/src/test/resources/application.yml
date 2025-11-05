@@ -1,45 +1,56 @@
 spring:
-  # ===============================
-  # Test Datasource Configuration (H2 In-Memory)
-  # ===============================
-  datasource:
-    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-    username: sa
-    password:
-    driver-class-name: org.h2.Driver
-
-  # ===============================
-  # Test JPA Configuration
-  # ===============================
-  jpa:
-    hibernate:
-      ddl-auto: create-drop
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
-        dialect: org.hibernate.dialect.H2Dialect
-    database-platform: org.hibernate.dialect.H2Dialect
-
-  # ===============================
-  # H2 Console (Optional - for debugging)
-  # ===============================
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
-
-  # ===============================
-  # Redis Configuration (Embedded for Test)
-  # ===============================
+  security:
+    oauth2:
+      client:
+        registration:
+          google-web:
+            provider: google
+            client-id: test-client-id
+            client-secret: test-client-secret
+            scope: openid, profile, email
+          google-android:
+            provider: google
+            client-id: test-client-id-android
+            scope: openid, profile, email
+        provider:
+          google:
+            issuer-uri: https://accounts.google.com
   data:
     redis:
       host: localhost
       port: 6379
+      password: 
+
+# Dummy JWT secret for tests
+jwt:
+  secret: d29ybGRfZG9tZXN0aWNfZ29hdF9zcHJpbmdfYm9vdF9qd3RfdHV0b3JpYWxfc2VjcmV0X2tleQo=
+  access-token-expire-time: 3600000
+  refresh-token-expire-time: 86400000
+
+# Dummy App properties
+app:
+  oauth2:
+    redirect-uri:
+      web: http://localhost/web
+      mobile: app://mobile
+
+google:
+  client-ids: test-web-client-id,test-android-client-id
 
 # ===============================
-# AWS Configuration (Mock for Test)
+# Test AWS S3 Configuration
 # ===============================
+aws:
+  credentials:
+    accessKey: test-access-key
+    secretKey: test-secret-key
+  s3:
+    bucket: test-bucket
+    dir: test-home
+  region:
+    static: ap-northeast-2
+  stack:
+    auto: false
 cloud:
   aws:
     credentials:
@@ -47,22 +58,8 @@ cloud:
       secret-key: test-secret-key
     s3:
       bucket: test-bucket
-      dir: test
+      dir: test-home
     region:
       static: ap-northeast-2
     stack:
       auto: false
-
-# ===============================
-# JWT Configuration (Test Values)
-# ===============================
-jwt:
-  secret: dGVzdC1zZWNyZXQta2V5LWZvci1qd3QtdG9rZW4tZ2VuZXJhdGlvbi1taW5pbXVtLTI1Ni1iaXRzLXJlcXVpcmVk
-  access-token-expire-time: 3600000
-  refresh-token-expire-time: 86400000
-
-# ===============================
-# Google OAuth2 (Test Values)
-# ===============================
-google:
-  client-ids: test-client-id-1,test-client-id-2
