@@ -7,7 +7,9 @@ import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface FileRepository extends JpaRepository<File, Long> {
@@ -49,8 +51,33 @@ public interface FileRepository extends JpaRepository<File, Long> {
                             @Param("start") int start,
                             @Param("end") int end);
 
+    @Query("""
+    SELECT f FROM File f
+    WHERE f.userId = :userId
+      AND (f.lastViewedAt IS NULL OR f.lastViewedAt < :sevenDaysAgo)
+    ORDER BY f.views ASC, f.lastViewedAt ASC NULLS FIRST, f.createdAt ASC
+    """)
+    List<File> findRemindFiles(@Param("userId") Long userId,
+                               @Param("sevenDaysAgo") LocalDateTime sevenDaysAgo,
+                               Pageable pageable);
 
-    /* ----------------------- [일반 조회용] ----------------------- */
+    List<File> findTop5ByUserIdAndCategoryIdOrderByCreatedAtDesc(Long userId, Long categoryId);
+
+    List<File> findTop3ByUserIdAndFavoriteTrueOrderByCreatedAtDesc(Long userId);
+
+    List<File> findTop10ByUserIdOrderByCreatedAtDesc(Long userId);
+
+    @Query("""
+        SELECT f FROM File f
+        WHERE f.userId = :userId
+          AND (f.lastViewedAt IS NULL OR f.lastViewedAt < :sevenDaysAgo)
+        ORDER BY f.views ASC, f.createdAt DESC
+        """)
+    List<File> findRemindPreview(@Param("userId") Long userId,
+                                 @Param("sevenDaysAgo") LocalDateTime sevenDaysAgo,
+                                 Pageable pageable);
+
+    Optional<File> findByIdAndUserId(Long id, Long userId);
 
     // 유저 전체 파일 (페이징)
     Page<File> findAllByUserId(Long userId, Pageable pageable);

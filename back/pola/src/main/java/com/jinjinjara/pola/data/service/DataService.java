@@ -4,6 +4,8 @@ import com.jinjinjara.pola.common.CustomException;
 import com.jinjinjara.pola.common.ErrorCode;
 import com.jinjinjara.pola.common.dto.PageRequestDto;
 import com.jinjinjara.pola.data.dto.request.FileUploadCompleteRequest;
+import com.jinjinjara.pola.data.dto.response.DataResponse;
+import com.jinjinjara.pola.data.dto.response.FileDetailResponse;
 import com.jinjinjara.pola.data.dto.response.InsertDataResponse;
 import com.jinjinjara.pola.data.entity.Category;
 import com.jinjinjara.pola.data.entity.File;
@@ -27,6 +29,57 @@ public class DataService {
 
     private final FileRepository fileRepository;
     private final CategoryRepository categoryRepository;
+
+
+    public List<DataResponse> getRemindFiles(Long userId) {
+        LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
+
+        List<File> files = fileRepository.findRemindFiles(userId, sevenDaysAgo, PageRequest.of(0, 30));
+
+        return files.stream()
+                .map(file -> DataResponse.builder()
+                        .id(file.getId())
+                        .src(file.getSrc())
+                        .type(file.getType())
+                        .context(file.getContext())
+                        .favorite(file.getFavorite())
+                        .build())
+                .toList();
+    }
+
+    @Transactional
+    public FileDetailResponse getFileDetail(Long userId, Long fileId) {
+        File file = fileRepository.findByIdAndUserId(fileId, userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
+
+        file.setViews(file.getViews() + 1);
+        file.setLastViewedAt(LocalDateTime.now());
+        fileRepository.save(file);
+
+        return FileDetailResponse.builder()
+                .id(file.getId())
+                .userId(file.getUserId())
+                .categoryId(file.getCategoryId())
+                .src(file.getSrc())
+                .type(file.getType())
+                .context(file.getContext())
+                .ocrText(file.getOcrText())
+                .vectorId(file.getVectorId())
+                .fileSize(file.getFileSize())
+                .shareStatus(file.getShareStatus())
+                .favorite(file.getFavorite())
+                .favoriteSort(file.getFavoriteSort())
+                .favoritedAt(file.getFavoritedAt())
+                .views(file.getViews())
+                .platform(file.getPlatform())
+                .originUrl(file.getOriginUrl())
+                .createdAt(file.getCreatedAt())
+                .lastViewedAt(file.getLastViewedAt())
+                .build();
+    }
+
+
+
     /**
      * 파일 목록 조회 (페이징 + 정렬 + 필터)
      */

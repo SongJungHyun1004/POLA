@@ -100,8 +100,45 @@ public class DataController {
 //        return ApiResponse.ok(favorites, "즐겨찾기된 파일 목록 조회 성공");
 //    }
 
+    /**
+     * 리마인드 목록 조회
+     * - 최근 7일 이내에 보지 않은 파일 중
+     * - 조회수가 낮고 오래된 순으로 30개
+     */
+    @Operation(
+            summary = "리마인드 파일 목록 조회",
+            description = """
+            최근 7일 이내에 보지 않은 파일 중 조회수가 낮고 오래된 순으로 30개를 반환합니다.
+            리마인드는 사용자가 잊고 있던 데이터를 다시 상기시켜주는 용도입니다.
+            """
+    )
+    @GetMapping("/reminders")
+    public ApiResponse<List<DataResponse>> getRemindFiles(
+            @AuthenticationPrincipal Users user
+    ) {
+        List<DataResponse> responses = dataService.getRemindFiles(user.getId());
+        return ApiResponse.ok(responses, "리마인드 목록을 불러왔습니다.");
+    }
 
-
+    /**
+     * 파일 단건 상세 조회
+     * - 조회수 증가 + 마지막 열람 시각 업데이트 포함
+     */
+    @Operation(
+            summary = "파일 상세 정보 조회",
+            description = """
+            파일 단건의 상세 정보를 반환합니다.
+            호출 시 해당 파일의 조회수가 1 증가하고, 마지막 열람 시각(lastViewedAt)이 갱신됩니다.
+            """
+    )
+    @GetMapping("/{fileId}")
+    public ApiResponse<FileDetailResponse> getFileDetail(
+            @AuthenticationPrincipal Users user,
+            @PathVariable Long fileId
+    ) {
+        FileDetailResponse response = dataService.getFileDetail(user.getId(), fileId);
+        return ApiResponse.ok(response, "파일 상세 정보를 불러왔습니다.");
+    }
 
     @Operation(summary = "즐겨찾기 순서 변경", description = "특정 파일의 즐겨찾기 순서를 변경합니다.\n" +
             "예: 파일 5번을 2~3 사이에 넣으면 3번이 되고, 나머지는 한 칸씩 밀립니다. 앞이아닌 뒤에끼어넣기도 가능")
@@ -177,14 +214,30 @@ public class DataController {
         return ApiResponse.ok(data, "데이터 목록 조회에 성공했습니다.");
     }
     @Operation(
-            summary = "파일 목록 조회",
+            summary = "파일 목록(타임라인) 조회",
             description = """
-                    유저별 파일 목록을 페이징, 정렬, 필터 조건으로 조회합니다.  
-                    - filterType: category, favorite, (없음)
-                    - filterId: categoryId (category일 때만 필요)
-                    - sortBy, direction 으로 정렬 지정 가능
-                    """
+        로그인한 사용자의 파일 목록을 페이징, 정렬, 필터 조건으로 조회합니다.  
+        기본적으로 업로드 최신순(`createdAt DESC`)으로 정렬되어 **타임라인 형태**로 반환됩니다.  
+        
+        **옵션**
+        - `filterType`: category | favorite | (없음)
+        - `filterId`: categoryId (filterType이 'category'일 때만 필요)
+        - `sortBy`: 정렬 기준 필드명 (예: createdAt, views 등)
+        - `direction`: 정렬 방향 (ASC / DESC)
+        - `page`, `size`: 페이징 설정 (기본 0페이지, size 최대 50)
+        
+        **예시**
+        ```json
+        {
+          "page": 0,
+          "size": 50,
+          "sortBy": "createdAt",
+          "direction": "DESC"
+        }
+        ```
+        """
     )
+
     @PostMapping("/list")
     public ApiResponse<PagedResponseDto<FileResponseDto>> getFileList(
             @AuthenticationPrincipal Users user,
