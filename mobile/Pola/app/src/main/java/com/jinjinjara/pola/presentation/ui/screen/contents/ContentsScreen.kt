@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.jinjinjara.pola.R
 import com.jinjinjara.pola.presentation.ui.component.PolaCard
 import com.jinjinjara.pola.presentation.ui.screen.category.CategoryScreen
 
@@ -149,6 +150,12 @@ fun ContentsScreen(
                     start = 14.dp,
                     end = 14.dp
                 ),
+                // item.timeAgo
+                timeAgo = "2시간 전",
+                // if(item.fromWeb) 크롬 아이콘 else 모바일 아이콘
+                sourceIcon = R.drawable.google_chrome_icon,
+                isFavorite = isBookmarked,
+                onFavoriteClick = { isBookmarked = !isBookmarked }
                 // item 받아서 넣기
 //                imageResId = item.imageRes,
             )
