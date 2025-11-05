@@ -1,5 +1,6 @@
 package com.jinjinjara.pola.auth;
 
+import com.jinjinjara.pola.auth.dto.common.Role;
 import com.jinjinjara.pola.auth.dto.common.TokenDto;
 import com.jinjinjara.pola.auth.jwt.TokenProvider;
 import com.jinjinjara.pola.auth.repository.UserRepository;
@@ -47,7 +48,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                     .displayName(name)
                     .profileImageUrl(picture)
                     .googleSub(sub)
-                    .role("ROLE_USER")
+                    .role(Role.ROLE_USER)
                     .build();
             return userRepository.save(newUser);
         });
