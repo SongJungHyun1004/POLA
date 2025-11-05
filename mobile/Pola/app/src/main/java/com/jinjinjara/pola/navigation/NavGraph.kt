@@ -9,6 +9,7 @@ import androidx.navigation.navArgument
 import androidx.navigation.navigation
 import com.jinjinjara.pola.presentation.ui.screen.MainScreen
 import com.jinjinjara.pola.presentation.ui.screen.category.CategoryScreen
+import com.jinjinjara.pola.presentation.ui.screen.contents.ContentsEditScreen
 import com.jinjinjara.pola.presentation.ui.screen.contents.ContentsScreen
 import com.jinjinjara.pola.presentation.ui.screen.favorite.FavoriteScreen
 import com.jinjinjara.pola.presentation.ui.screen.home.HomeScreen
@@ -159,8 +160,26 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
             ContentsScreen(
                 onBackClick = { navController.popBackStack() },
                 onShareClick = { /* TODO: 공유 기능 */ },
-                onEditClick = { /* TODO: 수정 기능 */ },
+                onEditClick = {
+                    navController.navigate(Screen.ContentsEdit.createRoute(contentId))
+                },
                 onDeleteClick = { /* TODO: 삭제 기능 */ }
+            )
+        }
+
+        composable(
+            route = Screen.ContentsEdit.route,
+            arguments = listOf(
+                navArgument("contentId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val contentId = backStackEntry.arguments?.getString("contentId") ?: ""
+            ContentsEditScreen(
+                onBackClick = { navController.popBackStack() },
+                onSaveClick = {
+                    // TODO: 저장 로직
+                    navController.popBackStack()
+                }
             )
         }
 

@@ -30,6 +30,9 @@ sealed class Screen(val route: String) {
     data object Contents : Screen("contents/{contentId}") {
         fun createRoute(contentId: String) = "contents/$contentId"
     }
+    data object ContentsEdit : Screen("contents/edit/{contentId}") {
+        fun createRoute(contentId: String) = "contents/edit/$contentId"
+    }
     data object Favorite : Screen("favorite")
 
     // Timeline 탭 내부 화면들
