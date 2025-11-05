@@ -109,8 +109,8 @@ pipeline {
                                 dir("web/pola") {
                                     sh '''
                                         # Kubernetes Secret에서 환경변수 가져오기
-                                        export NEXT_PUBLIC_API_URL=$(kubectl get secret frontend-build-env -n pola -o jsonpath='{.data.NEXT_PUBLIC_API_URL}' | base64 -d)
-                                        export NEXT_PUBLIC_GOOGLE_CLIENT_ID=$(kubectl get secret frontend-build-env -n pola -o jsonpath='{.data.NEXT_PUBLIC_GOOGLE_CLIENT_ID}' | base64 -d)
+                                        export NEXT_PUBLIC_API_URL=$(sudo kubectl get secret frontend-build-env -n pola -o jsonpath='{.data.NEXT_PUBLIC_API_URL}' | base64 -d)
+                                        export NEXT_PUBLIC_GOOGLE_CLIENT_ID=$(sudo kubectl get secret frontend-build-env -n pola -o jsonpath='{.data.NEXT_PUBLIC_GOOGLE_CLIENT_ID}' | base64 -d)
 
                                         echo "Using NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}"
                                         echo "Using NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID:0:20}..."
