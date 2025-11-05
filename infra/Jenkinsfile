@@ -123,6 +123,8 @@ EOF
                                             -v "$(pwd)":/app \
                                             -v /tmp/build.sh:/build.sh \
                                             -w /app \
+                                            -e NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL}" \
+                                            -e NEXT_PUBLIC_GOOGLE_CLIENT_ID="${NEXT_PUBLIC_GOOGLE_CLIENT_ID}" \
                                             node:20-alpine \
                                             sh /build.sh
                                     '''
