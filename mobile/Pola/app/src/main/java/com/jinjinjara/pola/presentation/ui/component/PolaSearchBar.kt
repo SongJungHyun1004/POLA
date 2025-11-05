@@ -29,7 +29,9 @@ fun PolaSearchBar(
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
     onSearchClick: () -> Unit = {},
-    focusRequester: FocusRequester? = null
+    focusRequester: FocusRequester? = null,
+    iconRes: Int = R.drawable.search,
+    placeholder: String = "검색어를 입력하세요"
 ) {
     BasicTextField(
         value = searchText,
@@ -71,7 +73,7 @@ fun PolaSearchBar(
                     ) {
                         if (searchText.isEmpty()) {
                             Text(
-                                text = "검색어를 입력하세요",
+                                text = placeholder,
                                 color = Color.Gray,
                                 fontSize = 16.sp
                             )
@@ -80,7 +82,7 @@ fun PolaSearchBar(
                     }
 
                     Icon(
-                        painter = painterResource(id = R.drawable.search),
+                        painter = painterResource(id = iconRes),
                         tint = MaterialTheme.colorScheme.primary,
                         contentDescription = "search",
                         modifier = Modifier

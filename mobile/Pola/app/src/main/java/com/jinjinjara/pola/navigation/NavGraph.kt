@@ -123,7 +123,9 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
         }
 
         composable(Screen.Chatbot.route) {
-            ChatbotScreen()
+            ChatbotScreen(
+                onBackClick = { navController.popBackStack() }
+            )
         }
 
         // Home Detail 화면 예시
