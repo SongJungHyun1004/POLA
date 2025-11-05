@@ -13,6 +13,14 @@
   COPY package.json yarn.lock .yarnrc.yml ./
   RUN yarn install --immutable
 
+  # 빌드 인자 선언
+  ARG NEXT_PUBLIC_API_URL
+  ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID
+
+  # 환경변수로 설정
+  ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+  ENV NEXT_PUBLIC_GOOGLE_CLIENT_ID=${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
+
   # 소스 복사 및 빌드
   COPY . .
   RUN yarn build
