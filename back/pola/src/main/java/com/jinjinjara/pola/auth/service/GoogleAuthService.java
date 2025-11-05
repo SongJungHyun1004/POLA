@@ -43,6 +43,7 @@ public class GoogleAuthService {
                     .displayName(name)
                     .profileImageUrl(picture)
                     .googleSub(sub)
+                    .role("ROLE_USER")
                     .build();
             return usersRepository.save(u);
         });
