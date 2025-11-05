@@ -19,6 +19,6 @@
   COPY --from=builder /app/package.json /app/yarn.lock /app/.yarnrc.yml ./
   COPY --from=builder /app/.next ./.next
   COPY --from=builder /app/public ./public
-  RUN yarn install --production --immutable
+  RUN yarn workspaces focus --all --production
   EXPOSE 3000
   CMD ["yarn", "start"]
