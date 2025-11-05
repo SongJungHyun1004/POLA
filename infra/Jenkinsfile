@@ -101,6 +101,8 @@ pipeline {
                         IMAGE_NAME = "pola-frontend"
                         IMAGE_TAG = "${BUILD_NUMBER}"
                         DEPLOY_NAMESPACE = "pola"
+                        NEXT_PUBLIC_API_URL = "https://k13d204.p.ssafy.io/api"
+                        NEXT_PUBLIC_GOOGLE_CLIENT_ID = "263989749255-e66idiieu47nridhgicm05e5a3vragnv.apps.googleusercontent.com"
                     }
                     stages {
                         stage("Build") {
