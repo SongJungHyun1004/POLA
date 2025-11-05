@@ -27,7 +27,10 @@ public class DataController {
 
     @Operation(
             summary = "파일 업로드 완료 처리",
-            description = "클라이언트에서 Presigned URL로 S3 업로드가 끝난 후, 해당 파일 메타데이터를 DB에 저장합니다."
+            description = "클라이언트에서 Presigned URL로 S3 업로드가 끝난 후, 해당 파일 메타데이터를 DB에 저장합니다.\n" +
+                    "https://pola-storage-bucket.s3.ap-northeast-2.amazonaws.com/home/31eea9ac-e92a-4547-8fc4-40d23530bd10.jpg?~~~~~~~~~~" +
+                    "파일업로드 링크에서 ? 앞까지의 부분을 파일업로드완료에있는 originUrl에 넣으면됨"
+
     )
     @PostMapping("/complete")
     public ApiResponse<File> saveUploadedFile(

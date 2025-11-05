@@ -7,14 +7,16 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import androidx.navigation.navigation
-import com.jinjinjara.pola.presentation.ui.CategoryScreen
 import com.jinjinjara.pola.presentation.ui.screen.MainScreen
+import com.jinjinjara.pola.presentation.ui.screen.category.CategoryScreen
+import com.jinjinjara.pola.presentation.ui.screen.favorite.FavoriteScreen
 import com.jinjinjara.pola.presentation.ui.screen.home.HomeScreen
 import com.jinjinjara.pola.presentation.ui.screen.my.MyScreen
 import com.jinjinjara.pola.presentation.ui.screen.remind.RemindScreen
 import com.jinjinjara.pola.presentation.ui.screen.start.CategorySelectScreen
 import com.jinjinjara.pola.presentation.ui.screen.start.StartScreen
 import com.jinjinjara.pola.presentation.ui.screen.start.TagSelectScreen
+import com.jinjinjara.pola.presentation.ui.screen.tag.TagScreen
 import com.jinjinjara.pola.presentation.ui.screen.timeline.TimelineScreen
 import com.jinjinjara.pola.presentation.ui.screen.upload.UploadScreen
 
@@ -93,6 +95,9 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
             HomeScreen(
                 onNavigateToCategory = { categoryName ->
                     navController.navigate(Screen.Category.createRoute(categoryName))
+                },
+                onNavigateToFavorite = {
+                    navController.navigate(Screen.Favorite.route)
                 }
             )
         }
@@ -120,6 +125,28 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
             val categoryName = backStackEntry.arguments?.getString("categoryName") ?: ""
             CategoryScreen(
                 categoryName = categoryName,
+                onBackClick = { navController.popBackStack() },
+                onNavigateToTag = { tagName ->
+                    navController.navigate(Screen.Tag.createRoute(tagName))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.Tag.route,
+            arguments = listOf(
+                navArgument("tagName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val tagName = backStackEntry.arguments?.getString("tagName") ?: ""
+            TagScreen(
+                tagName = tagName,
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.Favorite.route) {
+            FavoriteScreen(
                 onBackClick = { navController.popBackStack() }
             )
         }
