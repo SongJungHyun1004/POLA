@@ -98,3 +98,22 @@ body {
 .no-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
+
+.timeline-vertical {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+}
+
+.film-stack {
+  display: grid;
+  grid-auto-flow: row;
+  grid-template-rows: repeat(5, 129px);
+  grid-auto-columns: 160px;
+  gap: 12px;
+  align-content: end;
+  justify-content: center;
+  max-height: calc(129px * 5 + 12px * 4);
+  overflow: visible;
+  border-radius: 12px;
+}
