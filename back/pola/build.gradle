@@ -26,7 +26,10 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-security'
-    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation ('org.springframework.boot:spring-boot-starter-data-redis') {
+        exclude group: 'io.lettuce', module: 'lettuce-core'
+    }
+    implementation 'redis.clients:jedis'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'  // Health Check용
 
     // --- Swagger (API 문서) ---
