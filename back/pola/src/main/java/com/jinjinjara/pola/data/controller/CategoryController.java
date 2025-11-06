@@ -7,6 +7,7 @@ import com.jinjinjara.pola.user.entity.Users;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,21 +20,19 @@ public class CategoryController {
 
     private final CategoryService categoryService;
 
-    private Users mockUser() {
-        return Users.builder().id(1L).build();
-    }
 
     @Operation(summary = "카테고리 생성")
     @PostMapping
-    public ApiResponse<CategoryResponse> create(@RequestParam String name) {
-        CategoryResponse category = categoryService.createCategory(mockUser(), name);
+    public ApiResponse<CategoryResponse> create(@RequestParam String name
+    ,@AuthenticationPrincipal Users user) {
+        CategoryResponse category = categoryService.createCategory(user, name);
         return ApiResponse.ok(category, "카테고리가 성공적으로 생성되었습니다.");
     }
 
     @Operation(summary = "카테고리 전체 조회")
     @GetMapping
-    public ApiResponse<List<CategoryResponse>> getAll() {
-        List<CategoryResponse> categories = categoryService.getCategoriesByUser(mockUser());
+    public ApiResponse<List<CategoryResponse>> getAll(@AuthenticationPrincipal Users user) {
+        List<CategoryResponse> categories = categoryService.getCategoriesByUser(user);
         return ApiResponse.ok(categories, "카테고리 목록 조회 완료");
     }
 

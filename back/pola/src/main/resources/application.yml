@@ -3,6 +3,12 @@ spring:
     name: pola
 
   # ===============================
+  # Lifecycle (Graceful Shutdown)
+  # ===============================
+  lifecycle:
+    timeout-per-shutdown-phase: 30s  # 종료 시 최대 30초 대기
+
+  # ===============================
   # Database Configuration
   # ===============================
   datasource:
@@ -76,6 +82,7 @@ jwt:
 server:
   port: 8080
   url: https://k13d204.p.ssafy.io
+  shutdown: graceful  # 무중단 배포를 위한 우아한 종료
 
 # ===============================
 # Logging
@@ -93,6 +100,20 @@ springdoc:
     path: /api-docs
   swagger-ui:
     path: /swagger-ui.html
+
+# ===============================
+# Actuator (Health Check)
+# ===============================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when-authorized
 
 # ===============================
 # S3 (From HEAD)
