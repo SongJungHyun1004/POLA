@@ -12,7 +12,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class FileSearchController {
 
-    private final com.jinjinjara.pola.opensearch.service.FileSearchService service;
+    private final com.jinjinjara.pola.search.service.FileSearchService service;
 
     @PostMapping
     public void save(@RequestBody FileSearch file) throws IOException {

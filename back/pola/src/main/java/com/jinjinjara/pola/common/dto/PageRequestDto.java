@@ -15,15 +15,19 @@ import org.springframework.data.domain.Sort;
 public class PageRequestDto {
 
     @Schema(description = "페이지 번호 (0부터 시작)", example = "0")
+    @Builder.Default
     private int page = 0;
 
     @Schema(description = "페이지 크기", example = "20")
+    @Builder.Default
     private int size = 20;
 
     @Schema(description = "정렬 기준 필드명", example = "createdAt")
+    @Builder.Default
     private String sortBy = "createdAt";
 
     @Schema(description = "정렬 방향 (ASC/DESC)", example = "DESC")
+    @Builder.Default
     private String direction = "DESC";
 
     @Schema(description = "필터 종류 (category, favorite 등)", example = "category")
