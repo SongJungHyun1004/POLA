@@ -4,6 +4,7 @@
 ### Android ###
 google-services.json
 
+
 # Gradle files
 .gradle/
 build/
@@ -596,6 +597,31 @@ obj/
 !/gradle/wrapper/gradle-wrapper.jar
 
 # End of https://www.toptal.com/developers/gitignore/api/python,venv,android,react,web,intellij,androidstudio,java,maven,gradle,nextjs
-*.pem
-*.env
+### Custom Security Rules ###
+# 🔐 서비스 계정 및 인증 파일
 *-sa.json
+vision-sa.json
+service-account*.json
+
+# 🔑 Secret 폴더 및 파일
+secrets/
+
+# 📄 환경변수 파일 (추가)
+.env.production
+.env.development
+.env.test
+
+# 🔒 인증서 및 키 파일
+*.p12
+*.pfx
+*.key
+*.crt
+
+# 📝 설정 파일 백업
+*.yml.backup
+*.yaml.backup
+*.properties.backup
+
+# 💾 데이터베이스 덤프
+*.sql
+*.dump

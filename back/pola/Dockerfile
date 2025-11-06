@@ -2,7 +2,7 @@ FROM openjdk:21-jdk-slim
 
 WORKDIR /app
 
-# build.gradle
+# build.gradle 
 COPY build.gradle settings.gradle gradlew ./ 
 # gradle
 COPY gradle ./gradle
