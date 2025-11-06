@@ -1,26 +1,27 @@
 package com.jinjinjara.pola.auth.jwt;
 
-import com.jinjinjara.pola.auth.exception.InvalidTokenException;
 import com.jinjinjara.pola.auth.redis.RedisUtil;
 import com.jinjinjara.pola.auth.dto.common.TokenDto;
-import com.jinjinjara.pola.auth.repository.UserRepository;
+import com.jinjinjara.pola.common.CustomException;
+import com.jinjinjara.pola.common.ErrorCode;
 import com.jinjinjara.pola.user.entity.Users;
+import com.jinjinjara.pola.user.repository.UsersRepository;
 import io.jsonwebtoken.*;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
-import org.springframework.beans.factory.annotation.Value;
 
 import java.security.Key;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.stream.Collectors;
 import java.util.Date;
-import io.jsonwebtoken.io.Decoders;
-import io.jsonwebtoken.security.Keys;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -32,7 +33,7 @@ public class TokenProvider {
 
     private final Key key;
     private final RedisUtil redisUtil;
-    private final UserRepository userRepository; // 추가
+    private final UsersRepository userRepository;
 
     private final long accessExpireMs;
     private final long refreshExpireMs;
@@ -42,12 +43,12 @@ public class TokenProvider {
             @Value("${jwt.access-token-expire-time}") long accessExpireMs,
             @Value("${jwt.refresh-token-expire-time}") long refreshExpireMs,
             RedisUtil redisUtil,
-            UserRepository userRepository // 추가
+            UsersRepository userRepository
     ) {
         byte[] keyBytes = Decoders.BASE64.decode(secretKey);
         this.key = Keys.hmacShaKeyFor(keyBytes);
         this.redisUtil = redisUtil;
-        this.userRepository = userRepository; // 추가
+        this.userRepository = userRepository;
         this.accessExpireMs = accessExpireMs;
         this.refreshExpireMs = refreshExpireMs;
     }
@@ -71,13 +72,20 @@ public class TokenProvider {
     }
 
     public TokenDto reissueAccessToken(String refreshToken) {
-        Claims claims = parseClaims(refreshToken);
+        validateToken(refreshToken);
 
-        if (!validateToken(refreshToken) || claims.get("isRefreshToken") == null || !Boolean.TRUE.equals(claims.get("isRefreshToken"))) {
-            throw new InvalidTokenException("유효하지 않은 리프레시 토큰입니다.");
+        Claims claims = parseClaims(refreshToken);
+        String email = claims.getSubject();
+
+        Object storedRefreshTokenObj = redisUtil.get(email);
+        if (storedRefreshTokenObj == null || !storedRefreshTokenObj.toString().equals(refreshToken)) {
+            throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN, "저장된 토큰과 일치하지 않습니다.");
         }
 
-        String email = claims.getSubject();
+        if (claims.get("isRefreshToken") == null || !Boolean.TRUE.equals(claims.get("isRefreshToken"))) {
+            throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN, "리프레시 토큰이 아닙니다.");
+        }
+
         String authorities = claims.get(AUTHORITIES_KEY).toString();
         Long userId = claims.get(USER_ID_KEY, Number.class).longValue();
 
@@ -85,7 +93,7 @@ public class TokenProvider {
         String newRefreshToken = generateRefreshToken(email, authorities, userId);
 
         redisUtil.save(email, newRefreshToken, refreshExpireMs);
-        log.info("[REDIS] saved refresh for {}: {}...", email, newRefreshToken.substring(0,16));
+        log.info("[REDIS] Rotated and saved new refresh token for {}: {}...", email, newRefreshToken.substring(0, 16));
 
         return TokenDto.builder()
                 .grantType(BEARER_TYPE)
@@ -119,12 +127,11 @@ public class TokenProvider {
                 .compact();
     }
 
-    // ✅ 수정된 부분
     public Authentication getAuthentication(String accessToken) {
         Claims claims = parseClaims(accessToken);
 
         if (claims.get(AUTHORITIES_KEY) == null) {
-            throw new RuntimeException("권한 정보가 없는 토큰입니다.");
+            throw new CustomException(ErrorCode.INVALID_ACCESS_TOKEN, "권한 정보가 없는 토큰입니다.");
         }
 
         Collection<? extends GrantedAuthority> authorities =
@@ -134,11 +141,9 @@ public class TokenProvider {
 
         Long userId = claims.get(USER_ID_KEY, Number.class).longValue();
 
-        // Users 엔티티 직접 조회
         Users user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("유효하지 않은 사용자입니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        // Principal을 Users로 설정
         return new UsernamePasswordAuthenticationToken(user, null, authorities);
     }
 
@@ -147,22 +152,20 @@ public class TokenProvider {
             Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
             return true;
         } catch (io.jsonwebtoken.security.SecurityException | MalformedJwtException e) {
-            log.error("잘못된 JWT 서명입니다.", e);
+            throw new CustomException(ErrorCode.INVALID_ACCESS_TOKEN, "잘못된 JWT 서명입니다.");
         } catch (ExpiredJwtException e) {
-            log.error("만료된 JWT 토큰입니다.", e);
+            throw new CustomException(ErrorCode.INVALID_ACCESS_TOKEN, "만료된 JWT 토큰입니다.");
         } catch (UnsupportedJwtException e) {
-            log.error("지원되지 않는 JWT 토큰입니다.", e);
+            throw new CustomException(ErrorCode.INVALID_ACCESS_TOKEN, "지원되지 않는 JWT 토큰입니다.");
         } catch (IllegalArgumentException e) {
-            log.error("JWT 토큰이 잘못되었습니다.", e);
+            throw new CustomException(ErrorCode.INVALID_ACCESS_TOKEN, "JWT 토큰이 잘못되었습니다.");
         }
-        return false;
     }
 
     private Claims parseClaims(String accessToken) {
         try {
             return Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(accessToken).getBody();
         } catch (ExpiredJwtException e) {
-            log.error("만료된 JWT 토큰입니다.", e);
             return e.getClaims();
         }
     }

@@ -36,7 +36,7 @@ spring:
   # ===============================
   data:
     redis:
-      host: k13d204.p.ssafy.io
+      host: redis
       port: 6379
       password: ${REDIS_PASSWORD}
       # opensearch
