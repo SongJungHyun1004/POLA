@@ -3,8 +3,6 @@ package com.jinjinjara.pola.controller;
 import com.jinjinjara.pola.vision.dto.response.LabelResponse;
 import com.jinjinjara.pola.vision.service.VisionService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;

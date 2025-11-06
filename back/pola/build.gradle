@@ -69,6 +69,7 @@ dependencies {
     implementation platform('com.google.cloud:libraries-bom:26.70.0')
     implementation 'com.google.cloud:google-cloud-vision'
     implementation "com.google.cloud:google-cloud-translate"
+    implementation "com.google.genai:google-genai:1.25.0"
 }
 
 tasks.named('test') {
