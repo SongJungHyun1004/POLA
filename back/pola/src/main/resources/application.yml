@@ -130,6 +130,8 @@ cloud:
 # ===============================
 google:
   client-ids: ${GOOGLE_WEB_CLIENT_ID},${GOOGLE_ANDROID_CLIENT_ID}
+  project-id: ${GCP_PROJECT_ID}
+  location: ${GCP_LOCATION}
 
 # ===============================
 # Custom Application Properties
@@ -143,3 +145,7 @@ app:
     redirect-uri:
       web: https://k13d204.p.ssafy.io/oauth2/redirect
       mobile: pola-app://oauth2/redirect
+
+gcp:
+  vision:
+    credentials-path: ${GOOGLE_APPLICATION_CREDENTIALS}
