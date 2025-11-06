@@ -5,7 +5,7 @@ import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
-public class AuthResult {
+public class AuthResultResponse {
     private final TokenResponse tokenResponse;
     private final boolean isNewUser;
 }

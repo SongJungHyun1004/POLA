@@ -1,7 +1,7 @@
 package com.jinjinjara.pola.auth.controller;
 
 import com.jinjinjara.pola.auth.dto.request.GoogleLoginRequest;
-import com.jinjinjara.pola.auth.dto.response.AuthResult;
+import com.jinjinjara.pola.auth.dto.response.AuthResultResponse;
 import com.jinjinjara.pola.auth.dto.response.TokenResponse;
 import com.jinjinjara.pola.auth.service.CustomUserDetailsService;
 import com.jinjinjara.pola.auth.dto.request.SignInRequest;
@@ -52,14 +52,14 @@ public class AuthController {
     @PostMapping("/token")
     public ResponseEntity<ApiResponse<TokenResponse>> loginWithGoogle(@Valid @RequestBody GoogleLoginRequest request) throws Exception {
         // 1. GoogleAuthService를 통해 인증 처리 및 신규 유저 여부 확인
-        AuthResult authResult = googleAuthService.authenticate(request.getIdToken());
+        AuthResultResponse authResultResponse = googleAuthService.authenticate(request.getIdToken());
 
         // 2. 응답 본문 생성 (신규/기존 회원에 따라 메시지 분기 처리)
-        ApiResponse<TokenResponse> body = ApiResponse.ok(authResult.getTokenResponse(),
-                authResult.isNewUser() ? "회원가입 및 로그인에 성공했습니다." : "로그인에 성공했습니다.");
+        ApiResponse<TokenResponse> body = ApiResponse.ok(authResultResponse.getTokenResponse(),
+                authResultResponse.isNewUser() ? "회원가입 및 로그인에 성공했습니다." : "로그인에 성공했습니다.");
 
         // 3. 신규 회원이면 201 Created, 기존 회원이면 200 OK 상태 코드 설정
-        HttpStatus status = authResult.isNewUser() ? HttpStatus.CREATED : HttpStatus.OK;
+        HttpStatus status = authResultResponse.isNewUser() ? HttpStatus.CREATED : HttpStatus.OK;
 
         // 4. ResponseEntity에 응답 본문과 상태 코드를 담아 반환
         return new ResponseEntity<>(body, status);

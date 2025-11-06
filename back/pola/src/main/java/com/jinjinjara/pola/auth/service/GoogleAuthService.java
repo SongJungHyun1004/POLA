@@ -2,7 +2,7 @@ package com.jinjinjara.pola.auth.service;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.jinjinjara.pola.auth.dto.common.Role;
-import com.jinjinjara.pola.auth.dto.response.AuthResult;
+import com.jinjinjara.pola.auth.dto.response.AuthResultResponse;
 import com.jinjinjara.pola.auth.dto.response.TokenResponse;
 import com.jinjinjara.pola.auth.oauth.GoogleTokenVerifier;
 import com.jinjinjara.pola.auth.redis.RedisUtil;
@@ -35,7 +35,7 @@ public class GoogleAuthService {
     private long refreshExpireMs;
 
     @Transactional
-    public AuthResult authenticate(String idToken) {
+    public AuthResultResponse authenticate(String idToken) {
         GoogleIdToken.Payload payload;
         try {
             payload = googleTokenVerifier.verify(idToken);
@@ -84,6 +84,6 @@ public class GoogleAuthService {
         // RefreshToken 저장
         redisUtil.save(user.getEmail(), token.getRefreshToken(), refreshExpireMs);
 
-        return new AuthResult(tokenResponse, isNewUser);
+        return new AuthResultResponse(tokenResponse, isNewUser);
     }
 }
