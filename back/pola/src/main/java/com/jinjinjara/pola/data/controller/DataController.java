@@ -237,18 +237,14 @@ public class DataController {
     )
 
     @PostMapping("/list")
-    public ApiResponse<PagedResponseDto<FileResponseDto>> getFileList(
+    public ApiResponse<PagedResponseDto<DataResponse>> getFileList(
             @AuthenticationPrincipal Users user,
             @RequestBody PageRequestDto request
     ) {
-        Page<File> filePage = dataService.getFiles(user, request);
+        Page<DataResponse> filePage = dataService.getFiles(user, request);
 
-        List<FileResponseDto> fileResponses = filePage.getContent().stream()
-                .map(FileResponseDto::fromEntity)
-                .toList();
-
-        PagedResponseDto<FileResponseDto> response = PagedResponseDto.<FileResponseDto>builder()
-                .content(fileResponses)
+        PagedResponseDto<DataResponse> response = PagedResponseDto.<DataResponse>builder()
+                .content(filePage.getContent())
                 .page(filePage.getNumber())
                 .size(filePage.getSize())
                 .totalElements(filePage.getTotalElements())
@@ -258,6 +254,7 @@ public class DataController {
 
         return ApiResponse.ok(response, "파일 목록 조회 성공");
     }
+
 
 
 }
