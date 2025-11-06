@@ -20,6 +20,8 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.components.ActivityComponent
 import com.jinjinjara.pola.presentation.ui.screen.MainScreen
 import com.jinjinjara.pola.presentation.ui.screen.category.CategoryScreen
+import com.jinjinjara.pola.presentation.ui.screen.contents.ContentsEditScreen
+import com.jinjinjara.pola.presentation.ui.screen.contents.ContentsScreen
 import com.jinjinjara.pola.presentation.ui.screen.favorite.FavoriteScreen
 import com.jinjinjara.pola.presentation.ui.screen.home.HomeScreen
 import com.jinjinjara.pola.presentation.ui.screen.my.MyScreen
@@ -197,7 +199,43 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
             val tagName = backStackEntry.arguments?.getString("tagName") ?: ""
             TagScreen(
                 tagName = tagName,
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStack() },
+                onNavigateToContents = { contentId ->
+                    navController.navigate(Screen.Contents.createRoute(contentId))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.Contents.route,
+            arguments = listOf(
+                navArgument("contentId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val contentId = backStackEntry.arguments?.getString("contentId") ?: ""
+            ContentsScreen(
+                onBackClick = { navController.popBackStack() },
+                onShareClick = { /* TODO: 공유 기능 */ },
+                onEditClick = {
+                    navController.navigate(Screen.ContentsEdit.createRoute(contentId))
+                },
+                onDeleteClick = { /* TODO: 삭제 기능 */ }
+            )
+        }
+
+        composable(
+            route = Screen.ContentsEdit.route,
+            arguments = listOf(
+                navArgument("contentId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val contentId = backStackEntry.arguments?.getString("contentId") ?: ""
+            ContentsEditScreen(
+                onBackClick = { navController.popBackStack() },
+                onSaveClick = {
+                    // TODO: 저장 로직
+                    navController.popBackStack()
+                }
             )
         }
 
