@@ -92,7 +92,8 @@ server:
 logging:
   level:
     org.springframework: INFO
-    org.springframework.data.redis: DEBUG
+    org.springframework.data.redis: TRACE
+    io.lettuce.core: TRACE
     com.jinjinjara: DEBUG
 
 # ===============================
