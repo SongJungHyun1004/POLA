@@ -70,7 +70,7 @@ fun TagScreen(
 ) {
     var isMenuExpanded by remember { mutableStateOf(false) }
     var selectedSort by remember { mutableStateOf("최신순") }
-    var viewMode by remember { mutableStateOf(ViewMode.GRID_3) }
+    var viewMode by remember { mutableStateOf(ViewMode.GRID_2) }
 
     val categories = listOf(
         ContentsItem("1", tags = listOf("말차", "라떼", "스타벅스")),
