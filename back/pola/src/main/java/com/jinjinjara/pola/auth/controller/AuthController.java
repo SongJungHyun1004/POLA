@@ -1,4 +1,4 @@
-package com.jinjinjara.pola.controller;
+package com.jinjinjara.pola.auth.controller;
 
 import com.jinjinjara.pola.auth.dto.request.GoogleLoginRequest;
 import com.jinjinjara.pola.auth.dto.response.TokenResponse;
@@ -11,8 +11,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;

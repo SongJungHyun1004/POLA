@@ -1,8 +1,6 @@
-package com.jinjinjara.pola.controller;
+package com.jinjinjara.pola.user.controller;
 
 import com.jinjinjara.pola.common.ApiResponse;
-import com.jinjinjara.pola.data.dto.response.CategoryDataResponse;
-import com.jinjinjara.pola.data.dto.response.CategoryResponse;
 import com.jinjinjara.pola.user.dto.response.UserInfoResponse;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -13,8 +11,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 @Tag(name = "User API", description = "사용자 API")
 @RestController

@@ -1,18 +1,16 @@
-package com.jinjinjara.pola.controller;
+package com.jinjinjara.pola.data.controller;
 
 import com.jinjinjara.pola.common.ApiResponse;
-import com.jinjinjara.pola.common.CustomException;
-import com.jinjinjara.pola.common.ErrorCode;
 import com.jinjinjara.pola.data.dto.response.CategoryResponse;
 import com.jinjinjara.pola.data.service.CategoryService;
 import com.jinjinjara.pola.user.entity.Users;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/users/me/categories")
 @RequiredArgsConstructor

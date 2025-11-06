@@ -1,4 +1,4 @@
-package com.jinjinjara.pola.controller;
+package com.jinjinjara.pola.data.controller;
 
 import com.jinjinjara.pola.common.ApiResponse;
 import com.jinjinjara.pola.data.dto.request.InitCategoryTagRequest;
