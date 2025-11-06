@@ -19,7 +19,12 @@ public class S3Controller {
 
     private final S3Service s3Service;
 
-    @Operation(summary = "S3 업로드 URL 생성", description = "파일명을 입력받아 S3 업로드용 Presigned URL을 생성합니다.")
+    @Operation(summary = "S3 업로드 URL 생성", description = "파일명을 입력받아 S3 업로드용 Presigned URL을 생성합니다." +
+            "헤더에 content-type 을 넣어야하고 타입에 따라서 아래처럼 넣으면됨" +
+            "\"text/plain; charset=utf-8\"\n(이거안넣으면 인코딩이상한걸로댐)" +
+            "image/png\n" +
+            "image/jpg")
+
     @GetMapping("/s3/presigned/upload")
     public ApiResponse<S3PresignedUrlResponse> getUploadUrl(
             @Parameter(description = "업로드할 원본 파일 이름", example = "example.png")

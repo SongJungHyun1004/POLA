@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 
 @Tag(name = "User API", description = "사용자 API")
 @RestController
-@RequestMapping("/api/v1/user")
+@RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
 public class UserController {
 
