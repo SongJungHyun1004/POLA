@@ -29,6 +29,8 @@ jwt:
 
 # Dummy App properties
 app:
+  cors:
+    allowed-origins: "http://localhost:3000,http://test.com"
   oauth2:
     redirect-uri:
       web: http://localhost/web
@@ -63,3 +65,5 @@ cloud:
       static: ap-northeast-2
     stack:
       auto: false
+gcp:
+  project-id: "your-test-project-id"
