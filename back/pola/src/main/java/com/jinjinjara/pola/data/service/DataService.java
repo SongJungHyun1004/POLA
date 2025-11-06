@@ -11,6 +11,7 @@ import com.jinjinjara.pola.data.entity.Category;
 import com.jinjinjara.pola.data.entity.File;
 import com.jinjinjara.pola.data.repository.CategoryRepository;
 import com.jinjinjara.pola.data.repository.FileRepository;
+import com.jinjinjara.pola.s3.service.S3Service;
 import com.jinjinjara.pola.user.entity.Users;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -22,6 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.time.LocalDateTime;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -29,7 +32,7 @@ public class DataService {
 
     private final FileRepository fileRepository;
     private final CategoryRepository categoryRepository;
-
+    private final S3Service s3Service;
 
     public List<DataResponse> getRemindFiles(Long userId) {
         LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
@@ -81,9 +84,9 @@ public class DataService {
 
 
     /**
-     * 파일 목록 조회 (페이징 + 정렬 + 필터)
+     * 파일 목록 조회 (페이징 + 정렬 + 필터 + Presigned URL)
      */
-    public Page<File> getFiles(Users user, PageRequestDto request) {
+    public Page<DataResponse> getFiles(Users user, PageRequestDto request) {
         if (user == null) {
             throw new CustomException(ErrorCode.USER_UNAUTHORIZED);
         }
@@ -91,7 +94,7 @@ public class DataService {
         Pageable pageable = request.toPageable();
 
         // 필터 타입 분기
-        return switch (request.getFilterType() == null ? "" : request.getFilterType()) {
+        Page<File> files = switch (request.getFilterType() == null ? "" : request.getFilterType()) {
             case "category" -> {
                 if (request.getFilterId() == null)
                     throw new CustomException(ErrorCode.INVALID_REQUEST, "카테고리 ID가 필요합니다.");
@@ -101,8 +104,26 @@ public class DataService {
             default -> fileRepository.findAllByUserId(user.getId(), pageable);
         };
 
+        // presigned URL 매핑 (id → key, type)
+        Map<Long, S3Service.FileMeta> metaMap = files.stream()
+                .collect(Collectors.toMap(
+                        File::getId,
+                        f -> new S3Service.FileMeta(f.getSrc(), f.getType())
+                ));
 
+
+        Map<Long, String> previewUrls = s3Service.generatePreviewUrls(metaMap);
+
+        // 변환: File → DataResponse
+        return files.map(file -> DataResponse.builder()
+                .id(file.getId())
+                .src(previewUrls.get(file.getId()))  // ✅ 미리보기용 presigned URL
+                .type(file.getType())
+                .context(file.getContext())
+                .favorite(file.getFavorite())
+                .build());
     }
+
     /**
      * Presigned URL 업로드 완료 후 DB 메타데이터 저장
      */
@@ -143,27 +164,17 @@ public class DataService {
      * 파일 카테고리 변경
      */
     @Transactional
-    public File updateFileCategory(Long fileId, String newCategoryName, Users user) {
-        File file = fileRepository.findById(fileId)
+    public File updateFileCategory(Long fileId, Long categoryId, Users user) {
+        File file = fileRepository.findByIdAndUserId(fileId, user.getId())
                 .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
 
-        if (!file.getUserId().equals(user.getId())) {
-            throw new CustomException(ErrorCode.FILE_ACCESS_DENIED);
-        }
+        Category category = categoryRepository.findByIdAndUserId(categoryId, user.getId())
+                .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
 
-        Category targetCategory = categoryRepository
-                .findByUserAndCategoryName(user, newCategoryName)
-                .orElseGet(() -> {
-                    Category newCategory = Category.builder()
-                            .user(user)
-                            .categoryName(newCategoryName)
-                            .build();
-                    return categoryRepository.save(newCategory);
-                });
-
-        file.setCategoryId(targetCategory.getId());
+        file.setCategoryId(category);
         return fileRepository.save(file);
     }
+
 
     /* =======================================================
         즐겨찾기 관련 기능
@@ -260,26 +271,4 @@ public class DataService {
         return fileRepository.save(target);
     }
 
-    /**
-     * 테스트용 목업 데이터 삽입
-     */
-    public InsertDataResponse insertData(MultipartFile file, String originUrl, com.jinjinjara.pola.data.dto.common.Platform platform) {
-        String contentType = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
-        String s3Url = "https://s3-bucket/path/to/" + file.getOriginalFilename();
-        String ocrText = "아이디\n비밀번호\n로그인";
-        String context = "파란색 버튼이 있는 로그인 화면";
-
-        return InsertDataResponse.builder()
-                .id(101L)
-                .userId(1L)
-                .categoryId(5L)
-                .src(s3Url)
-                .type(contentType)
-                .createdAt(LocalDateTime.parse("2025-10-27T10:00:00"))
-                .context(context)
-                .textOcr(ocrText)
-                .platform(platform.name())
-                .originUrl(originUrl)
-                .build();
-    }
 }
