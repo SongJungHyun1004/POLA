@@ -37,3 +37,28 @@ data class GoogleLoginRequest(
     @Json(name = "id_token")
     val idToken: String
 )
+
+// OAuth
+@JsonClass(generateAdapter = true)
+data class OAuthTokenRequest(
+    @Json(name = "idToken")
+    val idToken: String
+)
+
+@JsonClass(generateAdapter = true)
+data class OAuthSignupRequest(
+    @Json(name = "email")
+    val email: String,
+
+    @Json(name = "username")
+    val username: String
+)
+
+@JsonClass(generateAdapter = true)
+data class OAuthSigninRequest(
+    @Json(name = "email")
+    val email: String,
+
+    @Json(name = "username")
+    val username: String
+)

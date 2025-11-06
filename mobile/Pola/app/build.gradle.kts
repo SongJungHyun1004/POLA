@@ -27,7 +27,7 @@ android {
         }
 
         // BuildConfig 필드
-        buildConfigField("String", "BASE_URL", "\"https://api.example.com/\"")
+        buildConfigField("String", "BASE_URL", "\"https://k13d204.p.ssafy.io/api/v1/\"")
 
         // Web Client ID 불러오기
         val properties = Properties()
@@ -49,7 +49,7 @@ android {
             versionNameSuffix = "-debug"
 
             // Debug용 BASE_URL
-            buildConfigField("String", "BASE_URL", "\"https://dev-api.example.com/\"")
+            buildConfigField("String", "BASE_URL", "\"https://k13d204.p.ssafy.io/api/v1/\"")
         }
 
         release {
@@ -62,7 +62,7 @@ android {
             )
 
             // Release용 BASE_URL
-            buildConfigField("String", "BASE_URL", "\"https://api.example.com/\"")
+            buildConfigField("String", "BASE_URL", "\"https://k13d204.p.ssafy.io/api/v1/\"")
         }
     }
     compileOptions {
