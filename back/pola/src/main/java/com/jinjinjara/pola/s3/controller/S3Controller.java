@@ -1,4 +1,4 @@
-package com.jinjinjara.pola.controller;
+package com.jinjinjara.pola.s3.controller;
 
 import com.jinjinjara.pola.common.ApiResponse;
 import com.jinjinjara.pola.s3.service.S3Service;

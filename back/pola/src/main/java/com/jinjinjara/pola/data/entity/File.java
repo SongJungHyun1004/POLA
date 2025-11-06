@@ -29,7 +29,7 @@ public class File {
     @Column(nullable = false, length = 255)
     private String type; // 파일 MIME 타입
 
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @Column(nullable = false, length = 255)
@@ -65,14 +65,23 @@ public class File {
     @Column(name = "origin_url", length = 255)
     private String originUrl; // 원본 URL (선택)
 
+    @Column(name = "last_viewed_at")
+    private LocalDateTime lastViewedAt; // ✅ 마지막 열람 시각
+
+    /* --- 콜백 영역 --- */
     @PrePersist
     public void prePersist() {
-        if (createdAt == null) createdAt = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now();
+        if (createdAt == null) createdAt = now;
         if (context == null) context = "Llava";
         if (shareStatus == null) shareStatus = false;
         if (favorite == null) favorite = false;
         if (favoriteSort == null) favoriteSort = 0;
-        if (favoritedAt == null) favoritedAt = LocalDateTime.now();
+        if (favoritedAt == null) favoritedAt = now;
         if (views == null) views = 0;
+    }
+
+    @PreUpdate
+    public void preUpdate() {
     }
 }

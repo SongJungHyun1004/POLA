@@ -10,7 +10,7 @@ fun UserResponse.toUser(): User {
     return User(
         id = id,
         email = email,
-        name = name,
+        displayName = displayName,
         profileImageUrl = profileImageUrl,
         createdAt = createdAt
     )

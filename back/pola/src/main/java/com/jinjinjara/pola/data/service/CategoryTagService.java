@@ -2,7 +2,11 @@ package com.jinjinjara.pola.data.service;
 
 import com.jinjinjara.pola.common.CustomException;
 import com.jinjinjara.pola.common.ErrorCode;
+import com.jinjinjara.pola.data.dto.request.CategoryWithTags;
+import com.jinjinjara.pola.data.dto.request.InitCategoryTagRequest;
 import com.jinjinjara.pola.data.dto.response.CategoryTagResponse;
+import com.jinjinjara.pola.data.dto.response.RecommendedCategory;
+import com.jinjinjara.pola.data.dto.response.RecommendedCategoryList;
 import com.jinjinjara.pola.data.dto.response.TagResponse;
 import com.jinjinjara.pola.data.entity.Category;
 import com.jinjinjara.pola.data.entity.Tag;
@@ -10,11 +14,14 @@ import com.jinjinjara.pola.data.entity.CategoryTag;
 import com.jinjinjara.pola.data.repository.CategoryRepository;
 import com.jinjinjara.pola.data.repository.TagRepository;
 import com.jinjinjara.pola.data.repository.CategoryTagRepository;
+import com.jinjinjara.pola.user.entity.Users;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -123,4 +130,50 @@ public class CategoryTagService {
             throw new CustomException(ErrorCode.DATA_DELETE_FAIL, e.getMessage());
         }
     }
+    @Transactional
+    public void initCategoriesAndTags(Users user, InitCategoryTagRequest request) {
+        Set<String> categoryNames = request.getCategories().stream()
+                .map(CategoryWithTags::getCategoryName)
+                .collect(Collectors.toSet());
+        categoryNames.add("미분류");
+
+        categoryNames.forEach(name -> {
+            if (!categoryRepository.existsByUserAndCategoryName(user, name)) {
+                categoryRepository.save(Category.builder()
+                        .user(user)
+                        .categoryName(name)
+                        .build());
+            }
+        });
+
+        request.getCategories().forEach(c -> {
+            c.getTags().forEach(tagName -> {
+                Tag tag = tagRepository.findByTagName(tagName)
+                        .orElseGet(() -> tagRepository.save(Tag.builder()
+                                .tagName(tagName)
+                                .build()));
+
+                Category category = categoryRepository
+                        .findByUserAndCategoryName(user, c.getCategoryName())
+                        .orElseThrow(() -> new IllegalArgumentException("카테고리 없음: " + c.getCategoryName()));
+
+                categoryTagRepository.save(CategoryTag.builder()
+                        .category(category)
+                        .tag(tag)
+                        .build());
+            });
+        });
+    }
+
+    @Transactional(readOnly = true)
+    public RecommendedCategoryList getRecommendedCategoriesAndTags() {
+        List<RecommendedCategory> recommended = List.of(
+                new RecommendedCategory("여행", List.of("유럽", "가족", "사진")),
+                new RecommendedCategory("음식", List.of("한식", "야식", "디저트")),
+                new RecommendedCategory("취미", List.of("그림", "음악", "운동"))
+        );
+        return new RecommendedCategoryList(recommended);
+    }
+
+
 }

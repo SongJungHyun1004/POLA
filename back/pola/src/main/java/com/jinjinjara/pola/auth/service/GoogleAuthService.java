@@ -1,6 +1,7 @@
 package com.jinjinjara.pola.auth.service;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.jinjinjara.pola.auth.dto.common.Role;
 import com.jinjinjara.pola.auth.dto.response.TokenResponse;
 import com.jinjinjara.pola.auth.oauth.GoogleTokenVerifier;
 import com.jinjinjara.pola.auth.redis.RedisUtil;
@@ -43,6 +44,7 @@ public class GoogleAuthService {
                     .displayName(name)
                     .profileImageUrl(picture)
                     .googleSub(sub)
+                    .role(Role.ROLE_USER)
                     .build();
             return usersRepository.save(u);
         });

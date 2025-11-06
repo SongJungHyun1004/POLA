@@ -40,3 +40,6 @@ out/
 ### OAuth ###
 /src/main/resources/application-oauth.yml
 /src/main/resources/application-local.yml
+
+# GCP service account key
+**/vision-sa.json

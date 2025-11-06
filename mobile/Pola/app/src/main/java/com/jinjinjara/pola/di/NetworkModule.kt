@@ -3,6 +3,7 @@ package com.jinjinjara.pola.di
 import com.jinjinjara.pola.data.local.datastore.PreferencesDataStore
 import com.jinjinjara.pola.data.remote.api.AuthApi
 import com.jinjinjara.pola.data.remote.interceptor.AuthInterceptor
+import com.jinjinjara.pola.data.remote.interceptor.TokenAuthenticator
 import com.jinjinjara.pola.util.Constants
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
@@ -17,9 +18,7 @@ import retrofit2.converter.moshi.MoshiConverterFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
-/**
- * 네트워크 관련 의존성을 제공하는 모듈
- */
+// 네트워크 관련 의존성을 제공하는 모듈
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
@@ -28,9 +27,7 @@ object NetworkModule {
     private const val READ_TIMEOUT = 30L
     private const val WRITE_TIMEOUT = 30L
 
-    /**
-     * Moshi 제공 (JSON 파싱)
-     */
+    // Moshi 제공
     @Provides
     @Singleton
     fun provideMoshi(): Moshi {
@@ -39,22 +36,16 @@ object NetworkModule {
             .build()
     }
 
-    /**
-     * HttpLoggingInterceptor 제공
-     */
+    // HttpLoggingInterceptor 제공
     @Provides
     @Singleton
     fun provideHttpLoggingInterceptor(): HttpLoggingInterceptor {
         return HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY  // 항상 BODY 로그
-            // 또는 릴리즈에서 끄고 싶다면:
-            // level = HttpLoggingInterceptor.Level.NONE
+            level = HttpLoggingInterceptor.Level.BODY
         }
     }
 
-    /**
-     * AuthInterceptor 제공 (인증 토큰 추가)
-     */
+    // AuthInterceptor 제공
     @Provides
     @Singleton
     fun provideAuthInterceptor(
@@ -63,14 +54,24 @@ object NetworkModule {
         return AuthInterceptor(preferencesDataStore)
     }
 
-    /**
-     * OkHttpClient 제공
-     */
+    // TokenAuthenticator 제공
+    // Lazy를 사용하여 순환 의존성 해결
+    @Provides
+    @Singleton
+    fun provideTokenAuthenticator(
+        preferencesDataStore: PreferencesDataStore,
+        authApi: dagger.Lazy<AuthApi>
+    ): TokenAuthenticator {
+        return TokenAuthenticator(preferencesDataStore, authApi)
+    }
+
+    // OkHttpClient 제공
     @Provides
     @Singleton
     fun provideOkHttpClient(
         loggingInterceptor: HttpLoggingInterceptor,
-        authInterceptor: AuthInterceptor
+        authInterceptor: AuthInterceptor,
+        tokenAuthenticator: TokenAuthenticator
     ): OkHttpClient {
         return OkHttpClient.Builder()
             .connectTimeout(CONNECT_TIMEOUT, TimeUnit.SECONDS)
@@ -78,12 +79,11 @@ object NetworkModule {
             .writeTimeout(WRITE_TIMEOUT, TimeUnit.SECONDS)
             .addInterceptor(authInterceptor)
             .addInterceptor(loggingInterceptor)
+            .authenticator(tokenAuthenticator)
             .build()
     }
 
-    /**
-     * Retrofit 제공
-     */
+    // Retrofit 제공
     @Provides
     @Singleton
     fun provideRetrofit(
@@ -91,24 +91,16 @@ object NetworkModule {
         moshi: Moshi
     ): Retrofit {
         return Retrofit.Builder()
-            .baseUrl(Constants.BASE_URL)  // Constants 사용
+            .baseUrl(Constants.BASE_URL)
             .client(okHttpClient)
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
     }
 
-    /**
-     * API 서비스 제공 예시
-     */
+    // AuthApi 제공
      @Provides
      @Singleton
      fun provideAuthApi(retrofit: Retrofit): AuthApi {
          return retrofit.create(AuthApi::class.java)
      }
-
-    // @Provides
-    // @Singleton
-    // fun provideUserApi(retrofit: Retrofit): UserApi {
-    //     return retrofit.create(UserApi::class.java)
-    // }
 }

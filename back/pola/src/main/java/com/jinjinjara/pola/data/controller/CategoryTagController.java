@@ -1,9 +1,12 @@
-package com.jinjinjara.pola.controller;
+package com.jinjinjara.pola.data.controller;
 
 import com.jinjinjara.pola.common.ApiResponse;
+import com.jinjinjara.pola.data.dto.request.InitCategoryTagRequest;
 import com.jinjinjara.pola.data.dto.response.CategoryTagResponse;
+import com.jinjinjara.pola.data.dto.response.RecommendedCategoryList;
 import com.jinjinjara.pola.data.dto.response.TagResponse;
 import com.jinjinjara.pola.data.service.CategoryTagService;
+import com.jinjinjara.pola.user.entity.Users;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -21,6 +24,10 @@ public class CategoryTagController {
 
     private final CategoryTagService categoryTagService;
 
+    private Users currentUser() {
+        return Users.builder().id(1L).build();
+    }
+
     @Operation(summary = "카테고리에 태그 추가", description = "특정 카테고리에 선택한 태그를 연결합니다.")
     @PostMapping("/categories/{categoryId}/tags/{tagId}")
     public ResponseEntity<ApiResponse<CategoryTagResponse>> addTagToCategory(
@@ -28,7 +35,7 @@ public class CategoryTagController {
             @Parameter(description = "태그 ID", example = "5") @PathVariable Long tagId
     ) {
         CategoryTagResponse response = categoryTagService.addTagToCategory(categoryId, tagId);
-        return ResponseEntity.ok(ApiResponse.ok(response, "카테고리에 태그가 추가되었습니다."));
+        return ResponseEntity.ok(ApiResponse.ok(response, "κα테고리에 태그가 추가되었습니다."));
     }
 
     @Operation(summary = "카테고리에서 태그 제거", description = "특정 카테고리에서 지정된 태그를 제거합니다.")
@@ -73,5 +80,20 @@ public class CategoryTagController {
     ) {
         categoryTagService.deleteTag(tagId);
         return ResponseEntity.ok(ApiResponse.ok(null, "태그 삭제 완료"));
+    }
+
+
+    @Operation(summary = "추천 카테고리/태그 목록", description = "기본 카테고리와 추천 태그 리스트를 반환합니다.")
+    @GetMapping("/categories/tags/recommendations")
+    public ResponseEntity<ApiResponse<RecommendedCategoryList>> getRecommendations() {
+        RecommendedCategoryList data = categoryTagService.getRecommendedCategoriesAndTags();
+        return ResponseEntity.ok(ApiResponse.ok(data, "추천 카테고리/태그 조회 성공"));
+    }
+
+    @Operation(summary = "카테고리/태그 초기 등록", description = "사용자 선택 카테고리/태그를 등록하며 '미분류'를 자동 추가합니다.")
+    @PostMapping("/categories/tags/init")
+    public ResponseEntity<ApiResponse<Void>> initCategoriesAndTags(@RequestBody InitCategoryTagRequest request) {
+        categoryTagService.initCategoriesAndTags(currentUser(), request);
+        return ResponseEntity.ok(ApiResponse.ok(null, "사용자 카테고리/태그 초기화 완료"));
     }
 }
