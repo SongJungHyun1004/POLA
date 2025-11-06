@@ -596,3 +596,6 @@ obj/
 !/gradle/wrapper/gradle-wrapper.jar
 
 # End of https://www.toptal.com/developers/gitignore/api/python,venv,android,react,web,intellij,androidstudio,java,maven,gradle,nextjs
+*.pem
+*.env
+*-sa.json
