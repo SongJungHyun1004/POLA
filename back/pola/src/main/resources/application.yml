@@ -149,3 +149,10 @@ app:
 gcp:
   vision:
     credentials-path: ${GOOGLE_APPLICATION_CREDENTIALS}
+
+
+vertex:
+  location: us-central1
+  model:
+    text: gemini-2.5-flash-lite
+    vision: gemini-2.5-flash-lite
