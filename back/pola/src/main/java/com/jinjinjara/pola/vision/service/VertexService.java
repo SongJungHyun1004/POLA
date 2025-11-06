@@ -116,8 +116,10 @@ public class VertexService {
         String b64 = Base64.encodeBase64String(imageBytes);
         String mime = sniffMime(imageBytes);
 
-        String userText =
-                "이미지의 핵심 객체와 브랜드/제품명 단서를 찾아 한국어 태그 5~10개를 JSON 배열로만 출력해.";
+        String userText = """
+                        이미지의 내용을 분석하여 한국어 태그 5~10개를 JSON 배열로만 출력해. 
+                        예) ["말차","초코","크림빵","디저트","간식"]
+                        """;
 
         Map<String, Object> inlineImage = Map.of(
                 "inlineData", Map.of(
