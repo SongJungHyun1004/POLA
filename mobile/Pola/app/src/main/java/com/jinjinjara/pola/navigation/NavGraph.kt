@@ -1,23 +1,48 @@
 package com.jinjinjara.pola.navigation
 
+import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import androidx.navigation.navigation
+import com.jinjinjara.pola.data.local.datastore.PreferencesDataStore
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.android.scopes.ActivityScoped
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.components.ActivityComponent
 import com.jinjinjara.pola.presentation.ui.screen.MainScreen
 import com.jinjinjara.pola.presentation.ui.screen.category.CategoryScreen
+import com.jinjinjara.pola.presentation.ui.screen.contents.ContentsEditScreen
+import com.jinjinjara.pola.presentation.ui.screen.contents.ContentsScreen
 import com.jinjinjara.pola.presentation.ui.screen.favorite.FavoriteScreen
 import com.jinjinjara.pola.presentation.ui.screen.home.HomeScreen
 import com.jinjinjara.pola.presentation.ui.screen.my.MyScreen
 import com.jinjinjara.pola.presentation.ui.screen.remind.RemindScreen
+import com.jinjinjara.pola.presentation.ui.screen.search.ChatbotScreen
+import com.jinjinjara.pola.presentation.ui.screen.search.SearchScreen
 import com.jinjinjara.pola.presentation.ui.screen.start.CategorySelectScreen
 import com.jinjinjara.pola.presentation.ui.screen.start.StartScreen
 import com.jinjinjara.pola.presentation.ui.screen.start.TagSelectScreen
+import com.jinjinjara.pola.presentation.ui.screen.tag.TagScreen
 import com.jinjinjara.pola.presentation.ui.screen.timeline.TimelineScreen
 import com.jinjinjara.pola.presentation.ui.screen.upload.UploadScreen
+
+/**
+ * DataStore EntryPoint for accessing PreferencesDataStore in Composables
+ */
+@EntryPoint
+@InstallIn(ActivityComponent::class)
+interface DataStoreEntryPoint {
+    fun preferencesDataStore(): PreferencesDataStore
+}
 
 /**
  * Auth 네비게이션 그래프
@@ -31,16 +56,14 @@ fun NavGraphBuilder.authNavGraph(
     ) {
         // 시작 화면 (구글 로그인) 화면
         composable(route = Screen.Start.route) {
-            StartScreen(onLoginSuccess = {
-                val isCategorySelected = false
-
-                if (isCategorySelected) {
-                    // 카테고리 이미 선택됨 -> 바로 메인으로
+            StartScreen(onLoginSuccess = { onboardingCompleted ->
+                if (onboardingCompleted) {
+                    // 온보딩 이미 완료 -> 바로 메인으로
                     navController.navigate(NavGraphs.MAIN) {
                         popUpTo(NavGraphs.AUTH) { inclusive = true }
                     }
                 } else {
-                    // 카테고리 선택 필요 -> 카테고리 선택 화면으로
+                    // 온보딩 필요 -> 카테고리 선택 화면으로
                     navController.navigate(Screen.CategorySelect.route)
                 }
             })
@@ -58,11 +81,23 @@ fun NavGraphBuilder.authNavGraph(
 
         // 태그 선택 화면 추가
         composable(route = Screen.TagSelect.route) {
+            val context = LocalContext.current
+            val coroutineScope = rememberCoroutineScope()
+
             TagSelectScreen(
                 onNextClick = { selectedTags ->
-                    // 태그 선택 완료 후 메인으로 이동
-                    navController.navigate(NavGraphs.MAIN) {
-                        popUpTo(NavGraphs.AUTH) { inclusive = true }
+                    // 온보딩 완료 플래그 저장
+                    coroutineScope.launch {
+                        val entryPoint = EntryPointAccessors.fromActivity(
+                            context as android.app.Activity,
+                            DataStoreEntryPoint::class.java
+                        )
+                        entryPoint.preferencesDataStore().setOnboardingCompleted(true)
+
+                        // 태그 선택 완료 후 메인으로 이동
+                        navController.navigate(NavGraphs.MAIN) {
+                            popUpTo(NavGraphs.AUTH) { inclusive = true }
+                        }
                     }
                 },
                 onBackClick = {
@@ -97,7 +132,31 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
                 },
                 onNavigateToFavorite = {
                     navController.navigate(Screen.Favorite.route)
+                },
+                onNavigateToSearch = {
+                    navController.navigate(Screen.SearchScreen.route)
+                },
+                onNavigateToChatbot = {
+                    navController.navigate(Screen.Chatbot.route)
                 }
+            )
+        }
+
+        composable(Screen.SearchScreen.route) {
+            SearchScreen(
+                onBackClick = { navController.popBackStack() },
+                onTagClick = { tagName ->
+                    navController.navigate(Screen.Tag.createRoute(tagName.removePrefix("#")))
+                },
+                onSearchClick = { searchQuery ->
+                    // TODO: 검색 버튼 클릭 시 동작 구현
+                }
+            )
+        }
+
+        composable(Screen.Chatbot.route) {
+            ChatbotScreen(
+                onBackClick = { navController.popBackStack() }
             )
         }
 
@@ -124,7 +183,59 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
             val categoryName = backStackEntry.arguments?.getString("categoryName") ?: ""
             CategoryScreen(
                 categoryName = categoryName,
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStack() },
+                onNavigateToTag = { tagName ->
+                    navController.navigate(Screen.Tag.createRoute(tagName))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.Tag.route,
+            arguments = listOf(
+                navArgument("tagName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val tagName = backStackEntry.arguments?.getString("tagName") ?: ""
+            TagScreen(
+                tagName = tagName,
+                onBackClick = { navController.popBackStack() },
+                onNavigateToContents = { contentId ->
+                    navController.navigate(Screen.Contents.createRoute(contentId))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.Contents.route,
+            arguments = listOf(
+                navArgument("contentId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val contentId = backStackEntry.arguments?.getString("contentId") ?: ""
+            ContentsScreen(
+                onBackClick = { navController.popBackStack() },
+                onShareClick = { /* TODO: 공유 기능 */ },
+                onEditClick = {
+                    navController.navigate(Screen.ContentsEdit.createRoute(contentId))
+                },
+                onDeleteClick = { /* TODO: 삭제 기능 */ }
+            )
+        }
+
+        composable(
+            route = Screen.ContentsEdit.route,
+            arguments = listOf(
+                navArgument("contentId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val contentId = backStackEntry.arguments?.getString("contentId") ?: ""
+            ContentsEditScreen(
+                onBackClick = { navController.popBackStack() },
+                onSaveClick = {
+                    // TODO: 저장 로직
+                    navController.popBackStack()
+                }
             )
         }
 

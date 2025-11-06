@@ -44,21 +44,34 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlin.math.roundToInt
 import androidx.compose.ui.zIndex
+import com.jinjinjara.pola.presentation.ui.component.DisplayItem
+import com.jinjinjara.pola.presentation.ui.component.ItemGrid2View
+import com.jinjinjara.pola.presentation.ui.component.ItemGrid3View
 
 
 data class CategoryItem(
-    val id: String,
-    val name: String
-)
+    override val id: String,
+    val name: String,
+    override val imageRes: Int = R.drawable.temp_image,
+    override val tags: List<String> = listOf(name),
+    override val description: String = "",
+    override val isFavorite: Boolean = false
+) : DisplayItem
+
+enum class ViewMode {
+    GRID_3, GRID_2
+}
 
 @Composable
 fun CategoryScreen(
     categoryName: String = "카테고리",
-    onBackClick: () -> Unit = {}
+    onBackClick: () -> Unit = {},
+    onNavigateToTag: (String) -> Unit = {}
 ) {
     var selectedTab by remember { mutableStateOf("전체") }
     var isMenuExpanded by remember { mutableStateOf(false) }
     var selectedSort by remember { mutableStateOf("최신순") }
+    var viewMode by remember { mutableStateOf(ViewMode.GRID_3) }
 
     val categories = listOf(
         CategoryItem("1", "말차"),
@@ -148,33 +161,73 @@ fun CategoryScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // Category Grid
-        LazyVerticalGrid(
-            state = gridState,
-            columns = GridCells.Fixed(3),
-            contentPadding = PaddingValues(
-                top = headerHeightDp + 8.dp,
-                start = 16.dp,
-                end = 16.dp,
-                bottom = 16.dp
-            ),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            items(categories) { category ->
-                PolaCard(
-                    modifier = Modifier.shadow(elevation = 8.dp),
-                    ratio = 0.7661f,
-                    imageRatio = 0.9062f,
-                    paddingValues = PaddingValues(top = 4.dp, start = 4.dp, end = 4.dp),
-                    imageResId = R.drawable.temp_image,
-                    textList = listOf(category.name),
-                    textSize = 12.sp,
-                    textSpacing = 8.dp,
+        when (viewMode) {
+            ViewMode.GRID_3 -> {
+                ItemGrid3View(
+                    items = categories,
+                    onItemClick = { item ->
+                        val tagName = if (item is CategoryItem) item.name else item.tags.firstOrNull() ?: ""
+                        onNavigateToTag(tagName)
+                    },
+                    onFavoriteToggle = { }, // 빈 람다 (기능 없음)
+                    state = gridState,
+                    contentPadding = PaddingValues(
+                        top = headerHeightDp + 8.dp,
+                        start = 16.dp,
+                        end = 16.dp,
+                        bottom = 16.dp
+                    ),
+                    showFavoriteIcon = false,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+            ViewMode.GRID_2 -> {
+                ItemGrid2View(
+                    items = categories,
+                    onItemClick = { item ->
+                        val tagName = if (item is CategoryItem) item.name else item.tags.firstOrNull() ?: ""
+                        onNavigateToTag(tagName)
+                    },
+                    onFavoriteToggle = { }, // 빈 람다 (기능 없음)
+                    state = gridState,
+                    contentPadding = PaddingValues(
+                        top = headerHeightDp + 8.dp,
+                        start = 16.dp,
+                        end = 16.dp,
+                        bottom = 16.dp
+                    ),
+                    showFavoriteIcon = false,
+                    modifier = Modifier.fillMaxSize()
                 )
             }
         }
+        // Category Grid
+//        LazyVerticalGrid(
+//            state = gridState,
+//            columns = GridCells.Fixed(3),
+//            contentPadding = PaddingValues(
+//                top = headerHeightDp + 8.dp,
+//                start = 16.dp,
+//                end = 16.dp,
+//                bottom = 16.dp
+//            ),
+//            horizontalArrangement = Arrangement.spacedBy(12.dp),
+//            verticalArrangement = Arrangement.spacedBy(24.dp),
+//            modifier = Modifier.fillMaxSize()
+//        ) {
+//            items(categories) { category ->
+//                PolaCard(
+//                    modifier = Modifier.shadow(elevation = 8.dp),
+//                    ratio = 0.7661f,
+//                    imageRatio = 0.9062f,
+//                    paddingValues = PaddingValues(top = 4.dp, start = 4.dp, end = 4.dp),
+//                    imageResId = R.drawable.temp_image,
+//                    textList = listOf(category.name),
+//                    textSize = 12.sp,
+//                    textSpacing = 8.dp,
+//                )
+//            }
+//        }
 
         Box(
             modifier = Modifier
@@ -269,10 +322,19 @@ fun CategoryScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Apps,
-                        contentDescription = "그리드",
+                        painter = painterResource(
+                            id = if (viewMode == ViewMode.GRID_3) R.drawable.grid_3 else R.drawable.gird_2
+                        ),
+                        contentDescription = "뷰 모드 변경",
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
+                                viewMode = if (viewMode == ViewMode.GRID_3) ViewMode.GRID_2 else ViewMode.GRID_3
+                            }
                     )
                     Box {
                         Row(

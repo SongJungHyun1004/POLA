@@ -9,8 +9,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -211,11 +213,15 @@ fun <T : DisplayItem> ItemGrid3View(
     items: List<T>,
     onFavoriteToggle: (T) -> Unit,
     onItemClick: ((T) -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    state: LazyGridState = rememberLazyGridState(),
+    contentPadding: PaddingValues = PaddingValues(16.dp),
+    showFavoriteIcon: Boolean = true
 ) {
     LazyVerticalGrid(
+        state = state,
         columns = GridCells.Fixed(3),
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = contentPadding,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
         modifier = modifier.fillMaxSize()
@@ -247,24 +253,26 @@ fun <T : DisplayItem> ItemGrid3View(
                 )
 
                 // 즐겨찾기 토글 아이콘
-                Icon(
-                    painter = painterResource(
-                        id = if (item.isFavorite) R.drawable.star_primary_solid
-                        else R.drawable.star_primary
-                    ),
-                    contentDescription = "즐겨찾기",
-                    tint = Color.Unspecified,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp)
-                        .size(22.dp)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) {
-                            onFavoriteToggle(item)
-                        }
-                )
+                if (showFavoriteIcon) {
+                    Icon(
+                        painter = painterResource(
+                            id = if (item.isFavorite) R.drawable.star_primary_solid
+                            else R.drawable.star_primary
+                        ),
+                        contentDescription = "즐겨찾기",
+                        tint = Color.Unspecified,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp)
+                            .size(22.dp)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
+                                onFavoriteToggle(item)
+                            }
+                    )
+                }
             }
         }
     }
@@ -276,11 +284,15 @@ fun <T : DisplayItem> ItemGrid2View(
     items: List<T>,
     onFavoriteToggle: (T) -> Unit,
     onItemClick: ((T) -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    state: LazyGridState = rememberLazyGridState(),
+    contentPadding: PaddingValues = PaddingValues(16.dp),
+    showFavoriteIcon: Boolean = true
 ) {
     LazyVerticalGrid(
+        state = state,
         columns = GridCells.Fixed(2),
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = contentPadding,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
         modifier = modifier.fillMaxSize()
@@ -312,24 +324,26 @@ fun <T : DisplayItem> ItemGrid2View(
                 )
 
                 // 즐겨찾기 토글 아이콘
-                Icon(
-                    painter = painterResource(
-                        id = if (item.isFavorite) R.drawable.star_primary_solid
-                        else R.drawable.star_primary
-                    ),
-                    contentDescription = "즐겨찾기",
-                    tint = Color.Unspecified,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(12.dp)
-                        .size(28.dp)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) {
-                            onFavoriteToggle(item)
-                        }
-                )
+                if (showFavoriteIcon) {
+                    Icon(
+                        painter = painterResource(
+                            id = if (item.isFavorite) R.drawable.star_primary_solid
+                            else R.drawable.star_primary
+                        ),
+                        contentDescription = "즐겨찾기",
+                        tint = Color.Unspecified,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(12.dp)
+                            .size(28.dp)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
+                                onFavoriteToggle(item)
+                            }
+                    )
+                }
             }
         }
     }
