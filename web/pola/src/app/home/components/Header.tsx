@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Search, SlidersHorizontal, Send } from "lucide-react";
+import useAuthStore from "@/store/useAuthStore";
 
 export default function Header() {
+  const { user } = useAuthStore();
   const router = useRouter();
 
   const [query, setQuery] = useState("");
@@ -33,6 +35,34 @@ export default function Header() {
     router.push(`/files?nlp=${encodeURIComponent(aiQuery)}`);
     setAiMode(false);
   };
+
+  if (!user) {
+    return (
+      <header className="flex justify-between items-center w-full pb-10 px-8 pt-6">
+        {/* Logo */}
+        <Link href="/home">
+          <Image
+            src="/images/POLA_logo_2.png"
+            alt="pola logo"
+            width={140}
+            height={40}
+            className="object-contain cursor-pointer"
+            priority
+          />
+        </Link>
+
+        {/* Login Button */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => router.push("/")}
+            className="px-4 py-2 bg-black text-white rounded-full"
+          >
+            로그인
+          </button>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <>
@@ -129,12 +159,11 @@ export default function Header() {
 
         {/* Profile */}
         <div className="flex items-center gap-3">
-          <span className="font-medium">username</span>
+          <span className="font-medium">{user.display_name}</span>
           <div className="relative w-10 h-10 bg-white rounded-full border overflow-hidden">
-            <Image
-              src="/images/POLA_logo_1.png"
+            <img
+              src={user.profile_image_url || "/images/default_profile.png"}
               alt="profile"
-              fill
               className="object-cover"
             />
           </div>
