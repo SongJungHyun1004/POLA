@@ -168,13 +168,15 @@ public class DataService {
         File file = fileRepository.findByIdAndUserId(fileId, user.getId())
                 .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
 
-        Category category = categoryRepository.findByIdAndUserId(categoryId, user.getId())
+        // 카테고리 존재 및 소유권 검증만 수행
+        categoryRepository.findByIdAndUserId(categoryId, user.getId())
                 .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
 
-        file.setCategoryId(category);
+        // category 엔티티 대신 categoryId(Long)만 설정
+        file.setCategoryId(categoryId);
+
         return fileRepository.save(file);
     }
-
 
     /* =======================================================
         즐겨찾기 관련 기능
