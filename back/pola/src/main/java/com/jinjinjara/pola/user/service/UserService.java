@@ -17,8 +17,6 @@ public class UserService {
      * @return 사용자 정보 DTO
      */
     public UserInfoResponse getCurrentUserInfo(Users user) {
-        // 컨트롤러에서 @AuthenticationPrincipal을 통해 이미 완전한 Users 객체를 받았으므로,
-        // 별도의 DB 조회 없이 바로 DTO로 변환합니다.
         return new UserInfoResponse(
                 user.getId(),
                 user.getEmail(),
