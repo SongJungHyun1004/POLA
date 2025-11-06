@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import com.jinjinjara.pola.R
 import com.jinjinjara.pola.presentation.ui.component.PolaCard
 import com.jinjinjara.pola.presentation.ui.component.PolaSearchBar
+import com.jinjinjara.pola.presentation.ui.component.SearchBar
 
 data class RecentItem(
     val type: String,
@@ -63,7 +64,9 @@ data class Category(
 @Composable
 fun HomeScreen(
     onNavigateToCategory: (String) -> Unit = {},
-    onNavigateToFavorite: () -> Unit = {}
+    onNavigateToFavorite: () -> Unit = {},
+    onNavigateToSearch: () -> Unit = {},
+    onNavigateToChatbot: () -> Unit = {}
 ) {
     val recentItems = remember {
         listOf(
@@ -105,12 +108,20 @@ fun HomeScreen(
                     .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                PolaSearchBar(
-                    searchText = searchText,
-                    onValueChange = { searchText = it },
+                SearchBar(
+                    searchText = "",
+                    onSearchClick = { isAiMode ->
+                        if (isAiMode) {
+                            onNavigateToChatbot()
+                        } else {
+                            onNavigateToSearch()
+                        }
+                    },
                     modifier = Modifier.weight(1f)
                 )
-                Spacer(Modifier.width(8.dp))
+
+                Spacer(Modifier.width(12.dp))
+
                 Icon(
                     painter = painterResource(R.drawable.star),
                     contentDescription = "Favorites",

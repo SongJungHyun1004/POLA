@@ -4,13 +4,20 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -98,6 +105,10 @@ fun PolaCard(
     textSize: TextUnit = 24.sp,
     textSpacing: Dp = 8.dp,
     clipTags: Boolean = false,
+    timeAgo: String? = null,
+    sourceIcon: Int? = null,
+    isFavorite: Boolean = false,
+    onFavoriteClick: (() -> Unit)? = null,
     content: @Composable (() -> Unit)? = null
 ) {
     // 전체 폴라로이드 카드
@@ -137,6 +148,62 @@ fun PolaCard(
                     contentScale = ContentScale.Crop
                 )
             }
+
+            // 메타 정보 영역
+            if (timeAgo != null || sourceIcon != null || isFavorite) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(end = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (timeAgo != null) {
+                            Text(
+                                text = timeAgo,
+                                fontSize = 12.sp,
+                            )
+                        }
+
+                        if (sourceIcon != null) {
+                            if (timeAgo != null) {
+                                Text(
+                                    text = "•",
+                                    fontSize = 12.sp,
+                                )
+                            }
+                            Icon(
+                                painter = painterResource(id = sourceIcon),
+                                contentDescription = "출처",
+                                modifier = Modifier.size(16.dp),
+                                tint = Color.Unspecified
+                            )
+                        }
+                    }
+
+                    Icon(
+                        painter = painterResource(
+                            id = if (isFavorite) R.drawable.star_primary_solid
+                            else R.drawable.star_primary
+                        ),
+                        contentDescription = "즐겨찾기",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
+                                onFavoriteClick?.invoke()
+                            }
+                    )
+                }
+            }
+
             // 정보 영역
             Box(
                 modifier = Modifier.fillMaxSize(),

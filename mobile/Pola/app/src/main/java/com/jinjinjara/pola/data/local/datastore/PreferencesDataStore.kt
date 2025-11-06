@@ -2,6 +2,7 @@ package com.jinjinjara.pola.data.local.datastore
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
@@ -10,9 +11,7 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * DataStore를 사용한 환경설정 관리
- */
+// DataStore를 사용한 환경설정 관리
 @Singleton
 class PreferencesDataStore @Inject constructor(
     private val dataStore: DataStore<Preferences>
@@ -23,9 +22,10 @@ class PreferencesDataStore @Inject constructor(
         private val REFRESH_TOKEN_KEY = stringPreferencesKey("refresh_token")
         private val USER_ID_KEY = stringPreferencesKey("user_id")
         private val IS_FIRST_LAUNCH_KEY = stringPreferencesKey("is_first_launch")
+        private val IS_ONBOARDING_COMPLETED_KEY = booleanPreferencesKey("is_onboarding_completed")
     }
 
-    // ========== 토큰 관련 ==========
+    // 토큰 관련
 
     suspend fun saveAccessToken(token: String) {
         dataStore.edit { preferences ->
@@ -60,7 +60,7 @@ class PreferencesDataStore @Inject constructor(
         }
     }
 
-    // ========== 사용자 정보 관련 ==========
+    // 사용자 정보 관련
 
     suspend fun saveUserId(userId: String) {
         dataStore.edit { preferences ->
@@ -78,7 +78,7 @@ class PreferencesDataStore @Inject constructor(
         }
     }
 
-    // ========== 앱 설정 관련 ==========
+    // 앱 설정 관련
 
     suspend fun setFirstLaunch(isFirst: Boolean) {
         dataStore.edit { preferences ->
@@ -91,7 +91,25 @@ class PreferencesDataStore @Inject constructor(
         return value?.toBoolean() ?: true
     }
 
-    // ========== 전체 데이터 삭제 (로그아웃 시) ==========
+    // 온보딩 관련
+
+    suspend fun setOnboardingCompleted(completed: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[IS_ONBOARDING_COMPLETED_KEY] = completed
+        }
+    }
+
+    suspend fun isOnboardingCompleted(): Boolean {
+        return dataStore.data.first()[IS_ONBOARDING_COMPLETED_KEY] ?: false
+    }
+
+    fun observeOnboardingCompleted(): Flow<Boolean> {
+        return dataStore.data.map { preferences ->
+            preferences[IS_ONBOARDING_COMPLETED_KEY] ?: false
+        }
+    }
+
+    // 전체 데이터 삭제
 
     suspend fun clearAll() {
         dataStore.edit { preferences ->
