@@ -1,7 +1,6 @@
-package com.jinjinjara.pola.controller;
+package com.jinjinjara.pola.data.controller;
 
 import com.jinjinjara.pola.common.ApiResponse;
-import com.jinjinjara.pola.common.CustomException;
 import com.jinjinjara.pola.common.dto.FileResponseDto;
 import com.jinjinjara.pola.common.dto.PageRequestDto;
 import com.jinjinjara.pola.common.dto.PagedResponseDto;
@@ -20,7 +19,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 @Tag(name = "Data API", description = "파일 데이터 관리 API (업로드, 카테고리 변경, 즐겨찾기 등)")

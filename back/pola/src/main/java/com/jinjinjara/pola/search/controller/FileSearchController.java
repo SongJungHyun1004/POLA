@@ -1,8 +1,7 @@
-package com.jinjinjara.pola.controller;
+package com.jinjinjara.pola.search.controller;
 
 import com.jinjinjara.pola.search.model.FileSearch;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;

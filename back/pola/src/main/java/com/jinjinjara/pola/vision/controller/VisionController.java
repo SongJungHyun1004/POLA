@@ -1,4 +1,4 @@
-package com.jinjinjara.pola.controller;
+package com.jinjinjara.pola.vision.controller;
 
 import com.jinjinjara.pola.vision.dto.response.LabelResponse;
 import com.jinjinjara.pola.vision.service.VisionService;
