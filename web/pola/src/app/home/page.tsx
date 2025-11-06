@@ -11,6 +11,10 @@ import { useEffect, useState } from "react";
 
 export default function HomePage() {
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [categories, setCategories] = useState<any[]>([]); // 카테고리 데이터
+  const [favorites, setFavorites] = useState<any[]>([]); // 즐겨찾기 데이터
+  const [reminds, setReminds] = useState<any[]>([]); // 알림 데이터
+  const [timeline, setTimeline] = useState<any[]>([]); // 타임라인 데이터
   const router = useRouter();
   const { setUser } = useAuthStore();
 
@@ -25,7 +29,7 @@ export default function HomePage() {
 
     const fetchUserData = async () => {
       const res = await fetch(
-        process.env.NEXT_PUBLIC_POLA_API_BASE_URL + "/user/me",
+        process.env.NEXT_PUBLIC_POLA_API_BASE_URL + "/users/me",
         {
           headers: {
             Authorization: `Bearer ${storedToken}`,
@@ -48,8 +52,32 @@ export default function HomePage() {
       }
     };
 
+    const fetchHomeData = async () => {
+      const res = await fetch(
+        process.env.NEXT_PUBLIC_POLA_API_BASE_URL + "/users/me/home",
+        {
+          headers: {
+            Authorization: `Bearer ${storedToken}`,
+          },
+        }
+      );
+
+      if (res.ok) {
+        const data = await res.json();
+        const { categories, favorites, reminds, timeline } = data.data;
+
+        setCategories(categories);
+        setFavorites(favorites);
+        setReminds(reminds);
+        setTimeline(timeline);
+      } else {
+        console.error("Failed to fetch home data");
+      }
+    };
+
     if (storedToken) {
       fetchUserData();
+      fetchHomeData();
     }
   }, [accessToken, router, setUser]);
 
@@ -69,29 +97,23 @@ export default function HomePage() {
           </div>
 
           <div className="flex flex-col items-center justify-center w-full mt-8">
-            <Timeline />
+            <Timeline timeline={timeline} /> {/* Timeline에 데이터를 전달 */}
             <TextLink text="Timeline" link="/timeline" />
           </div>
         </div>
 
         {/* 우측 영역 */}
         <div className="flex flex-col gap-8 overflow-y-auto pr-2 w-full h-full">
-          {[
-            { id: 1, name: "Travel" },
-            { id: 2, name: "Food" },
-            { id: 3, name: "Daily" },
-            { id: 4, name: "Friends" },
-            { id: 5, name: "Memories" },
-          ].map((category) => {
-            const imgSrc = `/images/dummy_image_1.png`;
+          {categories.slice(0, 5).map((category) => {
+            const imgSrc = `/images/dummy_image_1.png`; // 임시 이미지 사용
 
             return (
-              <div key={category.id} className="w-full flex-shrink-0">
+              <div key={category.categoryId} className="w-full flex-shrink-0">
                 <TextLink
-                  text={category.name}
-                  link={"/categories/" + category.id}
+                  text={category.categoryName}
+                  link={`/categories/${category.categoryId}`}
                 />
-                <CategoryRow imgSrc={imgSrc} />
+                <CategoryRow files={category.files} />
               </div>
             );
           })}
