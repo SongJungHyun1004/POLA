@@ -380,32 +380,36 @@ fun ContentsScreen(
                     .background(Color.Black.copy(alpha = 0.9f))
                     .clickable { showFullImage = false }
             ) {
-                // 뒤로가기 버튼
-                Icon(
-                    imageVector = Icons.Default.ArrowBackIosNew,
-                    contentDescription = "뒤로가기",
-                    tint = Color.White,
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(16.dp)
-                        .size(32.dp)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) {
-                            showFullImage = false
-                        }
-                )
+                Column(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    // 뒤로가기 버튼 영역
+                    Icon(
+                        imageVector = Icons.Default.ArrowBackIosNew,
+                        contentDescription = "뒤로가기",
+                        tint = Color.White,
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .size(32.dp)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
+                                showFullImage = false
+                            }
+                    )
 
-                // 이미지
-                Image(
-                    painter = painterResource(id = R.drawable.temp_image),
-                    contentDescription = "전체 화면 이미지",
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp)
-                )
+                    // 이미지 영역
+                    Image(
+                        painter = painterResource(id = R.drawable.temp_image),
+                        contentDescription = "전체 화면 이미지",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 16.dp)
+                    )
+                }
             }
         }
     }
