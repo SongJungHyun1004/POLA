@@ -68,6 +68,10 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/swagger-resources/**",
 
+                                // Actuator Health Check (무중단 배포용)
+                                "/actuator/health",
+                                "/actuator/health/**",
+
                                 // Common paths
                                 "/webjars/**",
                                 "/login/oauth2/success",

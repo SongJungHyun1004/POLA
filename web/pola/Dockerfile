@@ -4,6 +4,13 @@
   COPY package.json yarn.lock .yarnrc.yml ./
   RUN yarn install --immutable
 
+  # ============================================================================
+  # 🔥 환경변수 자동 주입 설정
+  # ============================================================================
+  # Jenkinsfile에서 Secret의 모든 NEXT_PUBLIC_ 변수를 --build-arg로 전달합니다.
+  # 새 환경변수 추가 시: 이 섹션에 ARG와 ENV를 추가하세요!
+  # ============================================================================
+
   ARG NEXT_PUBLIC_API_URL
   ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID
 
@@ -11,11 +18,15 @@
   ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
   ENV NEXT_PUBLIC_GOOGLE_CLIENT_ID=$NEXT_PUBLIC_GOOGLE_CLIENT_ID
 
+  # ============================================================================
+
   COPY . .
 
   # 환경변수 확인 (디버깅용)
-  RUN echo "Building with NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}"
-  RUN echo "Building with NEXT_PUBLIC_GOOGLE_CLIENT_ID=${NEXT_PUBLIC_GOOGLE_CLIENT_ID}"
+  RUN echo "=== Environment Variables ==="
+  RUN echo "NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}"
+  RUN echo "NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID}"
+  RUN echo "============================"
 
   RUN yarn build
 
