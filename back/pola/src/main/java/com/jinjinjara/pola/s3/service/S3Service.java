@@ -16,6 +16,11 @@ import java.net.URL;
 import java.time.Duration;
 import java.util.*;
 
+/**
+ * AWS S3 Presigned URL 관리 서비스
+ * - 업로드용, 다운로드용, 미리보기용 URL 생성
+ * - 여러 파일을 한 번에 처리 가능
+ */
 @Service
 @RequiredArgsConstructor
 public class S3Service {
@@ -25,8 +30,13 @@ public class S3Service {
     @Value("${cloud.aws.s3.bucket}")
     private String bucket;
 
+    /* ===========================================================
+        ✅ Presigned URL (UPLOAD)
+       =========================================================== */
+
     /**
      * 업로드용 Presigned URL 생성
+     * 예: 클라이언트가 S3에 직접 업로드할 때 사용
      */
     public S3PresignedUrlResponse generateUploadUrl(String originalFileName) {
         try {
@@ -50,6 +60,10 @@ public class S3Service {
         }
     }
 
+    /* ===========================================================
+        ✅ Presigned URL (DOWNLOAD)
+       =========================================================== */
+
     /**
      * 다운로드용 Presigned URL 생성
      */
@@ -70,17 +84,21 @@ public class S3Service {
         }
     }
 
+    /* ===========================================================
+        ✅ Presigned URL (PREVIEW)
+       =========================================================== */
+
     /**
-     * 미리보기용 Presigned URL 생성 (단일)
-     * Content-Type, inline 지정 → 브라우저나 앱에서 바로 열림
+     * 단일 파일 미리보기용 Presigned URL 생성
+     * → 브라우저/앱에서 바로 열 수 있음 (inline)
      */
     public URL generatePreviewUrl(String key, String contentType) {
         try {
             GetObjectRequest getRequest = GetObjectRequest.builder()
                     .bucket(bucket)
                     .key(key)
-                    .responseContentType(contentType)
-                    .responseContentDisposition("inline") // 다운로드 대신 미리보기
+                    .responseContentType(resolveContentType(contentType))
+                    .responseContentDisposition("inline") // 다운로드 대신 브라우저 미리보기
                     .build();
 
             PresignedGetObjectRequest presignedRequest = s3Presigner.presignGetObject(builder ->
@@ -95,25 +113,35 @@ public class S3Service {
 
     /**
      * 여러 파일용 미리보기 Presigned URL 생성
-     * key와 type을 함께 받아 URL을 한 번에 리턴
+     * → key, contentType 함께 받아서 presigned URL 일괄 생성
      */
     public Map<Long, String> generatePreviewUrls(Map<Long, FileMeta> fileMetaMap) {
         Map<Long, String> result = new HashMap<>();
-        fileMetaMap.forEach((id, meta) -> {
+
+        for (Map.Entry<Long, FileMeta> entry : fileMetaMap.entrySet()) {
+            Long id = entry.getKey();
+            FileMeta meta = entry.getValue();
+
             try {
                 URL url = generatePreviewUrl(meta.key(), meta.contentType());
                 result.put(id, url.toString());
             } catch (Exception e) {
-                // URL 생성 실패 시 null 또는 빈 문자열 처리 (로깅)
-                result.put(id, null);
+                // presigned 생성 실패 시 null 대신 원래 key라도 리턴
+                result.put(id, "home/" + meta.key());
+                System.err.println("[S3Service] Presigned URL 생성 실패: " + meta.key() + " → " + e.getMessage());
             }
-        });
+        }
+
         return result;
     }
 
+    /* ===========================================================
+        ✅ 내부 헬퍼 메서드
+       =========================================================== */
+
     /**
-     * 파일명으로부터 고유한 S3 키 생성
-     * 예: home/uuid.png
+     * S3 Key 생성
+     * 예: home/{UUID}.png
      */
     private String buildS3Key(String originalFileName) {
         try {
@@ -131,7 +159,17 @@ public class S3Service {
     }
 
     /**
-     * 내부용 파일 메타 데이터 구조체 (key, contentType)
+     * MIME 타입별 Content-Type 반환
+     */
+    private String resolveContentType(String type) {
+        if (type == null) return "application/octet-stream";
+        if (type.startsWith("image/")) return type; // image/png, image/jpeg
+        if (type.startsWith("text/")) return "text/plain; charset=utf-8";
+        return type;
+    }
+
+    /**
+     * 내부용 파일 메타데이터 구조체
      */
     public record FileMeta(String key, String contentType) {}
 }

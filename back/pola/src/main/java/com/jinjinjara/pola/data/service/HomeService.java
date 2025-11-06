@@ -54,11 +54,11 @@ public class HomeService {
 
         // --- Presigned URL 생성 (한 번에 처리) ---
         Map<Long, S3Service.FileMeta> fileMetaMap = allFiles.stream()
-                .filter(f -> f.getOriginUrl() != null)
+                .filter(f -> f.getSrc() != null)
                 .collect(Collectors.toMap(
                         File::getId,
-                        f -> new S3Service.FileMeta(f.getOriginUrl(), f.getType()),
-                        (a, b) -> a // 중복키 무시
+                        f -> new S3Service.FileMeta(f.getSrc(), f.getType()),
+                        (a, b) -> a
                 ));
 
         Map<Long, String> previewUrls = s3Service.generatePreviewUrls(fileMetaMap);

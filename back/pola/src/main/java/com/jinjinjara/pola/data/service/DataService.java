@@ -108,7 +108,7 @@ public class DataService {
         Map<Long, S3Service.FileMeta> metaMap = files.stream()
                 .collect(Collectors.toMap(
                         File::getId,
-                        f -> new S3Service.FileMeta(f.getOriginUrl(), f.getType())
+                        f -> new S3Service.FileMeta(f.getSrc(), f.getType())
                 ));
 
 
@@ -164,27 +164,17 @@ public class DataService {
      * 파일 카테고리 변경
      */
     @Transactional
-    public File updateFileCategory(Long fileId, String newCategoryName, Users user) {
-        File file = fileRepository.findById(fileId)
+    public File updateFileCategory(Long fileId, Long categoryId, Users user) {
+        File file = fileRepository.findByIdAndUserId(fileId, user.getId())
                 .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
 
-        if (!file.getUserId().equals(user.getId())) {
-            throw new CustomException(ErrorCode.FILE_ACCESS_DENIED);
-        }
+        Category category = categoryRepository.findByIdAndUserId(categoryId, user.getId())
+                .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
 
-        Category targetCategory = categoryRepository
-                .findByUserAndCategoryName(user, newCategoryName)
-                .orElseGet(() -> {
-                    Category newCategory = Category.builder()
-                            .user(user)
-                            .categoryName(newCategoryName)
-                            .build();
-                    return categoryRepository.save(newCategory);
-                });
-
-        file.setCategoryId(targetCategory.getId());
+        file.setCategoryId(category);
         return fileRepository.save(file);
     }
+
 
     /* =======================================================
         즐겨찾기 관련 기능

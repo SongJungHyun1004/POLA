@@ -59,9 +59,9 @@ public class DataController {
     public ApiResponse<File> updateFileCategory(
             @AuthenticationPrincipal Users user,
             @Parameter(description = "파일 ID", example = "10") @PathVariable Long fileId,
-            @Parameter(description = "새 카테고리 이름", example = "디자인") @RequestParam String categoryName
+            @Parameter(description = "새 카테고리 ID", example = "3") @RequestParam Long categoryId
     ) {
-        File updated = dataService.updateFileCategory(fileId, categoryName, user);
+        File updated = dataService.updateFileCategory(fileId, categoryId, user);
         return ApiResponse.ok(updated, "파일의 카테고리가 성공적으로 변경되었습니다.");
     }
 
