@@ -35,12 +35,10 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.jinjinjara.pola.R
 
-/**
- * 로그인 화면
- */
+// 로그인 화면
 @Composable
 fun StartScreen(
-    onLoginSuccess: () -> Unit,
+    onLoginSuccess: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: StartViewModel = hiltViewModel()
 ) {
@@ -63,7 +61,7 @@ fun StartScreen(
                 contentDescription = "Pola Logo",
                 modifier = Modifier.fillMaxWidth()
             )
-            // 아래쪽 하얀색 그라데이션
+            // 하단 그라데이션
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -88,8 +86,8 @@ fun StartScreen(
             Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 60.dp)
-                .clickable {   // (임시) 클릭 시 홈으로 이동
-                    onLoginSuccess()
+                .clickable {
+                    onLoginSuccess(false)
                 }
 
         )
@@ -99,11 +97,13 @@ fun StartScreen(
         Spacer(modifier = Modifier.height(100.dp))
 
         // 구글 로그인 버튼
+        val isLoading = uiState is StartUiState.Loading
+
         Button(
             onClick = {
-                // ViewModel에서 로그인 처리 호출
                 viewModel.signIn(context)
             },
+            enabled = !isLoading,
             modifier = Modifier
                 .padding(horizontal = 24.dp)
                 .fillMaxWidth()
@@ -120,18 +120,33 @@ fun StartScreen(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Image(
-                    painter = painterResource(id = R.drawable.google_logo),
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Google 계정으로 로그인",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color.Black
-                )
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "로그인 중...",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.Gray
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(id = R.drawable.google_logo),
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Google 계정으로 로그인",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.Black
+                    )
+                }
             }
         }
 
@@ -146,7 +161,7 @@ fun StartScreen(
         ) {
             when (val state = uiState) {
                 is StartUiState.Success -> {
-                    onLoginSuccess() // 로그인 성공 시 이동
+                    onLoginSuccess(state.onboardingCompleted)
                 }
                 is StartUiState.Error -> {
                     Text(
@@ -155,17 +170,10 @@ fun StartScreen(
                         fontSize = 14.sp
                     )
                 }
-                is StartUiState.Loading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(32.dp),
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
                 else -> {
-                    // 기본 상태일 때도 공간 유지
                     Spacer(modifier = Modifier.height(32.dp))
                 }
             }
-}
+        }
     }
 }

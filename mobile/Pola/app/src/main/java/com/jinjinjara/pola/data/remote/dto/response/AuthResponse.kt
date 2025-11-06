@@ -24,17 +24,46 @@ data class RefreshTokenResponse(
 @JsonClass(generateAdapter = true)
 data class UserResponse(
     @Json(name = "id")
-    val id: String,
+    val id: Long,
 
     @Json(name = "email")
     val email: String,
 
-    @Json(name = "name")
-    val name: String,
+    @Json(name = "display_name")
+    val displayName: String,
 
     @Json(name = "profile_image_url")
     val profileImageUrl: String? = null,
 
     @Json(name = "created_at")
-    val createdAt: Long
+    val createdAt: String
 )
+
+// OAuth API 공통 응답 래퍼
+@JsonClass(generateAdapter = true)
+data class OAuthApiResponse<T>(
+    @Json(name = "data")
+    val data: T?,
+
+    @Json(name = "message")
+    val message: String,
+
+    @Json(name = "status")
+    val status: String,
+
+    @Json(name = "code")
+    val code: String? = null
+)
+
+// OAuth 토큰 데이터
+@JsonClass(generateAdapter = true)
+data class OAuthTokenData(
+    @Json(name = "accessToken")
+    val accessToken: String,
+
+    @Json(name = "refreshToken")
+    val refreshToken: String
+)
+
+// OAuth reissue 응답은 data가 String 타입
+typealias OAuthReissueResponse = OAuthApiResponse<String>

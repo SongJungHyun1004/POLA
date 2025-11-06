@@ -7,7 +7,6 @@ spring:
   # ===============================
   datasource:
     driver-class-name: org.postgresql.Driver
-    # [Note] Use container name (postgres) instead of localhost in Docker
     #    url: jdbc:postgresql://postgres:5432/pola_db
     url: jdbc:postgresql://k13d204.p.ssafy.io:30432/pola_db
     username: ${DB_USERNAME}
@@ -76,6 +75,7 @@ jwt:
 # ===============================
 server:
   port: 8080
+  url: https://k13d204.p.ssafy.io
 
 # ===============================
 # Logging
@@ -130,3 +130,22 @@ cloud:
 # ===============================
 google:
   client-ids: ${GOOGLE_WEB_CLIENT_ID},${GOOGLE_ANDROID_CLIENT_ID}
+  project-id: ${GCP_PROJECT_ID}
+  location: ${GCP_LOCATION}
+
+# ===============================
+# Custom Application Properties
+# ===============================
+app:
+  # CORS 허용 출처 (allowCredentials: true 일 때 구체적으로 지정 필요)
+  cors:
+    allowed-origins: https://k13d204.p.ssafy.io,http://localhost:3000,http://localhost:5173
+
+  oauth2:
+    redirect-uri:
+      web: https://k13d204.p.ssafy.io/oauth2/redirect
+      mobile: pola-app://oauth2/redirect
+
+gcp:
+  vision:
+    credentials-path: ${GOOGLE_APPLICATION_CREDENTIALS}

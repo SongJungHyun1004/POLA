@@ -18,13 +18,22 @@ class AuthInterceptor @Inject constructor(
         val originalRequest = chain.request()
         val path = originalRequest.url.encodedPath
 
-        // 토큰이 필요없는 요청은 그대로 진행 (로그인, 회원가입 등)
-        if (path.contains("/auth/")) {
-            Log.d("AuthInterceptor", "Auth endpoint, skip token: $path")
+        // 토큰이 필요없는 요청은 그대로 진행
+        val skipTokenPaths = listOf(
+            "/auth/login",
+            "/auth/google",
+            "/auth/signup",
+            "/oauth/token",
+            "/oauth/signup",
+            "/oauth/signin"
+        )
+
+        if (skipTokenPaths.any { path.contains(it) }) {
+            Log.d("AuthInterceptor", "Public endpoint, skip token: $path")
             return chain.proceed(originalRequest)
         }
 
-        // DataStore에서 토큰 가져오기
+        // DataStore에서 Access Token 가져오기
         val token = runBlocking {
             preferencesDataStore.getAccessToken()
         }

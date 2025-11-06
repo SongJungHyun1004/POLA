@@ -1,4 +1,4 @@
-package com.jinjinjara.pola.opensearch.service;
+package com.jinjinjara.pola.search.service;
 
 
 import com.jinjinjara.pola.search.model.FileSearch;
