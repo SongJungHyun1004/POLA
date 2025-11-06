@@ -75,7 +75,7 @@ interface AuthRepository {
     suspend fun clearTokens()
 
     /**
-     * 현재 사용자 정보 가져오기
+     * 사용자 정보 가져오기
      */
-    suspend fun getCurrentUser(): Result<User>
+    suspend fun getUser(): Result<User>
 }

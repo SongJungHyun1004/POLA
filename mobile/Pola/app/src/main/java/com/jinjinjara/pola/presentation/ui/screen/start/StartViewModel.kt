@@ -4,8 +4,10 @@ import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jinjinjara.pola.data.local.datastore.PreferencesDataStore
 import com.jinjinjara.pola.data.remote.auth.GoogleSignInManager
 import com.jinjinjara.pola.domain.usecase.auth.LoginUseCase
+import com.jinjinjara.pola.util.ErrorType
 import com.jinjinjara.pola.util.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,41 +18,46 @@ import javax.inject.Inject
 @HiltViewModel
 class StartViewModel @Inject constructor(
     private val googleSignInManager: GoogleSignInManager,
-    private val loginUseCase: LoginUseCase
+    private val loginUseCase: LoginUseCase,
+    private val preferencesDataStore: PreferencesDataStore
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<StartUiState>(StartUiState.Idle)
     val uiState = _uiState.asStateFlow()
 
     fun signIn(context: Context) {
-        Log.d("StartViewModel", "signIn() called")
+        Log.d("Auth:UI", "Login button clicked")
+        _uiState.value = StartUiState.Loading
         viewModelScope.launch {
             googleSignInManager.signIn(
                 context = context,
                 onSuccess = { signInResult ->
-                    Log.d("StartViewModel", "Google signIn success: ${signInResult.displayName}")
-                    viewModelScope.launch {
-                        when (val result = loginUseCase(
-                            LoginUseCase.Params.Google(
-                                idToken = signInResult.idToken,
-                                displayName = signInResult.displayName
-                            )
-                        )) {
-                            is Result.Success -> {
-                                Log.d("StartViewModel", "Login success: ${result.data}")
-                                _uiState.value = StartUiState.Success
-                            }
-                            is Result.Error -> {
-                                Log.e("StartViewModel", "Login error: ${result.message}")
-                                _uiState.value = StartUiState.Error(result.message ?: "로그인 실패")
-                            }
-                            else -> Unit
+                    Log.d("Auth:UI", "Google credentials received, calling login use case")
+                    when (val result = loginUseCase(
+                        LoginUseCase.Params.Google(
+                            idToken = signInResult.idToken,
+                            displayName = signInResult.displayName
+                        )
+                    )) {
+                        is Result.Success -> {
+                            Log.d("Auth:UI", "Login successful, user: ${result.data.email}")
+                            val onboardingCompleted = preferencesDataStore.isOnboardingCompleted()
+                            Log.d("Auth:UI", "Onboarding status: $onboardingCompleted")
+                            _uiState.value = StartUiState.Success(onboardingCompleted)
                         }
+                        is Result.Error -> {
+                            Log.e("Auth:UI", "Login failed: ${result.message}")
+                            _uiState.value = StartUiState.Error(
+                                message = result.message ?: "로그인 실패",
+                                errorType = result.errorType
+                            )
+                        }
+                        else -> Unit
                     }
                 },
-                onError = { error ->
-                    Log.e("StartViewModel", "Google signIn error: $error")
-                    _uiState.value = StartUiState.Error(error)
+                onError = { error, errorType ->
+                    Log.e("Auth:UI", "Google sign-in error: $error (type: $errorType)")
+                    _uiState.value = StartUiState.Error(error, errorType)
                 }
             )
         }
@@ -60,6 +67,6 @@ class StartViewModel @Inject constructor(
 sealed interface StartUiState {
     object Idle : StartUiState
     object Loading : StartUiState
-    object Success : StartUiState
-    data class Error(val message: String) : StartUiState
+    data class Success(val onboardingCompleted: Boolean) : StartUiState
+    data class Error(val message: String, val errorType: ErrorType) : StartUiState
 }
