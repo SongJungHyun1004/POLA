@@ -13,6 +13,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.jinjinjara.pola.data.local.datastore.PreferencesDataStore
 import com.jinjinjara.pola.domain.repository.AuthRepository
 import com.jinjinjara.pola.navigation.PolaNavHost
 import com.jinjinjara.pola.presentation.ui.theme.PolaTheme
@@ -26,18 +27,22 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var authRepository: AuthRepository
 
+    @Inject
+    lateinit var preferencesDataStore: PreferencesDataStore
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d("MainActivity", "onCreate started")
         enableEdgeToEdge()
         setContent {
             PolaTheme {
-                // DataStore의 토큰 존재 여부를 관찰하여 로그인 상태 관리
+                // DataStore의 토큰 존재 여부와 온보딩 완료 여부를 관찰하여 상태 관리
                 // initial = null로 설정하여 로딩 상태 표시
                 val isLoggedIn by authRepository.observeLoginState().collectAsState(initial = null)
+                val onboardingCompleted by preferencesDataStore.observeOnboardingCompleted().collectAsState(initial = false)
 
-                LaunchedEffect(isLoggedIn) {
-                    Log.d("MainActivity", "isLoggedIn changed: $isLoggedIn")
+                LaunchedEffect(isLoggedIn, onboardingCompleted) {
+                    Log.d("MainActivity", "State changed - isLoggedIn: $isLoggedIn, onboardingCompleted: $onboardingCompleted")
                     if (isLoggedIn != null) {
                         val token = authRepository.getAccessToken()
                         Log.d("MainActivity", "Current token: ${token?.take(20) ?: "null"}...")
@@ -58,6 +63,7 @@ class MainActivity : ComponentActivity() {
                         PolaNavHost(
                             modifier = Modifier.fillMaxSize(),
                             isLoggedIn = isLoggedIn ?: false,
+                            onboardingCompleted = onboardingCompleted
                         )
                     }
                 }

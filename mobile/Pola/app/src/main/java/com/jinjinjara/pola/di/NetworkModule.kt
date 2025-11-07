@@ -2,6 +2,7 @@ package com.jinjinjara.pola.di
 
 import com.jinjinjara.pola.data.local.datastore.PreferencesDataStore
 import com.jinjinjara.pola.data.remote.api.AuthApi
+import com.jinjinjara.pola.data.remote.api.CategoryApi
 import com.jinjinjara.pola.data.remote.interceptor.AuthInterceptor
 import com.jinjinjara.pola.data.remote.interceptor.TokenAuthenticator
 import com.jinjinjara.pola.util.Constants
@@ -103,4 +104,11 @@ object NetworkModule {
      fun provideAuthApi(retrofit: Retrofit): AuthApi {
          return retrofit.create(AuthApi::class.java)
      }
+
+    // CategoryApi 제공
+    @Provides
+    @Singleton
+    fun provideCategoryApi(retrofit: Retrofit): CategoryApi {
+        return retrofit.create(CategoryApi::class.java)
+    }
 }

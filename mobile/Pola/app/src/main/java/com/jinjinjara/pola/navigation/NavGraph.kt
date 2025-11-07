@@ -2,8 +2,10 @@ package com.jinjinjara.pola.navigation
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -11,6 +13,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import androidx.navigation.navigation
 import com.jinjinjara.pola.data.local.datastore.PreferencesDataStore
+import com.jinjinjara.pola.presentation.ui.screen.start.CategorySelectViewModel
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.android.scopes.ActivityScoped
 import kotlinx.coroutines.launch
@@ -49,9 +52,20 @@ interface DataStoreEntryPoint {
  */
 fun NavGraphBuilder.authNavGraph(
     navController: NavHostController,
+    isLoggedIn: Boolean = false,
+    onboardingCompleted: Boolean = false
 ) {
+    // Auth 시작 화면 결정:
+    // - 로그인 완료 && 온보딩 미완료: CategorySelect (온보딩 필요)
+    // - 로그인 미완료: Start (로그인 필요)
+    val authStartDestination = if (isLoggedIn && !onboardingCompleted) {
+        Screen.CategorySelect.route
+    } else {
+        Screen.Start.route
+    }
+
     navigation(
-        startDestination = Screen.Start.route,
+        startDestination = authStartDestination,
         route = NavGraphs.AUTH
     ) {
         // 시작 화면 (구글 로그인) 화면
@@ -71,8 +85,20 @@ fun NavGraphBuilder.authNavGraph(
 
         // 카테고리 선택 화면
         composable(route = Screen.CategorySelect.route) {
+            // AUTH 네비게이션 그래프 스코프의 공유 ViewModel 사용
+            val authBackStackEntry = remember(it) {
+                navController.getBackStackEntry(NavGraphs.AUTH)
+            }
+            val sharedViewModel: CategorySelectViewModel = hiltViewModel(authBackStackEntry)
+
             CategorySelectScreen(
-                onCategorySelected = {
+                viewModel = sharedViewModel,
+                onCategorySelected = { categoriesWithTags ->
+                    // 선택된 카테고리 정보를 저장 (navController의 savedStateHandle 사용)
+                    navController.currentBackStackEntry?.savedStateHandle?.set(
+                        "categoriesWithTags",
+                        categoriesWithTags
+                    )
                     // 태그 선택 화면으로 이동
                     navController.navigate(Screen.TagSelect.route)
                 }
@@ -84,8 +110,15 @@ fun NavGraphBuilder.authNavGraph(
             val context = LocalContext.current
             val coroutineScope = rememberCoroutineScope()
 
+            // 이전 화면에서 전달받은 선택된 카테고리 정보
+            val categoriesWithTags = navController.previousBackStackEntry
+                ?.savedStateHandle
+                ?.get<Map<String, List<String>>>("categoriesWithTags")
+                ?: emptyMap()
+
             TagSelectScreen(
-                onNextClick = { selectedTags ->
+                categoriesWithTags = categoriesWithTags,
+                onNextClick = {
                     // 온보딩 완료 플래그 저장
                     coroutineScope.launch {
                         val entryPoint = EntryPointAccessors.fromActivity(
