@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import ImageModal from "./ImageModal";
 import EditModal from "./EditModal";
 import ShareModal from "./ShareModal";
@@ -29,9 +29,34 @@ export default function PolaroidDetail({
   const [open, setOpen] = useState(false);
   const [flipped, setFlipped] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+
   const [context, setContext] = useState(contexts);
   const [tagState, setTagState] = useState(tags);
-  const [shareOpen, setShareOpen] = useState(false);
+
+  useEffect(() => {
+    setTagState(tags);
+  }, [tags]);
+
+  useEffect(() => {
+    setContext(contexts);
+  }, [contexts]);
+
+  // 안전한 fallback src
+  const displaySrc =
+    src && (src.startsWith("/") || src.startsWith("http"))
+      ? src
+      : "/images/dummy_image_1.png";
+
+  // 날짜 포맷팅
+  const formattedDate = useMemo(() => {
+    if (!date) return "";
+    try {
+      return new Date(date).toISOString().split("T")[0].replace(/-/g, ".");
+    } catch {
+      return date;
+    }
+  }, [date]);
 
   if (!src) {
     return (
@@ -43,6 +68,7 @@ export default function PolaroidDetail({
 
   return (
     <div className="flex flex-col items-center w-full">
+      {/* 카드 영역 */}
       <div
         className={`relative bg-white border border-[#8B857C] rounded-md shadow-sm w-80 h-[420px] flex items-center justify-center transition-transform duration-500 [transform-style:preserve-3d] ${
           flipped ? "rotate-y-180" : ""
@@ -58,7 +84,7 @@ export default function PolaroidDetail({
             style={{ marginBottom: "14%" }}
           >
             <Image
-              src={src}
+              src={displaySrc}
               alt="selected polaroid"
               fill
               className="object-cover object-center"
@@ -70,6 +96,7 @@ export default function PolaroidDetail({
         <div className="absolute w-full h-full rotate-y-180 backface-hidden p-4 flex flex-col">
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-lg font-semibold text-[#4C3D25]">Context</h2>
+
             <div className="flex gap-3">
               <button
                 onClick={() => setEditOpen(true)}
@@ -91,11 +118,9 @@ export default function PolaroidDetail({
             </div>
           </div>
 
-          {/* 읽기 전용 영역 */}
           <textarea
             className="flex-1 resize-none p-3 rounded-md text-sm text-[#4C3D25] focus:outline-none cursor-default"
-            placeholder="이미지 설명"
-            value="내용을 입력하세요..."
+            value={context}
             readOnly
           />
         </div>
@@ -103,8 +128,9 @@ export default function PolaroidDetail({
 
       {/* Tags / Date / Flip */}
       <div className="mt-4 text-center text-[#4C3D25] flex flex-col items-center">
-        <p className="text-lg">{tags?.join(" ")}</p>
-        <p className="text-2xl font-semibold mt-1">{date}</p>
+        <p className="text-lg">{tagState.join(" ")}</p>
+        <p className="text-2xl font-semibold mt-1">{formattedDate}</p>
+
         <button
           className="mt-3 bg-white border border-[#8B857C] rounded-full p-2 shadow hover:bg-[#F6F1E7] transition-transform hover:rotate-180"
           onClick={() => setFlipped((prev) => !prev)}
@@ -113,8 +139,7 @@ export default function PolaroidDetail({
         </button>
       </div>
 
-      {/* 모달들 */}
-      {open && <ImageModal src={src} onClose={() => setOpen(false)} />}
+      {open && <ImageModal src={displaySrc} onClose={() => setOpen(false)} />}
       {shareOpen && id != null && (
         <ShareModal
           id={id}
