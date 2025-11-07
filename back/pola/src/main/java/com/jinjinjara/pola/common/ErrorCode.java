@@ -8,10 +8,17 @@ import org.springframework.http.HttpStatus;
 @AllArgsConstructor
 public enum ErrorCode {
 
+    /* ------------------------- [인증 관련] ------------------------- */
+    AUTHENTICATION_FAILED("AUTH-001", "인증에 실패했습니다.", HttpStatus.UNAUTHORIZED),
+    INVALID_ID_TOKEN("AUTH-002", "유효하지 않은 ID 토큰입니다.", HttpStatus.UNAUTHORIZED),
+    INVALID_ACCESS_TOKEN("AUTH-003", "유효하지 않은 엑세스 토큰입니다.", HttpStatus.UNAUTHORIZED),
+    INVALID_REFRESH_TOKEN("AUTH-004", "유효하지 않은 리프레시 토큰입니다.", HttpStatus.UNAUTHORIZED),
+
     /* ------------------------- [유저 관련] ------------------------- */
     USER_NOT_FOUND("USER-001", "유저를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
     USER_UNAUTHORIZED("USER-002", "인증되지 않은 사용자입니다.", HttpStatus.UNAUTHORIZED),
     USER_FORBIDDEN("USER-003", "해당 작업을 수행할 권한이 없습니다.", HttpStatus.FORBIDDEN),
+    USER_ALREADY_EXISTS("USER-004", "이미 가입된 유저입니다.", HttpStatus.CONFLICT),
 
     /* ------------------------- [카테고리 관련] ------------------------- */
     CATEGORY_NOT_FOUND("CATEGORY-001", "카테고리를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
@@ -27,8 +34,6 @@ public enum ErrorCode {
     TAG_ALREADY_EXISTS("TAG-002", "이미 존재하는 태그입니다.", HttpStatus.CONFLICT),
     TAG_LINK_DUPLICATE("TAG-003", "이미 연결된 태그입니다.", HttpStatus.CONFLICT),
     TAG_CREATE_FAIL("TAG-004", "태그 생성에 실패했습니다.", HttpStatus.BAD_REQUEST),
-
-
 
     /* ------------------------- [파일 관련] ------------------------- */
     FILE_NOT_FOUND("FILE-001", "파일을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
