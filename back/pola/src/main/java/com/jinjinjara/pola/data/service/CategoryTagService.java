@@ -168,9 +168,9 @@ public class CategoryTagService {
     @Transactional(readOnly = true)
     public RecommendedCategoryList getRecommendedCategoriesAndTags() {
         List<RecommendedCategory> recommended = List.of(
-                new RecommendedCategory("여행", List.of("유럽", "가족", "사진")),
-                new RecommendedCategory("음식", List.of("한식", "야식", "디저트")),
-                new RecommendedCategory("취미", List.of("그림", "음악", "운동"))
+                new RecommendedCategory("여행", List.of("유럽", "가족", "사진","동남아","비행기","기차","맛집","여행비")),
+                new RecommendedCategory("음식", List.of("한식", "야식", "디저트","양식","중식","일식","분식","배달음식")),
+                new RecommendedCategory("취미", List.of("그림", "음악", "운동","게임","운동","마라톤","러닝","조깅"))
         );
         return new RecommendedCategoryList(recommended);
     }
