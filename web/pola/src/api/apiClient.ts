@@ -11,15 +11,17 @@ export async function apiClient(url: string, options: RequestInit = {}) {
 
   let res: Response = await fetch(base + url, { ...options, headers });
 
-  // Access Token 만료 → 401
+  // ✅ Access Token 만료 시(401) → Refresh Token으로 재발급
   if (res.status === 401 && refreshToken) {
-    const refreshRes: Response = await fetch(base + "/auth/refresh", {
+    const refreshRes: Response = await fetch(base + "/oauth/reissue", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refreshToken }),
+      headers: {
+        Authorization: `Bearer ${refreshToken}`,
+        "Content-Type": "application/json",
+      },
     });
 
-    // Refresh 실패 → 로그아웃 처리
+    // Refresh 실패 → 강제 로그아웃
     if (!refreshRes.ok) {
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
@@ -27,24 +29,28 @@ export async function apiClient(url: string, options: RequestInit = {}) {
       throw new Error("Token refresh failed");
     }
 
-    // 새 Access Token 저장
-    const newTokens = await refreshRes.json();
-    const newAccessToken: string = newTokens?.data?.accessToken ?? "";
+    const tokenJson = await refreshRes.json();
 
-    if (!newAccessToken) {
+    const newAccess = tokenJson?.data?.accessToken ?? "";
+    const newRefresh = tokenJson?.data?.refreshToken ?? "";
+
+    if (!newAccess || !newRefresh) {
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
       window.location.href = "/";
-      throw new Error("New access token missing");
+      throw new Error("New tokens missing");
     }
 
-    localStorage.setItem("accessToken", newAccessToken);
+    // ✅ 새 토큰 저장
+    localStorage.setItem("accessToken", newAccess);
+    localStorage.setItem("refreshToken", newRefresh);
 
+    // ✅ 새 Access Token으로 원래 요청 재시도
     res = await fetch(base + url, {
       ...options,
       headers: {
         ...headers,
-        Authorization: `Bearer ${newAccessToken}`,
+        Authorization: `Bearer ${newAccess}`,
       },
     });
   }
