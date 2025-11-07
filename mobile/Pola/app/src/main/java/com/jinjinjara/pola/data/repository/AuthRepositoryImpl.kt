@@ -276,23 +276,7 @@ class AuthRepositoryImpl @Inject constructor(
                 }
 
                 val tokenData = tokenResponse.body()!!.data!!
-                val statusCode = tokenResponse.code()
-
-                // 상태코드로 신규/기존 유저 구분
-                val onboardingCompleted = when (statusCode) {
-                    200 -> {
-                        Log.d("Auth:Login", "Step 1 SUCCESS: Existing user (200)")
-                        true  // 기존 유저
-                    }
-                    201 -> {
-                        Log.d("Auth:Login", "Step 1 SUCCESS: New user (201)")
-                        false  // 신규 유저
-                    }
-                    else -> {
-                        Log.w("Auth:Login", "Step 1 WARNING: Unexpected status code $statusCode, treating as existing user")
-                        true  // 예상치 못한 코드는 기존 유저로 처리
-                    }
-                }
+                Log.d("Auth:Login", "Step 1 SUCCESS: OAuth token received")
 
                 // Step 2: 최종 토큰 저장
                 Log.d("Auth:Login", "Step 2: Saving tokens")
@@ -307,23 +291,42 @@ class AuthRepositoryImpl @Inject constructor(
                 Log.d("Auth:Login", "Step 3: Getting current user info")
                 val userInfoResponse = authApi.getUser()
 
-                if (userInfoResponse.isSuccessful && userInfoResponse.body()?.data != null) {
-                    val userResponse = userInfoResponse.body()!!.data!!
-                    val user = userResponse.toUser(onboardingCompleted = onboardingCompleted)
-                    Log.d("Auth:Login", "=== Google OAuth Login SUCCESS === User: ${user.email}, Onboarding: $onboardingCompleted")
-                    Result.Success(user)
-                } else {
+                if (!userInfoResponse.isSuccessful || userInfoResponse.body()?.data == null) {
                     val statusCode = userInfoResponse.code()
                     val errorBody = userInfoResponse.errorBody()?.string()
                     Log.e("Auth:User", "Failed to fetch user info")
                     Log.e("Auth:User", "Status Code: $statusCode")
                     Log.e("Auth:User", "Error message: ${userInfoResponse.message()}")
                     Log.e("Auth:User", "Error body: $errorBody")
-                    Result.Error(
+                    return@withContext Result.Error(
                         exception = Exception(userInfoResponse.message()),
                         message = "사용자 정보를 가져올 수 없습니다."
                     )
                 }
+
+                val userResponse = userInfoResponse.body()!!.data!!
+                Log.d("Auth:Login", "Step 3 SUCCESS: User info retrieved -> ${userResponse.email}")
+
+                // Step 4: 카테고리 존재 여부 확인으로 온보딩 완료 여부 판단
+                Log.d("Auth:Login", "Step 4: Checking user categories for onboarding status")
+                val categoriesResponse = authApi.getUserCategories()
+
+                val onboardingCompleted = if (categoriesResponse.isSuccessful && categoriesResponse.body()?.data != null) {
+                    Log.d("Auth:Login", "Step 4 SUCCESS: User has categories -> onboardingCompleted = true")
+                    true
+                } else {
+                    val categoryErrorBody = categoriesResponse.errorBody()?.string()
+                    Log.d("Auth:Login", "Step 4: No categories found -> onboardingCompleted = false")
+                    Log.d("Auth:Login", "Categories API response: ${categoriesResponse.code()}")
+                    if (categoryErrorBody != null) {
+                        Log.d("Auth:Login", "Error body: $categoryErrorBody")
+                    }
+                    false
+                }
+
+                val user = userResponse.toUser(onboardingCompleted = onboardingCompleted)
+                Log.d("Auth:Login", "=== Google OAuth Login SUCCESS === User: ${user.email}, Onboarding: $onboardingCompleted")
+                Result.Success(user)
 
             } catch (e: SocketTimeoutException) {
                 Log.e("Auth:Login", "=== Google OAuth Login FAILED === Timeout", e)
