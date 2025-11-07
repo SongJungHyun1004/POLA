@@ -4,7 +4,6 @@ import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.jinjinjara.pola.data.local.datastore.PreferencesDataStore
 import com.jinjinjara.pola.data.remote.auth.GoogleSignInManager
 import com.jinjinjara.pola.domain.usecase.auth.LoginUseCase
 import com.jinjinjara.pola.util.ErrorType
@@ -18,8 +17,7 @@ import javax.inject.Inject
 @HiltViewModel
 class StartViewModel @Inject constructor(
     private val googleSignInManager: GoogleSignInManager,
-    private val loginUseCase: LoginUseCase,
-    private val preferencesDataStore: PreferencesDataStore
+    private val loginUseCase: LoginUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<StartUiState>(StartUiState.Idle)
@@ -33,6 +31,7 @@ class StartViewModel @Inject constructor(
                 context = context,
                 onSuccess = { signInResult ->
                     Log.d("Auth:UI", "Google credentials received, calling login use case")
+                    Log.d("Auth:UI", "ID Token: ${signInResult.idToken}")
                     when (val result = loginUseCase(
                         LoginUseCase.Params.Google(
                             idToken = signInResult.idToken,
@@ -41,9 +40,8 @@ class StartViewModel @Inject constructor(
                     )) {
                         is Result.Success -> {
                             Log.d("Auth:UI", "Login successful, user: ${result.data.email}")
-                            val onboardingCompleted = preferencesDataStore.isOnboardingCompleted()
-                            Log.d("Auth:UI", "Onboarding status: $onboardingCompleted")
-                            _uiState.value = StartUiState.Success(onboardingCompleted)
+                            Log.d("Auth:UI", "Onboarding status: ${result.data.onboardingCompleted}")
+                            _uiState.value = StartUiState.Success(result.data.onboardingCompleted)
                         }
                         is Result.Error -> {
                             Log.e("Auth:UI", "Login failed: ${result.message}")

@@ -108,6 +108,7 @@ class GoogleSignInManager @Inject constructor(
                     try {
                         val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
                         Log.d("Auth:Google", "Google ID token parsed successfully")
+                        Log.d("Auth:Google", "ID Token: ${googleIdTokenCredential.idToken}")
                         GoogleSignInResult(
                             idToken = googleIdTokenCredential.idToken,
                             displayName = googleIdTokenCredential.displayName ?: "사용자"
