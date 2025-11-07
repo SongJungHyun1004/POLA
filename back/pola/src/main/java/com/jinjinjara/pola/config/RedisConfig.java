@@ -11,6 +11,7 @@ import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactor
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.repository.configuration.EnableRedisRepositories;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
+import org.springframework.beans.factory.annotation.Value; // <-- (1) import 추가
 
 @RequiredArgsConstructor
 @Configuration
@@ -19,11 +20,23 @@ public class RedisConfig {
 
     private final RedisProperties redisProperties;
 
+    // (2) application.yml에서 username과 password를 읽어올 변수 추가
+    @Value("${spring.data.redis.username}")
+    private String username;
+
+    @Value("${spring.data.redis.password}")
+    private String password;
+
     @Bean
     public RedisConnectionFactory redisConnectionFactory() {
         RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
         config.setHostName(redisProperties.getHost());
         config.setPort(redisProperties.getPort());
+
+        // (3) "PONG"을 확인했던 username과 password를 "수동"으로 설정!
+        config.setUsername(username);
+        config.setPassword(password);
+
         return new LettuceConnectionFactory(config);
     }
 
