@@ -58,13 +58,14 @@ public class ApiResponse<T> {
                 .build();
     }
 
-    public static <T> ApiResponse<T> success() {
+    public static <T> ApiResponse<T> success(String message) {
         return ApiResponse.<T>builder()
                 .success(true)
-                .message("성공했습니다.")
+                .message(message)
                 .data(null)
                 .build();
     }
+
 
     public static <T> ApiResponse<T> fail(String code, String message) {
         return ApiResponse.<T>builder()
