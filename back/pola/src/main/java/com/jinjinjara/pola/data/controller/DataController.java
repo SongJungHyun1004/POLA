@@ -218,9 +218,9 @@ public class DataController {
         기본적으로 업로드 최신순(`createdAt DESC`)으로 정렬되어 **타임라인 형태**로 반환됩니다.  
         
         **옵션**
-        - `filterType`: category | favorite | (없음)
-        - `filterId`: categoryId (filterType이 'category'일 때만 필요)
-        - `sortBy`: 정렬 기준 필드명 (예: createdAt, views 등)
+        - `filterType`: category | favorite | null(null을 보내면 전체파일을 조회)
+        - `filterId`: categoryId (filterType이 'category'일 때만 필요 카테고리 id넣으면됨 다른 타입일경우 null이여도댐 )
+        - `sortBy`: 정렬 기준 필드명 (예: createdAt, views ,file_size, last_viewed_at등)
         - `direction`: 정렬 방향 (ASC / DESC)
         - `page`, `size`: 페이징 설정 (기본 0페이지, size 최대 50)
         
