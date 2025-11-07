@@ -14,7 +14,7 @@ import java.util.List;
 
 @Tag(name = "Tag API", description = "파일에 태그를 추가/조회/삭제하는 API")
 @RestController
-@RequestMapping("/api/v1/files")
+@RequestMapping("/api/v1/file-tags")
 @RequiredArgsConstructor
 public class TagController {
 
