@@ -2,8 +2,10 @@ package com.jinjinjara.pola.di
 
 import com.jinjinjara.pola.data.repository.AuthRepositoryImpl
 import com.jinjinjara.pola.data.repository.FileUploadRepositoryImpl
+import com.jinjinjara.pola.data.repository.HomeRepositoryImpl
 import com.jinjinjara.pola.domain.repository.AuthRepository
 import com.jinjinjara.pola.domain.repository.FileUploadRepository
+import com.jinjinjara.pola.domain.repository.HomeRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -49,4 +51,10 @@ abstract class RepositoryModule {
     abstract fun bindFileUploadRepository(
         fileUploadRepositoryImpl: FileUploadRepositoryImpl
     ): FileUploadRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindHomeRepository(
+        homeRepositoryImpl: HomeRepositoryImpl
+    ): HomeRepository
 }
