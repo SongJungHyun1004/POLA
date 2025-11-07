@@ -61,3 +61,25 @@ export async function getFileDetail(fileId: number) {
   const json = await res.json();
   return json.data;
 }
+
+export async function updateFileCategory(fileId: number, categoryId: number) {
+  const res = await apiClient(
+    `/files/${fileId}/category?categoryId=${categoryId}`,
+    {
+      method: "PUT",
+    }
+  );
+
+  if (!res.ok) throw new Error("카테고리 변경 실패");
+
+  const json = await res.json();
+  return json.data;
+}
+
+export async function getMyCategories() {
+  const res = await apiClient(`/users/me/categories`);
+  if (!res.ok) throw new Error("카테고리 목록 조회 실패");
+
+  const json = await res.json();
+  return json.data;
+}
