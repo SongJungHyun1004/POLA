@@ -21,6 +21,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -33,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import android.widget.Toast
 import com.jinjinjara.pola.R
 
 // 로그인 화면
@@ -44,6 +46,19 @@ fun StartScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+
+    // 에러 토스트 표시
+    LaunchedEffect(uiState) {
+        when (val state = uiState) {
+            is StartUiState.Success -> {
+                onLoginSuccess(state.onboardingCompleted)
+            }
+            is StartUiState.Error -> {
+                Toast.makeText(context, state.message, Toast.LENGTH_SHORT).show()
+            }
+            else -> Unit
+        }
+    }
 
     Column(
         modifier = modifier
@@ -146,32 +161,6 @@ fun StartScreen(
                         fontWeight = FontWeight.Medium,
                         color = Color.Black
                     )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // 로그인 상태 표시
-        Box(
-            modifier = Modifier
-                .height(40.dp)
-                .fillMaxWidth(),
-            contentAlignment = Alignment.Center
-        ) {
-            when (val state = uiState) {
-                is StartUiState.Success -> {
-                    onLoginSuccess(state.onboardingCompleted)
-                }
-                is StartUiState.Error -> {
-                    Text(
-                        text = "로그인 실패: ${state.message}",
-                        color = Color.Red,
-                        fontSize = 14.sp
-                    )
-                }
-                else -> {
-                    Spacer(modifier = Modifier.height(32.dp))
                 }
             }
         }

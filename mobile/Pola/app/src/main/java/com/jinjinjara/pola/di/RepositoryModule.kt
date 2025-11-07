@@ -3,7 +3,9 @@ package com.jinjinjara.pola.di
 import com.jinjinjara.pola.data.repository.AuthRepositoryImpl
 import com.jinjinjara.pola.data.repository.FileUploadRepositoryImpl
 import com.jinjinjara.pola.data.repository.HomeRepositoryImpl
+import com.jinjinjara.pola.data.repository.CategoryRepositoryImpl
 import com.jinjinjara.pola.domain.repository.AuthRepository
+import com.jinjinjara.pola.domain.repository.CategoryRepository
 import com.jinjinjara.pola.domain.repository.FileUploadRepository
 import com.jinjinjara.pola.domain.repository.HomeRepository
 import dagger.Binds
@@ -29,6 +31,15 @@ abstract class RepositoryModule {
     abstract fun bindAuthRepository(
         authRepositoryImpl: AuthRepositoryImpl
     ): AuthRepository
+
+    /**
+     * CategoryRepository 바인딩
+     */
+    @Binds
+    @Singleton
+    abstract fun bindCategoryRepository(
+        categoryRepositoryImpl: CategoryRepositoryImpl
+    ): CategoryRepository
 
     /**
      * UserRepository 바인딩

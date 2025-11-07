@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -82,10 +83,45 @@ public class FileTagService {
                 .map(TagResponse::fromEntity)
                 .toList();
 
-        if (tags.isEmpty()) {
-            throw new CustomException(ErrorCode.TAG_NOT_FOUND);
-        }
+//        if (tags.isEmpty()) {
+//            throw new CustomException(ErrorCode.TAG_NOT_FOUND);
+//        }
 
         return tags;
     }
+
+
+    @Transactional
+    public List<FileTagResponse> addTagsToFile(Long fileId, List<String> tagNames) {
+        File file = fileRepository.findById(fileId)
+                .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
+
+        List<FileTagResponse> results = new ArrayList<>();
+
+        for (String tagName : tagNames) {
+            // 태그가 이미 존재하면 가져오고, 없으면 생성
+            Tag tag = tagRepository.findByTagName(tagName)
+                    .orElseGet(() -> tagRepository.save(Tag.builder()
+                            .tagName(tagName)
+                            .build()));
+
+            // 파일-태그 연결이 이미 존재하는지 확인
+            boolean exists = fileTagRepository.existsByFileAndTag(file, tag);
+            if (exists) {
+                continue; // 이미 연결되어 있으면 건너뜀
+            }
+
+            // 연결 생성 및 저장
+            FileTag fileTag = FileTag.builder()
+                    .file(file)
+                    .tag(tag)
+                    .build();
+
+            FileTag saved = fileTagRepository.save(fileTag);
+            results.add(FileTagResponse.fromEntity(saved));
+        }
+
+        return results;
+    }
+
 }

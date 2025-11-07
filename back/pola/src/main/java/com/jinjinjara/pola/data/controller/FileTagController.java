@@ -1,6 +1,7 @@
 package com.jinjinjara.pola.data.controller;
 
 import com.jinjinjara.pola.common.ApiResponse;
+import com.jinjinjara.pola.data.dto.request.AddTagNamesRequest;
 import com.jinjinjara.pola.data.dto.response.FileTagResponse;
 import com.jinjinjara.pola.data.dto.response.TagResponse;
 import com.jinjinjara.pola.data.service.FileTagService;
@@ -15,21 +16,27 @@ import java.util.List;
 
 @Tag(name = "FileTag API", description = "파일-태그 연결 관리 API (추가, 삭제, 조회)")
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/v1")
 @RequiredArgsConstructor
 public class FileTagController {
 
     private final FileTagService fileTagService;
 
-    @Operation(summary = "파일에 태그 추가", description = "특정 파일에 선택한 태그를 연결합니다.")
-    @PostMapping("/files/{fileId}/tags/{tagId}")
-    public ResponseEntity<ApiResponse<FileTagResponse>> addTagToFile(
+    @Operation(summary = "파일에 태그 추가", description = "특정 파일에 여러 태그 이름을 전달하면, 존재하는 태그는 연결하고 없는 태그는 새로 생성하여 연결합니다.")
+    @PostMapping("/files/{fileId}/tags")
+    public ResponseEntity<ApiResponse<List<FileTagResponse>>> addTagsToFile(
             @Parameter(description = "파일 ID", example = "1") @PathVariable Long fileId,
-            @Parameter(description = "태그 ID", example = "3") @PathVariable Long tagId
+            @RequestBody AddTagNamesRequest request
     ) {
-        FileTagResponse response = fileTagService.addTagToFile(fileId, tagId);
-        return ResponseEntity.ok(ApiResponse.ok(response, "파일에 태그가 추가되었습니다."));
+        if (request.getTagNames() == null || request.getTagNames().isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.fail("INVALID_REQUEST", "추가할 태그 이름이 없습니다."));
+        }
+
+        List<FileTagResponse> responses = fileTagService.addTagsToFile(fileId, request.getTagNames());
+        return ResponseEntity.ok(ApiResponse.ok(responses, "파일에 태그가 추가되었습니다."));
     }
+
 
     @Operation(summary = "파일에서 태그 제거", description = "특정 파일에서 지정된 태그를 제거합니다.")
     @DeleteMapping("/files/{fileId}/tags/{tagId}")

@@ -4,6 +4,7 @@ import com.jinjinjara.pola.common.ApiResponse;
 import com.jinjinjara.pola.common.dto.FileResponseDto;
 import com.jinjinjara.pola.common.dto.PageRequestDto;
 import com.jinjinjara.pola.common.dto.PagedResponseDto;
+import com.jinjinjara.pola.data.dto.request.FileUpdateRequest;
 import com.jinjinjara.pola.data.dto.request.FileUploadCompleteRequest;
 import com.jinjinjara.pola.data.dto.response.*;
 import com.jinjinjara.pola.data.entity.File;
@@ -218,9 +219,9 @@ public class DataController {
         기본적으로 업로드 최신순(`createdAt DESC`)으로 정렬되어 **타임라인 형태**로 반환됩니다.  
         
         **옵션**
-        - `filterType`: category | favorite | (없음)
-        - `filterId`: categoryId (filterType이 'category'일 때만 필요)
-        - `sortBy`: 정렬 기준 필드명 (예: createdAt, views 등)
+        - `filterType`: category | favorite | null(null을 보내면 전체파일을 조회)
+        - `filterId`: categoryId (filterType이 'category'일 때만 필요 카테고리 id넣으면됨 다른 타입일경우 null이여도댐 )
+        - `sortBy`: 정렬 기준 필드명 (예: createdAt, views ,file_size, last_viewed_at등)
         - `direction`: 정렬 방향 (ASC / DESC)
         - `page`, `size`: 페이징 설정 (기본 0페이지, size 최대 50)
         
@@ -255,6 +256,22 @@ public class DataController {
         return ApiResponse.ok(response, "파일 목록 조회 성공");
     }
 
+    @Operation(
+            summary = "파일 내용(context) 수정",
+            description = """
+        파일의 텍스트 설명(context)만 수정합니다.  
+        다른 필드는 변경되지 않습니다.
+        """
+    )
+    @PutMapping("/{fileId}")
+    public ApiResponse<FileDetailResponse> updateFileContext(
+            @AuthenticationPrincipal Users user,
+            @Parameter(description = "파일 ID", example = "15") @PathVariable Long fileId,
+            @RequestBody FileUpdateRequest request
+    ) {
+        FileDetailResponse updated = dataService.updateFileContext(user, fileId, request);
+        return ApiResponse.ok(updated, "파일 설명이 수정되었습니다.");
+    }
 
 
 }

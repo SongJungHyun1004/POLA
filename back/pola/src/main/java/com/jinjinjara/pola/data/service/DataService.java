@@ -1,16 +1,20 @@
 package com.jinjinjara.pola.data.service;
 
+import com.jinjinjara.pola.auth.repository.UserRepository;
 import com.jinjinjara.pola.common.CustomException;
 import com.jinjinjara.pola.common.ErrorCode;
 import com.jinjinjara.pola.common.dto.PageRequestDto;
+import com.jinjinjara.pola.data.dto.request.FileUpdateRequest;
 import com.jinjinjara.pola.data.dto.request.FileUploadCompleteRequest;
 import com.jinjinjara.pola.data.dto.response.DataResponse;
 import com.jinjinjara.pola.data.dto.response.FileDetailResponse;
 import com.jinjinjara.pola.data.dto.response.InsertDataResponse;
+import com.jinjinjara.pola.data.dto.response.TagResponse;
 import com.jinjinjara.pola.data.entity.Category;
 import com.jinjinjara.pola.data.entity.File;
 import com.jinjinjara.pola.data.repository.CategoryRepository;
 import com.jinjinjara.pola.data.repository.FileRepository;
+import com.jinjinjara.pola.data.repository.TagRepository;
 import com.jinjinjara.pola.s3.service.S3Service;
 import com.jinjinjara.pola.user.entity.Users;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +37,7 @@ public class DataService {
     private final FileRepository fileRepository;
     private final CategoryRepository categoryRepository;
     private final S3Service s3Service;
+    private final TagRepository tagRepository;
 
     public List<DataResponse> getRemindFiles(Long userId) {
         LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
@@ -49,21 +54,35 @@ public class DataService {
                         .build())
                 .toList();
     }
-
     @Transactional
     public FileDetailResponse getFileDetail(Long userId, Long fileId) {
         File file = fileRepository.findByIdAndUserId(fileId, userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
 
+        // 조회수 및 마지막 열람 시각 갱신
         file.setViews(file.getViews() + 1);
         file.setLastViewedAt(LocalDateTime.now());
         fileRepository.save(file);
 
+        // 🏷 파일에 연결된 태그 조회
+        List<TagResponse> tags = tagRepository.findAllByFileId(fileId).stream()
+                .map(tag -> TagResponse.builder()
+                        .id(tag.getId())
+                        .tagName(tag.getTagName())
+                        .build())
+                .toList();
+
+        // presigned URL 생성 (파일 1개용)
+        String presignedUrl = s3Service.generatePreviewUrl(
+                new S3Service.FileMeta(file.getSrc(), file.getType())
+        );
+
+        // 응답 DTO 구성
         return FileDetailResponse.builder()
                 .id(file.getId())
                 .userId(file.getUserId())
                 .categoryId(file.getCategoryId())
-                .src(file.getSrc())
+                .src(presignedUrl) // presigned URL 반환
                 .type(file.getType())
                 .context(file.getContext())
                 .ocrText(file.getOcrText())
@@ -78,6 +97,7 @@ public class DataService {
                 .originUrl(file.getOriginUrl())
                 .createdAt(file.getCreatedAt())
                 .lastViewedAt(file.getLastViewedAt())
+                .tags(tags)
                 .build();
     }
 
@@ -117,7 +137,7 @@ public class DataService {
         // 변환: File → DataResponse
         return files.map(file -> DataResponse.builder()
                 .id(file.getId())
-                .src(previewUrls.get(file.getId()))  // ✅ 미리보기용 presigned URL
+                .src(previewUrls.get(file.getId()))  // 미리보기용 presigned URL
                 .type(file.getType())
                 .context(file.getContext())
                 .favorite(file.getFavorite())
@@ -271,6 +291,41 @@ public class DataService {
         // 대상 파일 sort 갱신
         target.setFavoriteSort(newSort);
         return fileRepository.save(target);
+    }
+
+
+    @Transactional
+    public FileDetailResponse updateFileContext(Users user, Long fileId, FileUpdateRequest request) {
+        File file = fileRepository.findByIdAndUserId(fileId, user.getId())
+                .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
+
+        // context가 비어있지 않을 때만 수정
+        if (request.getContext() != null && !request.getContext().isBlank()) {
+            file.setContext(request.getContext());
+        }
+
+        File saved = fileRepository.save(file);
+
+        return FileDetailResponse.builder()
+                .id(saved.getId())
+                .userId(saved.getUserId())
+                .categoryId(saved.getCategoryId())
+                .src(saved.getSrc())
+                .type(saved.getType())
+                .context(saved.getContext())
+                .ocrText(saved.getOcrText())
+                .vectorId(saved.getVectorId())
+                .fileSize(saved.getFileSize())
+                .shareStatus(saved.getShareStatus())
+                .favorite(saved.getFavorite())
+                .favoriteSort(saved.getFavoriteSort())
+                .favoritedAt(saved.getFavoritedAt())
+                .views(saved.getViews())
+                .platform(saved.getPlatform())
+                .originUrl(saved.getOriginUrl())
+                .createdAt(saved.getCreatedAt())
+                .lastViewedAt(saved.getLastViewedAt())
+                .build();
     }
 
 }

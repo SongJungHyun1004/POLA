@@ -47,7 +47,7 @@ interface AuthApi {
         @Body request: RefreshTokenRequest
     ): Response<RefreshTokenResponse>
 
-    @GET("user/me")
+    @GET("users/me")
     suspend fun getUser(): Response<OAuthApiResponse<UserResponse>>
 
     // OAuth 2.0 엔드포인트
