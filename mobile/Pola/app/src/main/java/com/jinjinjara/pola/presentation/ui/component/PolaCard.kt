@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.jinjinjara.pola.R
 
 @Composable
@@ -93,6 +94,7 @@ fun PolaCard(
     modifier: Modifier = Modifier,
     backgroundColor: Color = Color.White,
     imageResId: Int? = null,
+    imageUrl: String? = null,
     ratio: Float = 3f / 4f,
     imageRatio: Float = 1f,
     paddingValues: PaddingValues = PaddingValues(
@@ -136,17 +138,28 @@ fun PolaCard(
                     .border(1.dp, borderColor, RoundedCornerShape(5.dp)),
                 contentAlignment = Alignment.TopCenter
             ) {
-                val painter = painterResource(
-                    id = imageResId ?: R.drawable.temp_image
-                )
-                Image(
-                    painter = painter,
-                    contentDescription = "Content",
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(5.dp)),
-                    contentScale = ContentScale.Crop
-                )
+                if (imageUrl != null) {
+                    AsyncImage(
+                        model = imageUrl,
+                        contentDescription = "Content",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(5.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    val painter = painterResource(
+                        id = imageResId ?: R.drawable.temp_image
+                    )
+                    Image(
+                        painter = painter,
+                        contentDescription = "Content",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(5.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                }
             }
 
             // 메타 정보 영역

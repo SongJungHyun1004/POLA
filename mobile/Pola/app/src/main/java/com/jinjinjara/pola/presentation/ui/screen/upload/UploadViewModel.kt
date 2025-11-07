@@ -7,20 +7,36 @@ import android.net.Uri
 import android.provider.MediaStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jinjinjara.pola.domain.repository.FileUploadRepository
+import com.jinjinjara.pola.util.Result
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+// 업로드 상태
+sealed class UploadScreenState {
+    object Idle : UploadScreenState()
+    object Uploading : UploadScreenState()
+    data class Success(val message: String) : UploadScreenState()
+    data class Error(val message: String) : UploadScreenState()
+}
 
 data class UploadUiState(
     val images: List<GalleryImage> = emptyList(),
-    val selectedImages: List<GalleryImage> = emptyList(),
-    val isLoading: Boolean = false
+    val selectedImage: GalleryImage? = null,
+    val isLoading: Boolean = false,
+    val uploadState: UploadScreenState = UploadScreenState.Idle
 )
 
-class UploadViewModel : ViewModel() {
+@HiltViewModel
+class UploadViewModel @Inject constructor(
+    private val fileUploadRepository: FileUploadRepository
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(UploadUiState())
     val uiState: StateFlow<UploadUiState> = _uiState.asStateFlow()
@@ -81,21 +97,15 @@ class UploadViewModel : ViewModel() {
         }
     }
 
-    fun toggleImageSelection(image: GalleryImage) {
+    fun selectImage(image: GalleryImage) {
         _uiState.update { state ->
             val updatedImages = state.images.map {
-                if (it.id == image.id) {
-                    it.copy(isSelected = !it.isSelected)
-                } else {
-                    it
-                }
+                it.copy(isSelected = it.id == image.id)
             }
-
-            val selectedImages = updatedImages.filter { it.isSelected }
 
             state.copy(
                 images = updatedImages,
-                selectedImages = selectedImages
+                selectedImage = image.copy(isSelected = true)
             )
         }
     }
@@ -105,8 +115,39 @@ class UploadViewModel : ViewModel() {
             val clearedImages = state.images.map { it.copy(isSelected = false) }
             state.copy(
                 images = clearedImages,
-                selectedImages = emptyList()
+                selectedImage = null
             )
         }
+    }
+
+    fun uploadSelectedImage(context: Context) {
+        val selectedImage = _uiState.value.selectedImage ?: return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(uploadState = UploadScreenState.Uploading) }
+
+            val fileName = "upload_${System.currentTimeMillis()}.jpg"
+            val contentType = context.contentResolver.getType(selectedImage.uri) ?: "image/jpeg"
+
+            when (val result = fileUploadRepository.uploadFile(selectedImage.uri, fileName, contentType)) {
+                is Result.Success -> {
+                    _uiState.update {
+                        it.copy(uploadState = UploadScreenState.Success(result.data))
+                    }
+                }
+                is Result.Error -> {
+                    _uiState.update {
+                        it.copy(uploadState = UploadScreenState.Error(result.message ?: "업로드 실패"))
+                    }
+                }
+                is Result.Loading -> {
+                    // 이미 Uploading 상태
+                }
+            }
+        }
+    }
+
+    fun resetUploadState() {
+        _uiState.update { it.copy(uploadState = UploadScreenState.Idle) }
     }
 }

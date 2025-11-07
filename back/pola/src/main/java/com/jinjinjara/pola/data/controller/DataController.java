@@ -4,6 +4,7 @@ import com.jinjinjara.pola.common.ApiResponse;
 import com.jinjinjara.pola.common.dto.FileResponseDto;
 import com.jinjinjara.pola.common.dto.PageRequestDto;
 import com.jinjinjara.pola.common.dto.PagedResponseDto;
+import com.jinjinjara.pola.data.dto.request.FileUpdateRequest;
 import com.jinjinjara.pola.data.dto.request.FileUploadCompleteRequest;
 import com.jinjinjara.pola.data.dto.response.*;
 import com.jinjinjara.pola.data.entity.File;
@@ -255,6 +256,22 @@ public class DataController {
         return ApiResponse.ok(response, "파일 목록 조회 성공");
     }
 
+    @Operation(
+            summary = "파일 내용(context) 수정",
+            description = """
+        파일의 텍스트 설명(context)만 수정합니다.  
+        다른 필드는 변경되지 않습니다.
+        """
+    )
+    @PutMapping("/{fileId}")
+    public ApiResponse<FileDetailResponse> updateFileContext(
+            @AuthenticationPrincipal Users user,
+            @Parameter(description = "파일 ID", example = "15") @PathVariable Long fileId,
+            @RequestBody FileUpdateRequest request
+    ) {
+        FileDetailResponse updated = dataService.updateFileContext(user, fileId, request);
+        return ApiResponse.ok(updated, "파일 설명이 수정되었습니다.");
+    }
 
 
 }

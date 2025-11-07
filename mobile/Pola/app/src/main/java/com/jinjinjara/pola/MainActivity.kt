@@ -29,6 +29,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.jinjinjara.pola.data.local.datastore.PreferencesDataStore
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -48,6 +49,10 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var authRepository: AuthRepository
 
+
+    @Inject
+    lateinit var preferencesDataStore: PreferencesDataStore
+
     private val shareUploadViewModel: ShareUploadViewModel by viewModels()
 
     // 공유하기로 들어왔는지 확인
@@ -57,6 +62,7 @@ class MainActivity : ComponentActivity() {
     private var sharedImageUri: Uri? = null
     private var sharedText: String? = null
     private var sharedContentType: String? = null
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -86,13 +92,18 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             PolaTheme {
-                val isLoggedIn by authRepository.observeLoginState().collectAsState(initial = null)
 
-                LaunchedEffect(isLoggedIn) {
-                    Log.d("MainActivity", "isLoggedIn changed: $isLoggedIn")
+                // DataStore의 토큰 존재 여부와 온보딩 완료 여부를 관찰하여 상태 관리
+                // initial = null로 설정하여 로딩 상태 표시
+
+                val isLoggedIn by authRepository.observeLoginState().collectAsState(initial = null)
+                val onboardingCompleted by preferencesDataStore.observeOnboardingCompleted().collectAsState(initial = false)
+
+                LaunchedEffect(isLoggedIn, onboardingCompleted) {
+                    Log.d("MainActivity", "State changed - isLoggedIn: $isLoggedIn, onboardingCompleted: $onboardingCompleted")
                     if (isLoggedIn != null) {
                         val token = authRepository.getAccessToken()
-                        Log.d("MainActivity", "Current token: ${token?.take(20) ?: "null"}...")
+                        Log.d("MainActivity", "Current token: ${token ?: "null"}")
                     }
                 }
 
@@ -256,6 +267,10 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     }
+
+
+
+
                 } else {
                     // 일반 실행: 기존 로그인 플로우
                     when (isLoggedIn) {
@@ -271,8 +286,10 @@ class MainActivity : ComponentActivity() {
                             PolaNavHost(
                                 modifier = Modifier.fillMaxSize(),
                                 isLoggedIn = isLoggedIn ?: false,
+                                onboardingCompleted = onboardingCompleted
                             )
                         }
+
                     }
                 }
             }

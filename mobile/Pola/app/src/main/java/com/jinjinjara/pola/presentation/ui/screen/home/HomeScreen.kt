@@ -44,7 +44,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import com.jinjinjara.pola.R
+import com.jinjinjara.pola.domain.model.CategoryInfo
+import com.jinjinjara.pola.domain.model.HomeScreenData
 import com.jinjinjara.pola.presentation.ui.component.PolaCard
 import com.jinjinjara.pola.presentation.ui.component.PolaSearchBar
 import com.jinjinjara.pola.presentation.ui.component.SearchBar
@@ -63,33 +67,59 @@ data class Category(
 
 @Composable
 fun HomeScreen(
+    viewModel: HomeViewModel = hiltViewModel(),
     onNavigateToCategory: (String) -> Unit = {},
     onNavigateToFavorite: () -> Unit = {},
     onNavigateToSearch: () -> Unit = {},
     onNavigateToChatbot: () -> Unit = {}
 ) {
-    val recentItems = remember {
-        listOf(
-            RecentItem("BLOG", "Lorem ipsum", "dolor sit amet, consectetur adipiscing elit..."),
-            RecentItem("BLOG", "Lorem ipsum", "dolor sit amet, consectetur adipiscing elit..."),
-            RecentItem("NOTE", "Lorem ipsum", "dolor sit amet...")
-        )
+
+    val uiState by viewModel.uiState.collectAsState()
+
+    when (val state = uiState) {
+        is HomeUiState.Loading -> {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+        is HomeUiState.Error -> {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(text = state.message)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(onClick = { viewModel.loadHomeData() }) {
+                        Text("다시 시도")
+                    }
+                }
+            }
+        }
+        is HomeUiState.Success -> {
+            HomeContent(
+                homeData = state.data,
+                onNavigateToCategory = onNavigateToCategory,
+                onNavigateToFavorite = onNavigateToFavorite,
+                onNavigateToSearch = onNavigateToSearch,
+                onNavigateToChatbot = onNavigateToChatbot
+            )
+        }
     }
 
-    val categories = remember {
-        listOf(
-            Category("쇼핑", 0),
-            Category("장소", 0),
-            Category("인물", 0),
-            Category("간식", 0),
-            Category("쇼핑", 0),
-            Category("장소", 0),
-            Category("인물", 0),
-            Category("간식", 0),
-        )
-    }
+}
 
-    var searchText by remember { mutableStateOf("") }
+@Composable
+private fun HomeContent(
+    homeData: HomeScreenData,
+    onNavigateToCategory: (String) -> Unit,
+    onNavigateToFavorite: () -> Unit,
+    onNavigateToSearch: () -> Unit,
+    onNavigateToChatbot: () -> Unit
+) {
 
     Column(
         modifier = Modifier.fillMaxSize()
@@ -161,8 +191,7 @@ fun HomeScreen(
                         .horizontalScroll(rememberScrollState())
                 ) {
                     Spacer(Modifier.width(16.dp))
-                    // 추후 recent 리스트로 변경
-                    repeat(10) {
+                    homeData.timeline.forEach { fileInfo ->
                         val painter = painterResource(R.drawable.film)
                         val ratio = painter.intrinsicSize.width / painter.intrinsicSize.height
                         Box(
@@ -182,8 +211,8 @@ fun HomeScreen(
                                     .clip(RoundedCornerShape(5.dp))
                                     .align(Alignment.Center)
                             ) {
-                                Image(
-                                    painter = painterResource(id = R.drawable.temp_image),
+                                AsyncImage(
+                                    model = fileInfo.imageUrl,
                                     contentDescription = "Content",
                                     modifier = Modifier.fillMaxSize(),
                                     contentScale = ContentScale.Crop
@@ -235,7 +264,7 @@ fun HomeScreen(
             }
 
             // Categories Grid - LazyColumn items로 변경
-            items(categories.chunked(2)) { rowItems ->
+            items(homeData.categories.chunked(2)) { rowItems ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -245,7 +274,7 @@ fun HomeScreen(
                 ) {
                     for (item in rowItems) {
                         CategoryCard(
-                            item,
+                            category = item,
                             Modifier.weight(1f),
                             onClick = { onNavigateToCategory(item.name) }
                         )
@@ -260,11 +289,12 @@ fun HomeScreen(
 
         }
     }
+
 }
 
 @Composable
 fun CategoryCard(
-    category: Category,
+    category: CategoryInfo,
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
@@ -277,6 +307,7 @@ fun CategoryCard(
             ),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        val files = category.recentFiles
         // 카드 스택 영역
         Box(
             modifier = Modifier
@@ -301,7 +332,7 @@ fun CategoryCard(
                     start = 8.dp,
                     end = 8.dp
                 ),
-                imageResId = R.drawable.temp_image
+                imageUrl = files[2].imageUrl
             )
 
             // 왼쪽 뒤 카드
@@ -321,7 +352,7 @@ fun CategoryCard(
                     start = 8.dp,
                     end = 8.dp
                 ),
-                imageResId = R.drawable.temp_image
+                imageUrl = files[1].imageUrl
             )
 
             // 중간 카드
@@ -336,7 +367,7 @@ fun CategoryCard(
                     start = 8.dp,
                     end = 8.dp
                 ),
-                imageResId = R.drawable.temp_image
+                imageUrl = files[0].imageUrl
             )
         }
 

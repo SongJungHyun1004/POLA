@@ -18,4 +18,7 @@ public interface FileTagRepository extends JpaRepository<FileTag, Long> {
 
     // 파일에서 특정 태그 연결 해제
     void deleteByFileAndTag(File file, Tag tag);
+
+    boolean existsByFileAndTag(File file, Tag tag);
+
 }

@@ -4,6 +4,7 @@ import com.jinjinjara.pola.auth.repository.UserRepository;
 import com.jinjinjara.pola.common.CustomException;
 import com.jinjinjara.pola.common.ErrorCode;
 import com.jinjinjara.pola.common.dto.PageRequestDto;
+import com.jinjinjara.pola.data.dto.request.FileUpdateRequest;
 import com.jinjinjara.pola.data.dto.request.FileUploadCompleteRequest;
 import com.jinjinjara.pola.data.dto.response.DataResponse;
 import com.jinjinjara.pola.data.dto.response.FileDetailResponse;
@@ -290,6 +291,41 @@ public class DataService {
         // 대상 파일 sort 갱신
         target.setFavoriteSort(newSort);
         return fileRepository.save(target);
+    }
+
+
+    @Transactional
+    public FileDetailResponse updateFileContext(Users user, Long fileId, FileUpdateRequest request) {
+        File file = fileRepository.findByIdAndUserId(fileId, user.getId())
+                .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
+
+        // context가 비어있지 않을 때만 수정
+        if (request.getContext() != null && !request.getContext().isBlank()) {
+            file.setContext(request.getContext());
+        }
+
+        File saved = fileRepository.save(file);
+
+        return FileDetailResponse.builder()
+                .id(saved.getId())
+                .userId(saved.getUserId())
+                .categoryId(saved.getCategoryId())
+                .src(saved.getSrc())
+                .type(saved.getType())
+                .context(saved.getContext())
+                .ocrText(saved.getOcrText())
+                .vectorId(saved.getVectorId())
+                .fileSize(saved.getFileSize())
+                .shareStatus(saved.getShareStatus())
+                .favorite(saved.getFavorite())
+                .favoriteSort(saved.getFavoriteSort())
+                .favoritedAt(saved.getFavoritedAt())
+                .views(saved.getViews())
+                .platform(saved.getPlatform())
+                .originUrl(saved.getOriginUrl())
+                .createdAt(saved.getCreatedAt())
+                .lastViewedAt(saved.getLastViewedAt())
+                .build();
     }
 
 }
