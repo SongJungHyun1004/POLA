@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -101,8 +102,9 @@ public class CategoryTagController {
     }
     @Operation(summary = "사용자 전체 카테고리별 태그 조회", description = "유저가 가진 모든 카테고리와 각 카테고리에 연결된 태그들을 반환합니다.")
     @GetMapping("/users/me/categories/tags")
-    public ApiResponse<List<CategoryWithTagsResponse>> getUserCategoriesWithTags() {
-        Users user = currentUser(); // 나중에 @AuthenticationPrincipal로 교체
+    public ApiResponse<List<CategoryWithTagsResponse>> getUserCategoriesWithTags(
+            @AuthenticationPrincipal Users user
+    ) {
         List<CategoryWithTagsResponse> response = categoryTagService.getUserCategoriesWithTags(user);
         return ApiResponse.ok(response, "사용자 카테고리별 태그 목록 조회 성공");
     }
