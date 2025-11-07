@@ -108,14 +108,29 @@ pipeline {
                                 echo "Building Frontend Docker image..."
                                 dir("web/pola") {
                                     sh '''
-                                        # Kubernetes Secret에서 환경변수 가져오기
-                                        export NEXT_PUBLIC_API_URL=$(kubectl get secret frontend-build-env -n pola -o jsonpath='{.data.NEXT_PUBLIC_API_URL}' | base64 -d)
-                                        export NEXT_PUBLIC_GOOGLE_CLIENT_ID=$(kubectl get secret frontend-build-env -n pola -o jsonpath='{.data.NEXT_PUBLIC_GOOGLE_CLIENT_ID}' | base64 -d)
+                                        # 🔥 Secret의 모든 NEXT_PUBLIC_ 환경변수를 자동으로 가져오기
+                                        echo "=== Loading all NEXT_PUBLIC_ environment variables from Secret ==="
 
+                                        BUILD_ARGS=""
+
+                                        # Secret의 모든 키 목록 가져오기 (jq 없이 kubectl만 사용)
+                                        SECRET_KEYS=$(kubectl get secret frontend-build-env -n pola -o jsonpath='{.data}' | grep -oP '"NEXT_PUBLIC_[^"]*"' | tr -d '"')
+
+                                        # 각 키에 대해 값을 가져와서 --build-arg로 추가
+                                        for key in $SECRET_KEYS; do
+                                            value=$(kubectl get secret frontend-build-env -n pola -o jsonpath="{.data.$key}" | base64 -d)
+                                            BUILD_ARGS="$BUILD_ARGS --build-arg $key=\"$value\""
+
+                                            # 디버깅: 환경변수 로드 확인 (값은 출력하지 않음)
+                                            echo "✅ Loaded: $key"
+                                        done
+
+                                        echo "=== Building Docker image with all environment variables ==="
+
+                                        # Docker 빌드 (자동으로 모든 --build-arg 전달)
                                         docker build \
                                             --no-cache \
-                                            --build-arg NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL}" \
-                                            --build-arg NEXT_PUBLIC_GOOGLE_CLIENT_ID="${NEXT_PUBLIC_GOOGLE_CLIENT_ID}" \
+                                            $BUILD_ARGS \
                                             -t ${IMAGE_NAME}:${IMAGE_TAG} .
                                         docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
                                     '''

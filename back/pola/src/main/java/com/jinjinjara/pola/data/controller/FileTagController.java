@@ -15,7 +15,7 @@ import java.util.List;
 
 @Tag(name = "FileTag API", description = "파일-태그 연결 관리 API (추가, 삭제, 조회)")
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/v1")
 @RequiredArgsConstructor
 public class FileTagController {
 

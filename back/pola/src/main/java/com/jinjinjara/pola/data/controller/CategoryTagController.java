@@ -18,7 +18,7 @@ import java.util.List;
 
 @Tag(name = "CategoryTag API", description = "카테고리-태그 연결 관리 API (추가, 삭제, 조회, 태그 관리)")
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/v1")
 @RequiredArgsConstructor
 public class CategoryTagController {
 

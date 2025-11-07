@@ -3,6 +3,7 @@ package com.jinjinjara.pola.config;
 import com.jinjinjara.pola.auth.OAuth2SuccessHandler;
 import com.jinjinjara.pola.auth.jwt.JwtAccessDeniedHandler;
 import com.jinjinjara.pola.auth.jwt.JwtAuthenticationEntryPoint;
+import com.jinjinjara.pola.auth.jwt.JwtFilter;
 import com.jinjinjara.pola.auth.jwt.TokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,11 +14,11 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Arrays;
 import java.util.List;
 
 @Configuration
@@ -50,23 +51,14 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(authorizeHttpRequests -> authorizeHttpRequests
                         .requestMatchers(
-                                // Swagger UI with /api prefix
-                                "/api/swagger-ui.html",
-                                "/api/swagger-ui/**",
-                                "/api/api-docs/**",
-                                "/api/v3/api-docs/**",
-                                "/api/swagger-resources/**",
-
-                                // Swagger UI without prefix
-                                "/swagger-ui/index.html",
-                                "/api-docs/**",
-                                "/api-docs",
-                                "/v3/api-docs",
-                                "/swagger-ui.html",
+                                // Swagger UI
                                 "/swagger-ui/**",
-                                "/api-docs/**",
+                                "api-docs/**",
                                 "/v3/api-docs/**",
                                 "/swagger-resources/**",
+
+                                // Actuator Health Check (무중단 배포용)
+                                "/actuator/health/**",
 
                                 // Common paths
                                 "/webjars/**",
@@ -80,7 +72,8 @@ public class SecurityConfig {
                 .oauth2Login(oauth2 -> oauth2
                         .successHandler(oAuth2SuccessHandler)
                 )
-                .with(new JwtSecurityConfig(tokenProvider), customizer -> customizer.getClass());
+                .addFilterBefore(new JwtFilter(tokenProvider), UsernamePasswordAuthenticationFilter.class);
+
 
         return http.build();
     }
@@ -92,7 +85,7 @@ public class SecurityConfig {
         config.setAllowedOrigins(List.of(allowedOrigins));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
-        config.setExposedHeaders(List.of("*"));
+        config.setExposedHeaders(List.of("Authorization"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
