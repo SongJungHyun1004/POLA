@@ -1,25 +1,61 @@
 package com.jinjinjara.pola.presentation.ui.screen.my
 
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
+import com.jinjinjara.pola.util.parcelable
 
 @Composable
 fun MyScreen(
     modifier: Modifier = Modifier,
     viewModel: MyViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
+    val activity = context as? ComponentActivity
+
     val uiState by viewModel.uiState.collectAsState()
     val userInfoState by viewModel.userInfoState.collectAsState()
     var showLogoutDialog by remember { mutableStateOf(false) }
+
+    // 공유받은 데이터 상태 추가
+    var sharedText by remember { mutableStateOf<String?>(null) }
+    var sharedImageUri by remember { mutableStateOf<Uri?>(null) }
+    var showSharedContent by remember { mutableStateOf(true) }
+
+    // Intent에서 공유 데이터 읽기
+    LaunchedEffect(Unit) {
+        activity?.intent?.let { intent ->
+            if (intent.action == Intent.ACTION_SEND) {
+                when {
+                    intent.type?.startsWith("text/") == true -> {
+                        sharedText = intent.getStringExtra(Intent.EXTRA_TEXT)
+                    }
+                    intent.type?.startsWith("image/") == true -> {
+                        sharedImageUri = intent.parcelable(Intent.EXTRA_STREAM)
+                    }
+                }
+            }
+        }
+    }
 
     Box(
         modifier = modifier.fillMaxSize(),
@@ -28,7 +64,9 @@ fun MyScreen(
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(24.dp),
-            modifier = Modifier.padding(24.dp)
+            modifier = Modifier
+                .padding(24.dp)
+                .verticalScroll(rememberScrollState()) // 스크롤 추가
         ) {
             Text(
                 text = "마이 화면",
@@ -36,6 +74,15 @@ fun MyScreen(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
+
+            // 공유받은 내용 표시
+            if (showSharedContent && (sharedText != null || sharedImageUri != null)) {
+                SharedContentCard(
+                    sharedText = sharedText,
+                    sharedImageUri = sharedImageUri,
+                    onClose = { showSharedContent = false }
+                )
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -181,6 +228,79 @@ fun MyScreen(
     LaunchedEffect(uiState) {
         if (uiState is MyUiState.LogoutSuccess) {
             viewModel.resetLogoutState()
+        }
+    }
+}
+
+// 공유 컨텐츠 카드
+@Composable
+private fun SharedContentCard(
+    sharedText: String?,
+    sharedImageUri: Uri?,
+    onClose: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        ),
+        elevation = CardDefaults.cardElevation(4.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "📤 공유받은 내용",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                IconButton(
+                    onClick = onClose,
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "닫기",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            sharedText?.let { text ->
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
+                ) {
+                    Text(
+                        text = text,
+                        fontSize = 14.sp,
+                        color = Color.Black,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
+            }
+
+            sharedImageUri?.let { uri ->
+                Spacer(modifier = Modifier.height(8.dp))
+                AsyncImage(
+                    model = uri,
+                    contentDescription = "공유받은 이미지",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 200.dp)
+                        .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Fit
+                )
+            }
         }
     }
 }
