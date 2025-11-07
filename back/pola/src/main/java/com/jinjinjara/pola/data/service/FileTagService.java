@@ -82,9 +82,9 @@ public class FileTagService {
                 .map(TagResponse::fromEntity)
                 .toList();
 
-        if (tags.isEmpty()) {
-            throw new CustomException(ErrorCode.TAG_NOT_FOUND);
-        }
+//        if (tags.isEmpty()) {
+//            throw new CustomException(ErrorCode.TAG_NOT_FOUND);
+//        }
 
         return tags;
     }
