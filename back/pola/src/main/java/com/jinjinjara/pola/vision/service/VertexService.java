@@ -11,7 +11,10 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.io.ByteArrayInputStream;
+import javax.net.ssl.HttpsURLConnection;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
@@ -32,7 +35,12 @@ public class VertexService {
     @Value("${vertex.model.vision:gemini-2.5-flash-lite}")
     private String visionModel;
 
+    // 다운로드 안전 가드
+    private static final long MAX_IMAGE_BYTES = 20L * 1024 * 1024; // 20MB
+    private static final long MAX_TEXT_BYTES  = 2L  * 1024 * 1024; // 2MB
+
     private final ObjectMapper om = new ObjectMapper();
+    // Vertex 호출용
     private final RestTemplate rt = new RestTemplate();
 
     // ————— 공통 헬퍼 —————
@@ -95,7 +103,6 @@ public class VertexService {
                         "role", "user",
                         "parts", List.of(Map.of("text", prompt))
                 )),
-                // 필요시 온도 등 파라미터:
                 "generationConfig", Map.of(
                         "temperature", 0.2,
                         "maxOutputTokens", 256
@@ -116,7 +123,7 @@ public class VertexService {
         String mime = sniffMime(imageBytes);
 
         String userText = """
-                        이미지의 내용을 분석하여 한국어 태그 5~10개를 JSON 배열로만 출력해. 
+                        이미지에서 중요한 부분이나 주제라고 생각되는 부분을 분석해서 한국어 태그 5~10개를 JSON 배열로만 출력해. 
                         예) ["말차","초코","크림빵","디저트","간식"]
                         """;
 
@@ -144,26 +151,94 @@ public class VertexService {
         return postJson(url, body);
     }
 
-    // URL 입력 어댑터 (힌트 제거 버전)
-    public String analyzeImageFromUrl(String imageUrl) {
-        byte[] bytes = downloadToBytes(imageUrl);
-        return analyzeImage(bytes);
+    // ————— URL 입력 (이미지/텍스트 presigned 모두 처리, HEAD 없이 단일 GET) —————
+    public String analyzeImageFromUrl(String url) {
+        if (url == null || url.isBlank() || !(url.startsWith("https://") || url.startsWith("http://"))) {
+            return "{\"error\":\"invalid url\"}";
+        }
+
+        // presigned URL은 보통 GET 서명만 포함 → HEAD 금지, 단일 GET로 바이트 수신
+        byte[] data = directDownloadBytes(url, MAX_IMAGE_BYTES);
+        if (data == null || data.length == 0) {
+            return "{\"error\":\"empty content\"}";
+        }
+
+        // 이미지 판별 (매직바이트)
+        String mime = sniffMime(data);
+        if (mime.startsWith("image/")) {
+            return analyzeImage(data);
+        }
+
+        // 이미지 아니면 텍스트로 시도
+        if (data.length > MAX_TEXT_BYTES) {
+            return "{\"error\":\"text too large\"}";
+        }
+        String text = new String(data, StandardCharsets.UTF_8);
+        if (text.isBlank()) {
+            return "{\"error\":\"unsupported content\"}";
+        }
+        return generateTagsFromText(text);
     }
 
-    // 간단 다운로드 유틸 (필요시 타임아웃/크기 제한 추가)
-    private byte[] downloadToBytes(String imageUrl) {
+    // ————— 순수 JDK 다운로드 (헤더 파싱 무의존) —————
+    private byte[] directDownloadBytes(String urlStr, long maxBytes) {
+        HttpURLConnection conn = null;
         try {
-            return new RestTemplate().getForObject(imageUrl, byte[].class);
+            URL url = new URL(urlStr);
+            conn = (HttpURLConnection) url.openConnection();
+            if (conn instanceof HttpsURLConnection https) {
+                https.setInstanceFollowRedirects(true);
+            }
+            conn.setInstanceFollowRedirects(true);
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(20000);
+            conn.setRequestProperty("User-Agent", "pola-vertex-downloader/1.0");
+
+            int code = conn.getResponseCode();
+            InputStream is = (code >= 200 && code < 400) ? conn.getInputStream() : conn.getErrorStream();
+            if (is == null) throw new RuntimeException("No response stream, status=" + code);
+
+            long declared = conn.getContentLengthLong(); // -1 가능
+            if (declared > 0 && declared > maxBytes) {
+                throw new RuntimeException("Object too large (Content-Length): " + declared);
+            }
+
+            byte[] data = is.readAllBytes(); // JDK 11+
+            if (data.length > maxBytes) {
+                throw new RuntimeException("Object too large (actual): " + data.length);
+            }
+            if (code < 200 || code >= 300) {
+                String snippet = new String(data, 0, Math.min(256, data.length), StandardCharsets.UTF_8);
+                log.error("[VertexService] GET {} -> {} bodySnippet={}", urlStr, code, snippet);
+                throw new RuntimeException("HTTP " + code);
+            }
+            return data;
+
         } catch (Exception e) {
-            throw new RuntimeException("Failed to download image: " + imageUrl, e);
+            log.error("[VertexService] directDownloadBytes failed: {}", e.toString());
+            throw new RuntimeException("Failed to download image: " + urlStr, e);
+        } finally {
+            if (conn != null) conn.disconnect();
         }
     }
 
+    // ————— 매직바이트로 MIME 추정 —————
     private String sniffMime(byte[] img) {
-        // 아주 단순 스니핑 (원하면 Apache Tika 등으로 교체)
+        // JPEG
         if (img.length >= 3 && img[0] == (byte)0xFF && img[1] == (byte)0xD8) return "image/jpeg";
+        // PNG
         if (img.length >= 8 &&
                 img[0] == (byte)0x89 && img[1] == 0x50 && img[2] == 0x4E && img[3] == 0x47) return "image/png";
+        // WEBP: "RIFF....WEBP"
+        if (img.length >= 12 &&
+                img[0] == 'R' && img[1] == 'I' && img[2] == 'F' && img[3] == 'F' &&
+                img[8] == 'W' && img[9] == 'E' && img[10] == 'B' && img[11] == 'P') return "image/webp";
+        // GIF: "GIF87a"/"GIF89a"
+        if (img.length >= 6 &&
+                img[0] == 'G' && img[1] == 'I' && img[2] == 'F' && img[3] == '8' &&
+                (img[4] == '7' || img[4] == '9') && img[5] == 'a') return "image/gif";
+
         return "application/octet-stream";
     }
 }

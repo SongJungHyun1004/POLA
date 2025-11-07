@@ -20,7 +20,7 @@ public class VertexController {
 
     // 텍스트
     @Operation(summary = "텍스트에서 태그 추출 (JSON 전용)")
-    @PostMapping(value = "/tags", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/text", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> extractTags(@RequestBody TagExtractRequest req) {
         return ResponseEntity.ok(vertexService.generateTagsFromText(req.getText()));
     }
@@ -36,7 +36,7 @@ public class VertexController {
 
     // 이미지 URI
     @Operation(summary = "이미지 URL로 설명+태그 추출 (멀티모달)")
-    @PostMapping(value = "/image-url", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/url", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> analyzeImageUrl(@RequestBody ImageUriRequest req) throws Exception {
         return ResponseEntity.ok(vertexService.analyzeImageFromUrl(req.getImageUri()));
     }

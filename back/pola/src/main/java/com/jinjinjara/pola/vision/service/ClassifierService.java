@@ -20,12 +20,18 @@ public class ClassifierService {
     private final ObjectMapper yaml = new ObjectMapper(new YAMLFactory());
 
     // ---- 튜닝 파라미터 (application.yml 없으면 기본값) ----
-    @Value("${classifier.alpha:0.7}")                   private double alpha;                // (예비) 센트로이드/태그 블렌딩 비율
-    @Value("${classifier.generic.downscale:0.3}")       private double genericDown;          // generic(프로모션성) 입력/증거 다운가중
-    @Value("${classifier.input.min-sim:0.35}")          private double minInputSim;          // 입력-카테고리 최소 유사도 컷
-    @Value("${classifier.evidence.top:3}")              private int evidenceTopN;            // 카테고리 근거 태그 Top-N
-    @Value("${classifier.topInputN:5}")                 private int topInputN;               // 1위 카테고리와 가까운 입력 Top-N
-    @Value("${classifier.topInputs.skip-generic:false}") private boolean skipGenericInTopInputs; // true면 TopInputs에서 generic 제외
+    @Value("${classifier.alpha:0.7}")
+    private double alpha;                // (예비) 센트로이드/태그 블렌딩 비율
+    @Value("${classifier.generic.downscale:0.3}")
+    private double genericDown;          // generic(프로모션성) 입력/증거 다운가중
+    @Value("${classifier.input.min-sim:0.35}")
+    private double minInputSim;          // 입력-카테고리 최소 유사도 컷
+    @Value("${classifier.evidence.top:3}")
+    private int evidenceTopN;            // 카테고리 근거 태그 Top-N
+    @Value("${classifier.topInputN:5}")
+    private int topInputN;               // 1위 카테고리와 가까운 입력 Top-N
+    @Value("${classifier.topInputs.skip-generic:false}")
+    private boolean skipGenericInTopInputs; // true면 TopInputs에서 generic 제외
 
     // ---- 사전 파일 경로 ----
     @Value("${nlp.paths.synonyms:classpath:nlp/synonyms.yml}")
