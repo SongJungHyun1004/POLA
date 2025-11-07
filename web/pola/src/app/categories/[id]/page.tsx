@@ -4,7 +4,7 @@ import { useParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import PolaroidCard from "@/app/home/components/PolaroidCard";
 import PolaroidDetail from "./components/PolaroidDetail";
-import { Plus, Pencil } from "lucide-react";
+import { Plus } from "lucide-react";
 
 import {
   getCategoryInfo,
@@ -85,6 +85,7 @@ export default function CategoryPage() {
         tags: normalizedTags,
         context: detail.context ?? "",
         created_at: detail.created_at,
+        category_id: detail.category_id,
       });
     } catch (e) {
       console.error(e);
@@ -151,6 +152,11 @@ export default function CategoryPage() {
           tags={selectedFile?.tags ?? []}
           contexts={selectedFile?.context ?? ""}
           date={selectedFile?.created_at}
+          categoryId={selectedFile?.category_id}
+          onCategoryUpdated={async () => {
+            const updated = await getCategoryFiles(id, 0);
+            setFiles(updated);
+          }}
         />
       </div>
     </div>
