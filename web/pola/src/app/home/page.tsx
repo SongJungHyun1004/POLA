@@ -7,6 +7,7 @@ import TextLink from "./components/TextLink";
 import useAuthStore from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { getUserMe, getUserHome } from "@/services/userService";
 
 export default function HomePage() {
   const router = useRouter();
@@ -24,53 +25,37 @@ export default function HomePage() {
       return;
     }
 
-    const fetchUserData = async () => {
-      const res = await fetch(
-        process.env.NEXT_PUBLIC_POLA_API_BASE_URL + "/users/me",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (res.ok) {
-        const data = await res.json();
-        setUser({
-          id: data.data.id,
-          email: data.data.email,
-          display_name: data.data.display_name,
-          profile_image_url: data.data.profile_image_url,
-        });
-      } else {
+    const fetchData = async () => {
+      // 1) 사용자 정보
+      const userRes = await getUserMe();
+      if (!userRes) {
         router.push("/");
+        return;
       }
+
+      const u = userRes.data;
+      setUser({
+        id: u.id,
+        email: u.email,
+        display_name: u.display_name,
+        profile_image_url: u.profile_image_url,
+      });
+
+      // 2) 홈 데이터
+      const homeRes = await getUserHome();
+      if (!homeRes) {
+        console.error("홈 데이터 조회 실패");
+        return;
+      }
+
+      const d = homeRes.data;
+      setFavorites(d.favorites ?? []);
+      setReminds(d.reminds ?? []);
+      setCategories(d.categories ?? []);
+      setTimeline(d.timeline ?? []);
     };
 
-    const fetchHomeData = async () => {
-      const res = await fetch(
-        process.env.NEXT_PUBLIC_POLA_API_BASE_URL + "/users/me/home",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (res.ok) {
-        const json = await res.json();
-        const d = json.data;
-        setFavorites(d.favorites || []);
-        setReminds(d.reminds || []);
-        setCategories(d.categories || []);
-        setTimeline(d.timeline || []);
-      } else {
-        console.error("Failed to fetch home data");
-      }
-    };
-
-    fetchUserData();
-    fetchHomeData();
+    fetchData();
   }, [router, setUser]);
 
   return (
@@ -79,6 +64,7 @@ export default function HomePage() {
         {/* 좌측 영역 */}
         <div className="flex flex-col items-center justify-start gap-12 w-full mt-16">
           <div className="flex justify-center gap-10 w-full">
+            {/* Favorite Box */}
             <div
               className="cursor-pointer"
               onClick={() => {
@@ -94,6 +80,7 @@ export default function HomePage() {
 
             <div className="flex w-8" />
 
+            {/* Remind Box */}
             <div
               className="cursor-pointer"
               onClick={() => {
@@ -114,23 +101,18 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* 우측 영역 : categories 리스트 */}
+        {/* 우측 카테고리 영역 */}
         <div className="flex flex-col gap-8 overflow-y-auto pr-2 w-full h-full">
-          {categories.map((cat: any) => {
-            const files = cat.files || [];
+          {categories.map((cat) => (
+            <div key={cat.categoryId} className="w-full flex-shrink-0">
+              <TextLink
+                text={cat.categoryName}
+                link={`/categories/${cat.categoryId}`}
+              />
 
-            return (
-              <div key={cat.categoryId} className="w-full flex-shrink-0">
-                <TextLink
-                  text={cat.categoryName}
-                  link={`/categories/${cat.categoryId}`}
-                />
-
-                {/* CategoryRow에 files 전달 */}
-                <CategoryRow files={files} />
-              </div>
-            );
-          })}
+              <CategoryRow files={cat.files ?? []} />
+            </div>
+          ))}
         </div>
       </div>
     </main>
