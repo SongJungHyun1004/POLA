@@ -31,7 +31,7 @@ public class S3Service {
     private String bucket;
 
     /* ===========================================================
-        ✅ Presigned URL (UPLOAD)
+        Presigned URL (UPLOAD)
        =========================================================== */
 
     /**
@@ -61,7 +61,7 @@ public class S3Service {
     }
 
     /* ===========================================================
-        ✅ Presigned URL (DOWNLOAD)
+        Presigned URL (DOWNLOAD)
        =========================================================== */
 
     /**
@@ -85,7 +85,7 @@ public class S3Service {
     }
 
     /* ===========================================================
-        ✅ Presigned URL (PREVIEW)
+        Presigned URL (PREVIEW)
        =========================================================== */
 
     /**
@@ -136,7 +136,7 @@ public class S3Service {
     }
 
     /* ===========================================================
-        ✅ 내부 헬퍼 메서드
+        내부 헬퍼 메서드
        =========================================================== */
 
     /**
@@ -167,6 +167,16 @@ public class S3Service {
         if (type.startsWith("text/")) return "text/plain; charset=utf-8";
         return type;
     }
+    public String generatePreviewUrl(FileMeta meta) {
+        // 단건 Map을 만들어서 기존 메서드 재사용
+        return generatePreviewUrls(Map.of(1L, meta))   // Map<Long, FileMeta>
+                .values()
+                .stream()
+                .findFirst()
+                .orElse(null);
+    }
+
+
 
     /**
      * 내부용 파일 메타데이터 구조체

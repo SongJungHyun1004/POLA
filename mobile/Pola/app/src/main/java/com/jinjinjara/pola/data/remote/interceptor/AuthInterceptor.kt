@@ -17,6 +17,12 @@ class AuthInterceptor @Inject constructor(
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest = chain.request()
         val path = originalRequest.url.encodedPath
+        val host = originalRequest.url.host
+
+        if (host.contains("amazonaws.com") || host.contains("s3")) {
+            Log.d("AuthInterceptor", "S3 request, skip token: ${originalRequest.url}")
+            return chain.proceed(originalRequest)
+        }
 
         // 토큰이 필요없는 요청은 그대로 진행
         val skipTokenPaths = listOf(

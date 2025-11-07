@@ -4,6 +4,8 @@ import com.jinjinjara.pola.data.repository.AuthRepositoryImpl
 import com.jinjinjara.pola.data.repository.CategoryRepositoryImpl
 import com.jinjinjara.pola.domain.repository.AuthRepository
 import com.jinjinjara.pola.domain.repository.CategoryRepository
+import com.jinjinjara.pola.data.repository.FileUploadRepositoryImpl
+import com.jinjinjara.pola.domain.repository.FileUploadRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -52,4 +54,10 @@ abstract class RepositoryModule {
     // abstract fun bindPostRepository(
     //     postRepositoryImpl: PostRepositoryImpl
     // ): PostRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindFileUploadRepository(
+        fileUploadRepositoryImpl: FileUploadRepositoryImpl
+    ): FileUploadRepository
 }

@@ -1,5 +1,6 @@
 package com.jinjinjara.pola.data.service;
 
+import com.jinjinjara.pola.auth.repository.UserRepository;
 import com.jinjinjara.pola.common.CustomException;
 import com.jinjinjara.pola.common.ErrorCode;
 import com.jinjinjara.pola.common.dto.PageRequestDto;
@@ -7,10 +8,12 @@ import com.jinjinjara.pola.data.dto.request.FileUploadCompleteRequest;
 import com.jinjinjara.pola.data.dto.response.DataResponse;
 import com.jinjinjara.pola.data.dto.response.FileDetailResponse;
 import com.jinjinjara.pola.data.dto.response.InsertDataResponse;
+import com.jinjinjara.pola.data.dto.response.TagResponse;
 import com.jinjinjara.pola.data.entity.Category;
 import com.jinjinjara.pola.data.entity.File;
 import com.jinjinjara.pola.data.repository.CategoryRepository;
 import com.jinjinjara.pola.data.repository.FileRepository;
+import com.jinjinjara.pola.data.repository.TagRepository;
 import com.jinjinjara.pola.s3.service.S3Service;
 import com.jinjinjara.pola.user.entity.Users;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +36,7 @@ public class DataService {
     private final FileRepository fileRepository;
     private final CategoryRepository categoryRepository;
     private final S3Service s3Service;
+    private final TagRepository tagRepository;
 
     public List<DataResponse> getRemindFiles(Long userId) {
         LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
@@ -49,21 +53,35 @@ public class DataService {
                         .build())
                 .toList();
     }
-
     @Transactional
     public FileDetailResponse getFileDetail(Long userId, Long fileId) {
         File file = fileRepository.findByIdAndUserId(fileId, userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
 
+        // 조회수 및 마지막 열람 시각 갱신
         file.setViews(file.getViews() + 1);
         file.setLastViewedAt(LocalDateTime.now());
         fileRepository.save(file);
 
+        // 🏷 파일에 연결된 태그 조회
+        List<TagResponse> tags = tagRepository.findAllByFileId(fileId).stream()
+                .map(tag -> TagResponse.builder()
+                        .id(tag.getId())
+                        .tagName(tag.getTagName())
+                        .build())
+                .toList();
+
+        // presigned URL 생성 (파일 1개용)
+        String presignedUrl = s3Service.generatePreviewUrl(
+                new S3Service.FileMeta(file.getSrc(), file.getType())
+        );
+
+        // 응답 DTO 구성
         return FileDetailResponse.builder()
                 .id(file.getId())
                 .userId(file.getUserId())
                 .categoryId(file.getCategoryId())
-                .src(file.getSrc())
+                .src(presignedUrl) // presigned URL 반환
                 .type(file.getType())
                 .context(file.getContext())
                 .ocrText(file.getOcrText())
@@ -78,6 +96,7 @@ public class DataService {
                 .originUrl(file.getOriginUrl())
                 .createdAt(file.getCreatedAt())
                 .lastViewedAt(file.getLastViewedAt())
+                .tags(tags)
                 .build();
     }
 
@@ -117,7 +136,7 @@ public class DataService {
         // 변환: File → DataResponse
         return files.map(file -> DataResponse.builder()
                 .id(file.getId())
-                .src(previewUrls.get(file.getId()))  // ✅ 미리보기용 presigned URL
+                .src(previewUrls.get(file.getId()))  // 미리보기용 presigned URL
                 .type(file.getType())
                 .context(file.getContext())
                 .favorite(file.getFavorite())

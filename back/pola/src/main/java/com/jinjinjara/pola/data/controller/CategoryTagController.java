@@ -3,6 +3,7 @@ package com.jinjinjara.pola.data.controller;
 import com.jinjinjara.pola.common.ApiResponse;
 import com.jinjinjara.pola.data.dto.request.InitCategoryTagRequest;
 import com.jinjinjara.pola.data.dto.response.CategoryTagResponse;
+import com.jinjinjara.pola.data.dto.response.CategoryWithTagsResponse;
 import com.jinjinjara.pola.data.dto.response.RecommendedCategoryList;
 import com.jinjinjara.pola.data.dto.response.TagResponse;
 import com.jinjinjara.pola.data.service.CategoryTagService;
@@ -18,7 +19,7 @@ import java.util.List;
 
 @Tag(name = "CategoryTag API", description = "카테고리-태그 연결 관리 API (추가, 삭제, 조회, 태그 관리)")
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/v1")
 @RequiredArgsConstructor
 public class CategoryTagController {
 
@@ -50,12 +51,14 @@ public class CategoryTagController {
 
     @Operation(summary = "카테고리 내 태그 조회", description = "특정 카테고리에 연결된 모든 태그를 조회합니다.")
     @GetMapping("/categories/{categoryId}/tags")
-    public ResponseEntity<ApiResponse<List<TagResponse>>> getTagsByCategory(
-            @Parameter(description = "카테고리 ID", example = "1") @PathVariable Long categoryId
-    ) {
+    public ApiResponse<List<TagResponse>> getTagsByCategory(@PathVariable Long categoryId) {
         List<TagResponse> tags = categoryTagService.getTagsByCategory(categoryId);
-        return ResponseEntity.ok(ApiResponse.ok(tags, "카테고리 태그 목록 조회 완료"));
+        if (tags == null || tags.isEmpty()) {
+            return ApiResponse.ok(null, "카테고리 태그가 없습니다.");
+        }
+        return ApiResponse.ok(tags, "카테고리 태그 목록 조회 완료");
     }
+
 
     @Operation(summary = "전체 태그 조회", description = "등록된 모든 태그를 조회합니다.")
     @GetMapping("/tags")
@@ -96,4 +99,14 @@ public class CategoryTagController {
         categoryTagService.initCategoriesAndTags(currentUser(), request);
         return ResponseEntity.ok(ApiResponse.ok(null, "사용자 카테고리/태그 초기화 완료"));
     }
+    @Operation(summary = "사용자 전체 카테고리별 태그 조회", description = "유저가 가진 모든 카테고리와 각 카테고리에 연결된 태그들을 반환합니다.")
+    @GetMapping("/users/me/categories/tags")
+    public ApiResponse<List<CategoryWithTagsResponse>> getUserCategoriesWithTags() {
+        Users user = currentUser(); // 나중에 @AuthenticationPrincipal로 교체
+        List<CategoryWithTagsResponse> response = categoryTagService.getUserCategoriesWithTags(user);
+        return ApiResponse.ok(response, "사용자 카테고리별 태그 목록 조회 성공");
+    }
+
+
+
 }

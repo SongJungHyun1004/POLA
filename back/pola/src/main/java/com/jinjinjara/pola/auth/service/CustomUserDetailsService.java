@@ -1,14 +1,14 @@
 package com.jinjinjara.pola.auth.service;
 
 import com.jinjinjara.pola.auth.dto.response.TokenResponse;
-import com.jinjinjara.pola.auth.exception.InvalidRefreshTokenException;
-import com.jinjinjara.pola.auth.exception.MultipleLoginException;
 import com.jinjinjara.pola.auth.redis.RedisUtil;
 import com.jinjinjara.pola.auth.jwt.TokenProvider;
 import com.jinjinjara.pola.auth.dto.common.Role;
 import com.jinjinjara.pola.auth.dto.request.SignInRequest;
 import com.jinjinjara.pola.auth.dto.request.SignUpRequest;
 import com.jinjinjara.pola.auth.dto.common.TokenDto;
+import com.jinjinjara.pola.common.CustomException;
+import com.jinjinjara.pola.common.ErrorCode;
 import com.jinjinjara.pola.user.entity.Users;
 import com.jinjinjara.pola.user.repository.UsersRepository;
 import lombok.RequiredArgsConstructor;
@@ -44,14 +44,12 @@ public class CustomUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         return usersRepository.findByEmail(email)
                 .map(this::createUserDetails)
-                .orElseThrow(() -> new UsernameNotFoundException(email + " -> 데이터베이스에서 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
     }
 
-    // DB에 User 값이 존재한다면 UserDetails 객체로 만들어서 리턴
     private UserDetails createUserDetails(Users user) {
         GrantedAuthority grantedAuthority = new SimpleGrantedAuthority(user.getRole().toString());
 
-        // Spring 내부 User
         return new User(
                 user.getEmail(),
                 "",
@@ -62,7 +60,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Transactional
     public void signup(SignUpRequest signUpRequest) {
         if (usersRepository.existsByEmail(signUpRequest.getEmail())) {
-            throw new MultipleLoginException("이미 가입되어 있는 유저입니다");
+            throw new CustomException(ErrorCode.USER_ALREADY_EXISTS);
         }
 
         Users user = Users.builder()
@@ -79,7 +77,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Transactional
     public TokenResponse signIn(SignInRequest signInRequest) {
         Users user = usersRepository.findByEmail(signInRequest.getEmail())
-                .orElseThrow(() -> new UsernameNotFoundException("존재하지 않는 이메일: " + signInRequest.getEmail()));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         var authorities = Collections.singletonList(new SimpleGrantedAuthority(user.getRole().toString()));
 
@@ -100,10 +98,17 @@ public class CustomUserDetailsService implements UserDetailsService {
         return res;
     }
 
+    @Transactional
+    public TokenResponse reissueToken(String refreshTokenWithBearer) {
+        String refreshToken = resolveRefreshToken(refreshTokenWithBearer);
+        TokenDto tokenDto = tokenProvider.reissueAccessToken(refreshToken);
+        return new TokenResponse(tokenDto.getAccessToken(), tokenDto.getRefreshToken());
+    }
+
     @Transactional(readOnly = true)
     public String resolveRefreshToken(String refreshToken) {
         if (refreshToken == null || !refreshToken.startsWith("Bearer ")) {
-            throw new InvalidRefreshTokenException("리프레시 토큰이 누락되었거나 올바르지 않습니다.");
+            throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
         }
         return refreshToken.substring(7);
     }

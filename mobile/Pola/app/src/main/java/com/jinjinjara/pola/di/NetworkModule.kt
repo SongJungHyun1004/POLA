@@ -3,6 +3,7 @@ package com.jinjinjara.pola.di
 import com.jinjinjara.pola.data.local.datastore.PreferencesDataStore
 import com.jinjinjara.pola.data.remote.api.AuthApi
 import com.jinjinjara.pola.data.remote.api.CategoryApi
+import com.jinjinjara.pola.data.remote.api.FileUploadApi
 import com.jinjinjara.pola.data.remote.interceptor.AuthInterceptor
 import com.jinjinjara.pola.data.remote.interceptor.TokenAuthenticator
 import com.jinjinjara.pola.util.Constants
@@ -110,5 +111,12 @@ object NetworkModule {
     @Singleton
     fun provideCategoryApi(retrofit: Retrofit): CategoryApi {
         return retrofit.create(CategoryApi::class.java)
+    }
+
+    // 파일 업로드
+    @Provides
+    @Singleton
+    fun provideFileUploadApi(retrofit: Retrofit): FileUploadApi {
+        return retrofit.create(FileUploadApi::class.java)
     }
 }
