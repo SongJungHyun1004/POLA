@@ -24,19 +24,34 @@ fun PolaNavHost(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
     isLoggedIn: Boolean = false,
+    onboardingCompleted: Boolean = false
 ) {
 
     // 테스트용: 이미지 클릭 시 토큰 없이 메인으로 이동
     var isTestMode by remember { mutableStateOf(false) }
 
+    // 시작 화면 결정 로직:
+    // - 테스트 모드: MAIN으로 이동
+    // - 로그인 완료 && 온보딩 완료: MAIN으로 이동
+    // - 그 외: AUTH로 이동 (로그인 또는 온보딩 필요)
+    val startDestination = if (isTestMode) {
+        NavGraphs.MAIN
+    } else if (isLoggedIn && onboardingCompleted) {
+        NavGraphs.MAIN
+    } else {
+        NavGraphs.AUTH
+    }
+
     NavHost(
         navController = navController,
-        startDestination = if (isLoggedIn || isTestMode) NavGraphs.MAIN else NavGraphs.AUTH,
+        startDestination = startDestination,
         modifier = modifier
     ) {
         // Auth 네비게이션 그래프
         authNavGraph(
-            navController = navController
+            navController = navController,
+            isLoggedIn = isLoggedIn,
+            onboardingCompleted = onboardingCompleted
         )
 
         // Main 네비게이션 그래프

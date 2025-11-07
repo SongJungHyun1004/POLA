@@ -23,47 +23,25 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.jinjinjara.pola.util.ErrorType
 
 @Composable
 fun TagSelectScreen(
-    onNextClick: (Set<String>) -> Unit = {},
-    onBackClick: () -> Unit = {}
+    categoriesWithTags: Map<String, List<String>> = emptyMap(),
+    onNextClick: () -> Unit = {},
+    onBackClick: () -> Unit = {},
+    viewModel: TagSelectViewModel = hiltViewModel()
 ) {
-    var showAddDialog by remember { mutableStateOf(false) }
-    var currentCategory by remember { mutableStateOf<TagCategory?>(null) }
-    var customTagsMap by remember { mutableStateOf<Map<String, List<String>>>(emptyMap()) }
+    val uiState by viewModel.uiState.collectAsState()
 
-    val categories = remember(customTagsMap) {
-        listOf(
-            TagCategory(
-                title = "간식",
-                tags = listOf("카페", "디저트", "스낵", "베이커리", "음료") + (customTagsMap["간식"] ?: emptyList())  // 추가
-            ),
-            TagCategory(
-                title = "장소",
-                tags = listOf("포토존", "공원", "루프탑", "전망대", "힐링스팟") + (customTagsMap["장소"] ?: emptyList())  // 추가
-            ),
-            TagCategory(
-                title = "정보",
-                tags = listOf("핫플", "체험", "전시", "이벤트", "문화시설") + (customTagsMap["정보"] ?: emptyList())  // 추가
-            ),
-            TagCategory(
-                title = "쇼핑",
-                tags = listOf("컨셉스토어", "플리마켓", "빈티지샵", "쇼핑몰", "서점") + (customTagsMap["쇼핑"] ?: emptyList())  // 추가
-            ),
-            TagCategory(
-                title = "커스텀",
-                tags = customTagsMap["커스텀"] ?: emptyList()  // 수정
-            )
-        )
-    }
-
-    // 모든 태그를 초기 선택 상태로 설정
-    val allTags = remember(categories) { categories.flatMap { it.tags }.toSet() }
-    var selectedTags by remember { mutableStateOf(allTags) }
-
-    LaunchedEffect(categories) {
-        selectedTags = selectedTags + categories.flatMap { it.tags }.toSet()
+    // Success 상태 처리
+    LaunchedEffect(uiState) {
+        if (uiState is TagSelectUiState.Success) {
+            onNextClick()
+        }
     }
 
     Column(
@@ -108,59 +86,160 @@ fun TagSelectScreen(
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
                 lineHeight = 36.sp,
-                modifier = Modifier.padding(top = 16.dp, bottom = 24.dp)
+                modifier = Modifier.padding(top = 8.dp, bottom = 24.dp)
             )
 
-            // Scrollable content
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState())
-            ) {
-                categories.forEach { category ->
-                    TagCategorySection(
-                        category = category,
-                        selectedTags = selectedTags,
-                        onTagClick = { tag ->
-                            selectedTags = if (selectedTags.contains(tag)) {
-                                selectedTags - tag
-                            } else {
-                                selectedTags + tag
+            // Handle different UI states
+            when (val state = uiState) {
+                is TagSelectUiState.Loading -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+
+                is TagSelectUiState.Error -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Text(
+                                text = state.message,
+                                color = MaterialTheme.colorScheme.error,
+                                textAlign = TextAlign.Center
+                            )
+                            Button(onClick = {
+                                // 에러 상태 초기화 후 다시 시도할 수 있도록
+                                viewModel.resetState()
+                            }) {
+                                Text("다시 시도")
                             }
-                        },
-                        onClearAll = {
-                            selectedTags = selectedTags - category.tags.toSet()
-                        },
-                        onAddClick = {
-                            currentCategory = category
-                            showAddDialog = true
-                        },
-                        modifier = Modifier.padding(bottom = 24.dp)
+                        }
+                    }
+                }
+
+                else -> {
+                    TagSelectContent(
+                        categoriesWithTags = categoriesWithTags,
+                        onSubmit = { categories, selectedTags ->
+                            viewModel.submitSelectedTags(categories, selectedTags)
+                        }
                     )
                 }
             }
+        }
+    }
+}
 
-            Spacer(modifier = Modifier.height(8.dp))
-            // Next Button
-            Button(
-                onClick = { onNextClick(selectedTags) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                ),
-                shape = RoundedCornerShape(100.dp)
-            ) {
-                Text(
-                    text = "다음",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+@Composable
+private fun TagSelectContent(
+    categoriesWithTags: Map<String, List<String>>,
+    onSubmit: (Map<String, List<String>>, Set<String>) -> Unit
+) {
+    var showAddDialog by remember { mutableStateOf(false) }
+    var currentCategory by remember { mutableStateOf<TagCategory?>(null) }
+    // rememberSaveable을 사용하여 커스텀 태그 저장 (재구성 시에도 유지)
+    var customTagsMap by rememberSaveable { mutableStateOf<Map<String, List<String>>>(emptyMap()) }
+
+    // 선택된 카테고리를 TagCategory로 변환
+    val categories = remember(categoriesWithTags, customTagsMap) {
+        categoriesWithTags.map { (categoryName, tags) ->
+            TagCategory(
+                title = categoryName,
+                // API에서 가져온 태그 + 사용자가 추가한 태그
+                tags = (tags + (customTagsMap[categoryName] ?: emptyList())).distinct()
+            )
+        }
+    }
+
+    // 모든 태그를 초기 선택 상태로 설정
+    val allTags = remember(categories) { categories.flatMap { it.tags }.toSet() }
+    var selectedTags by remember { mutableStateOf(allTags) }
+
+    LaunchedEffect(categories) {
+        selectedTags = selectedTags + categories.flatMap { it.tags }.toSet()
+    }
+
+    Column {
+        // Scrollable content
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+        ) {
+            categories.forEach { category ->
+                TagCategorySection(
+                    category = category,
+                    selectedTags = selectedTags,
+                    onTagClick = { tag ->
+                        selectedTags = if (selectedTags.contains(tag)) {
+                            selectedTags - tag
+                        } else {
+                            selectedTags + tag
+                        }
+                    },
+                    onClearAll = {
+                        val count = category.tags.count { selectedTags.contains(it) }
+                        selectedTags = if (count == 0) {
+                            selectedTags + category.tags.toSet()  // 모두 선택
+                        } else {
+                            selectedTags - category.tags.toSet()  // 모두 해제
+                        }
+                    },
+                    onAddClick = {
+                        currentCategory = category
+                        showAddDialog = true
+                    },
+                    modifier = Modifier.padding(bottom = 24.dp)
                 )
             }
-            Spacer(modifier = Modifier.height(40.dp))
         }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // 모든 카테고리가 최소 4개 이상 선택되었는지 검증
+        val allCategoriesMeetRequirement = remember(selectedTags, categories) {
+            categories.all { category ->
+                category.tags.count { selectedTags.contains(it) } >= 4
+            }
+        }
+
+        // Next Button
+        Button(
+            onClick = {
+                // ViewModel을 통해 선택된 태그 전송
+                val finalCategoriesWithTags = (categoriesWithTags.keys + customTagsMap.keys).associateWith { key ->
+                    ((categoriesWithTags[key] ?: emptyList()) + (customTagsMap[key] ?: emptyList())).distinct()
+                }
+                onSubmit(finalCategoriesWithTags, selectedTags)
+            },
+            enabled = allCategoriesMeetRequirement,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary
+            ),
+            shape = RoundedCornerShape(100.dp)
+        ) {
+            Text(
+                text = "다음",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White
+            )
+        }
+        Spacer(modifier = Modifier.height(40.dp))
     }
 
     if (showAddDialog && currentCategory != null) {
@@ -189,6 +268,8 @@ private fun TagCategorySection(
 ) {
     // 해당 카테고리에서 선택된 태그 개수 계산
     val selectedCount = category.tags.count { selectedTags.contains(it) }
+    val noneSelected = selectedCount == 0
+    val buttonText = if (noneSelected) "모두 선택" else "모두 해제"
 
     Column(modifier = modifier) {
         // Category Title
@@ -206,7 +287,7 @@ private fun TagCategorySection(
                 color = Color.Black
             )
             Text(
-                text = "모두 해제",
+                text = buttonText,
                 fontSize = 12.sp,
                 color = Color.Gray,
                 modifier = Modifier.clickable(
@@ -233,11 +314,11 @@ private fun TagCategorySection(
         }
 
 
-        // 경고 메시지
-        val minimumTags = 5
+        // 경고 메시지 (모든 카테고리에 표시)
+        val minimumTags = 4
         if (selectedCount < minimumTags) {
             Text(
-                text = "${minimumTags}개 이상 선택해주세요.",
+                text = "4개 이상 선택해주세요.",
                 fontSize = 12.sp,
                 color = Color.Red,
                 modifier = Modifier.padding(top = 8.dp)

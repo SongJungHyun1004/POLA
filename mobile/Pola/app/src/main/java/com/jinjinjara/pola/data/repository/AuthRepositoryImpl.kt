@@ -215,7 +215,12 @@ class AuthRepositoryImpl @Inject constructor(
                         )
                     }
                 } else {
-                    Log.e("Auth:User", "Failed to fetch user info: ${response.message()}")
+                    val statusCode = response.code()
+                    val errorBody = response.errorBody()?.string()
+                    Log.e("Auth:User", "Failed to fetch user info")
+                    Log.e("Auth:User", "Status Code: $statusCode")
+                    Log.e("Auth:User", "Error message: ${response.message()}")
+                    Log.e("Auth:User", "Error body: $errorBody")
                     Result.Error(
                         exception = Exception(response.message()),
                         message = "사용자 정보를 가져올 수 없습니다."
@@ -236,10 +241,12 @@ class AuthRepositoryImpl @Inject constructor(
         return withContext(ioDispatcher) {
             try {
                 Log.d("Auth:Login", "=== Google OAuth Login Started ===")
+                Log.d("Auth:Login", "ID Token: $idToken")
 
-                // Step 1: Google ID Token으로 임시 JWT 획득
+                // Step 1: Google ID Token으로 최종 JWT 획득
                 Log.d("Auth:Login", "Step 1: Requesting OAuth token")
                 val tokenResponse = authApi.getOAuthToken(OAuthTokenRequest(idToken))
+
                 if (!tokenResponse.isSuccessful || tokenResponse.body()?.data == null) {
                     val errorBody = tokenResponse.errorBody()?.string()
                     val statusCode = tokenResponse.code()
@@ -268,65 +275,55 @@ class AuthRepositoryImpl @Inject constructor(
                     }
                 }
 
-                // 임시 토큰 저장
-                val tempTokenData = tokenResponse.body()!!.data!!
-                Log.d("Auth:Login", "Step 1 SUCCESS: OAuth token received")
+                val tokenData = tokenResponse.body()!!.data!!
+                val statusCode = tokenResponse.code()
 
-                // Step 2: Google ID Token에서 email 추출
-                Log.d("Auth:Login", "Step 2: Extracting email from ID token")
-                val email = extractEmailFromIdToken(idToken)
-                if (email == null) {
-                    Log.e("Auth:Login", "Step 2 FAILED: Cannot extract email from ID token")
-                    return@withContext Result.Error(
-                        exception = Exception("Invalid ID Token"),
-                        message = "Google 계정 정보를 가져올 수 없습니다."
-                    )
-                }
-                Log.d("Auth:Login", "Step 2 SUCCESS: Email extracted -> $email")
-
-                // Step 3: 먼저 signin 시도
-                Log.d("Auth:Login", "Step 3: Trying signin for existing user -> $email")
-                val signinRequest = OAuthSigninRequest(email, displayName)
-                val signinResponse = authApi.oauthSignin(signinRequest)
-
-                val finalTokenData = if (signinResponse.isSuccessful && signinResponse.body()?.data != null) {
-                    Log.d("Auth:Login", "Step 3 SUCCESS: Existing user signin -> $email")
-                    signinResponse.body()!!.data!!
-                } else {
-                    // Step 4: signin 실패 시 signup 시도
-                    Log.d("Auth:Login", "Step 3 SKIP: Not existing user, trying signup -> $email")
-                    Log.d("Auth:Login", "Step 4: Trying signup for new user -> $email")
-                    val signupRequest = OAuthSignupRequest(email, displayName)
-                    val signupResponse = authApi.oauthSignup(signupRequest)
-
-                    if (signupResponse.isSuccessful && signupResponse.body()?.data != null) {
-                        Log.d("Auth:Login", "Step 4 SUCCESS: New user signup -> $email")
-                        signupResponse.body()!!.data!!
-                    } else {
-                        Log.e("Auth:Login", "Step 4 FAILED: Both signin and signup failed -> $email")
-                        return@withContext Result.Error(
-                            exception = Exception(signupResponse.message()),
-                            message = "로그인에 실패했습니다."
-                        )
+                // 상태코드로 신규/기존 유저 구분
+                val onboardingCompleted = when (statusCode) {
+                    200 -> {
+                        Log.d("Auth:Login", "Step 1 SUCCESS: Existing user (200)")
+                        true  // 기존 유저
+                    }
+                    201 -> {
+                        Log.d("Auth:Login", "Step 1 SUCCESS: New user (201)")
+                        false  // 신규 유저
+                    }
+                    else -> {
+                        Log.w("Auth:Login", "Step 1 WARNING: Unexpected status code $statusCode, treating as existing user")
+                        true  // 예상치 못한 코드는 기존 유저로 처리
                     }
                 }
 
-                // Step 5: 최종 토큰 저장
-                Log.d("Auth:Login", "Step 5: Saving tokens")
+                // Step 2: 최종 토큰 저장
+                Log.d("Auth:Login", "Step 2: Saving tokens")
                 saveTokens(
-                    accessToken = finalTokenData.accessToken,
-                    refreshToken = finalTokenData.refreshToken
+                    accessToken = tokenData.accessToken,
+                    refreshToken = tokenData.refreshToken
                 )
-                Log.d("Auth:Token", "Access token saved: ${finalTokenData.accessToken.take(20)}...")
-                Log.d("Auth:Token", "Refresh token saved: ${finalTokenData.refreshToken.take(20)}...")
+                Log.d("Auth:Token", "Access token saved: ${tokenData.accessToken.take(20)}...")
+                Log.d("Auth:Token", "Refresh token saved: ${tokenData.refreshToken.take(20)}...")
 
-                // Step 6: 사용자 정보 가져오기
-                Log.d("Auth:Login", "Step 6: Getting current user info")
-                val userResult = getUser()
-                if (userResult is Result.Success) {
-                    Log.d("Auth:Login", "=== Google OAuth Login SUCCESS === User: ${userResult.data.email}")
+                // Step 3: 사용자 정보 가져오기
+                Log.d("Auth:Login", "Step 3: Getting current user info")
+                val userInfoResponse = authApi.getUser()
+
+                if (userInfoResponse.isSuccessful && userInfoResponse.body()?.data != null) {
+                    val userResponse = userInfoResponse.body()!!.data!!
+                    val user = userResponse.toUser(onboardingCompleted = onboardingCompleted)
+                    Log.d("Auth:Login", "=== Google OAuth Login SUCCESS === User: ${user.email}, Onboarding: $onboardingCompleted")
+                    Result.Success(user)
+                } else {
+                    val statusCode = userInfoResponse.code()
+                    val errorBody = userInfoResponse.errorBody()?.string()
+                    Log.e("Auth:User", "Failed to fetch user info")
+                    Log.e("Auth:User", "Status Code: $statusCode")
+                    Log.e("Auth:User", "Error message: ${userInfoResponse.message()}")
+                    Log.e("Auth:User", "Error body: $errorBody")
+                    Result.Error(
+                        exception = Exception(userInfoResponse.message()),
+                        message = "사용자 정보를 가져올 수 없습니다."
+                    )
                 }
-                return@withContext userResult
 
             } catch (e: SocketTimeoutException) {
                 Log.e("Auth:Login", "=== Google OAuth Login FAILED === Timeout", e)
@@ -350,24 +347,6 @@ class AuthRepositoryImpl @Inject constructor(
                     errorType = ErrorType.UNKNOWN
                 )
             }
-        }
-    }
-
-    // Google ID Token에서 email 추출
-    private fun extractEmailFromIdToken(idToken: String): String? {
-        return try {
-            val parts = idToken.split(".")
-            if (parts.size < 2) {
-                Log.e("Auth:Login", "Invalid ID token format: parts=${parts.size}")
-                return null
-            }
-
-            val payload = String(Base64.decode(parts[1], Base64.URL_SAFE or Base64.NO_WRAP))
-            val json = JSONObject(payload)
-            json.optString("email", null)
-        } catch (e: Exception) {
-            Log.e("Auth:Login", "Failed to parse ID token", e)
-            null
         }
     }
 }

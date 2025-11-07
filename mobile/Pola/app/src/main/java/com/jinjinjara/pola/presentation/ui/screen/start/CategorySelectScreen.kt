@@ -34,6 +34,9 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.jinjinjara.pola.domain.model.CategoryRecommendation
 
 data class Category(
     val id: String,
@@ -42,33 +45,32 @@ data class Category(
     val isAddBtn: Boolean = false
 )
 
+// Icon mapping function
+private fun getCategoryIcon(categoryName: String): ImageVector {
+    return when (categoryName.lowercase()) {
+        "쇼핑", "shopping" -> Icons.Outlined.ShoppingBag
+        "장소", "place", "위치" -> Icons.Outlined.Place
+        "인물", "person", "사람" -> Icons.Outlined.Person
+        "간식", "snack", "디저트" -> Icons.Outlined.BakeryDining
+        "운동", "exercise", "피트니스" -> Icons.Outlined.FitnessCenter
+        "정보", "info" -> Icons.Outlined.Info
+        "학습", "study", "교육" -> Icons.Outlined.School
+        "음식", "food", "한식", "야식" -> Icons.Outlined.Restaurant
+        "여행", "travel" -> Icons.Default.Flight
+        "가족", "family" -> Icons.Default.FamilyRestroom
+        "사진", "photo" -> Icons.Default.PhotoCamera
+        "취미", "hobby" -> Icons.Default.SportsEsports
+        else -> Icons.Outlined.Category // Default icon
+    }
+}
+
 @Composable
 fun CategorySelectScreen(
-    onCategorySelected: () -> Unit,
+    onCategorySelected: (Map<String, List<String>>) -> Unit,
+    viewModel: CategorySelectViewModel = hiltViewModel()
 ) {
-    var selectedCategories by remember { mutableStateOf(setOf<String>()) }
-    var showAddDialog by remember { mutableStateOf(false) }
-    var customCategories by remember { mutableStateOf(listOf<Category>()) }
-
-    val defaultCategories = listOf(
-        Category("shopping", "쇼핑", Icons.Outlined.ShoppingBag),
-        Category("place", "장소", Icons.Outlined.Place),
-        Category("person", "인물", Icons.Outlined.Person),
-        Category("snack", "간식", Icons.Outlined.BakeryDining),
-        Category("exercise", "운동", Icons.Outlined.FitnessCenter),
-        Category("info", "정보", Icons.Outlined.Info),
-        Category("study", "학습", Icons.Outlined.School),
-        Category("food", "음식", Icons.Outlined.Restaurant),
-    )
-
-    val categories = remember(customCategories) {
-        defaultCategories + customCategories + Category(
-            "add",
-            "",
-            Icons.Default.Add,
-            isAddBtn = true
-        )
-    }
+    val uiState by viewModel.uiState.collectAsState()
+    val selectedCategories by viewModel.selectedCategories.collectAsState()
 
     Column(
         modifier = Modifier
@@ -82,16 +84,14 @@ fun CategorySelectScreen(
         Text(
             text = buildAnnotatedString {
                 append("원하는 ")
-
                 withStyle(
                     style = SpanStyle(
-                        color = MaterialTheme.colorScheme.primary, // 원하는 색상
+                        color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
                     )
                 ) {
                     append("카테고리")
                 }
-
                 append("를\n모두 골라주세요")
             },
             fontSize = 32.sp,
@@ -99,22 +99,116 @@ fun CategorySelectScreen(
             lineHeight = 36.sp,
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        // Progress indicator
-        Text(
-            text = "${selectedCategories.size}/${categories.count { !it.isAddBtn }}",
-            fontSize = 16.sp,
+        // Handle different UI states
+        when (val state = uiState) {
+            is CategoryUiState.Loading -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+
+            is CategoryUiState.Error -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text(
+                            text = state.message,
+                            color = MaterialTheme.colorScheme.error,
+                            textAlign = TextAlign.Center
+                        )
+                        Button(onClick = { viewModel.retry() }) {
+                            Text("다시 시도")
+                        }
+                    }
+                }
+            }
+
+            is CategoryUiState.Success -> {
+                CategoryContent(
+                    categories = state.categories,
+                    selectedCategories = selectedCategories,
+                    onCategoryToggle = { viewModel.toggleCategory(it) },
+                    onCategorySelected = {
+                        // 선택된 카테고리와 해당 태그 정보를 전달
+                        val categoriesWithTags = viewModel.getSelectedCategoriesWithTags()
+                        onCategorySelected(categoriesWithTags)
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CategoryContent(
+    categories: List<CategoryRecommendation>,
+    selectedCategories: Set<String>,
+    onCategoryToggle: (String) -> Unit,
+    onCategorySelected: () -> Unit
+) {
+    var showAddDialog by remember { mutableStateOf(false) }
+    // rememberSaveable을 사용하여 커스텀 카테고리 이름 저장 (재구성 시에도 유지)
+    var customCategoryNames by rememberSaveable { mutableStateOf(listOf<String>()) }
+
+    // 커스텀 카테고리 이름을 CategoryRecommendation으로 변환
+    val customCategories = remember(customCategoryNames) {
+        customCategoryNames.map { CategoryRecommendation(categoryName = it, tags = emptyList()) }
+    }
+
+    // Map API categories to UI categories with icons
+    val uiCategories = remember(categories, customCategories) {
+        (categories + customCategories).map { category ->
+            Category(
+                id = category.categoryName,
+                name = category.categoryName,
+                icon = getCategoryIcon(category.categoryName),
+                isAddBtn = false
+            )
+        } + Category(
+            id = "add",
+            name = "",
+            icon = Icons.Default.Add,
+            isAddBtn = true
         )
+    }
 
-        Spacer(modifier = Modifier.height(32.dp))
+    Column {
+        // 카테고리 선택 검증 메시지
+        if (selectedCategories.size < 2) {
+            Text(
+                text = "2개 이상 선택해주세요",
+                fontSize = 14.sp,
+                color = Color.Red
+            )
+        } else {
+            Text(
+                text = " ",
+                fontSize = 14.sp,
+                color = Color.Red
+            )
+        }
+        Spacer(modifier = Modifier.height(16.dp))
 
-        val rowCount = (categories.size + 2) / 3
+        val rowCount = (uiCategories.size + 2) / 3
         // Category Grid
         Column(
-            verticalArrangement = Arrangement.spacedBy(36.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier
-                .weight(1f)  // 남은 공간을 차지
+                .weight(1f)
                 .verticalScroll(rememberScrollState())
         ) {
             for (rowIndex in 0 until rowCount) {
@@ -124,19 +218,12 @@ fun CategorySelectScreen(
                 ) {
                     for (colIndex in 0..2) {
                         val index = rowIndex * 3 + colIndex
-                        if (index < categories.size) {
-                            val category = categories[index]
+                        if (index < uiCategories.size) {
+                            val category = uiCategories[index]
                             CategoryItem(
                                 category = category,
                                 isSelected = selectedCategories.contains(category.id),
-                                onToggle = {
-                                    selectedCategories =
-                                        if (selectedCategories.contains(category.id)) {
-                                            selectedCategories - category.id
-                                        } else {
-                                            selectedCategories + category.id
-                                        }
-                                },
+                                onToggle = { onCategoryToggle(category.id) },
                                 onAddClick = { showAddDialog = true },
                                 modifier = Modifier.weight(1f)
                             )
@@ -152,7 +239,8 @@ fun CategorySelectScreen(
 
         // Next Button
         Button(
-            onClick = { onCategorySelected() },
+            onClick = onCategorySelected,
+            enabled = selectedCategories.size >= 2,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
@@ -176,11 +264,7 @@ fun CategorySelectScreen(
         AddCategoryDialog(
             onDismiss = { showAddDialog = false },
             onConfirm = { categoryName ->
-                customCategories = customCategories + Category(
-                    id = "custom_${System.currentTimeMillis()}",
-                    name = categoryName,
-                    icon = Icons.Outlined.Category
-                )
+                customCategoryNames = customCategoryNames + categoryName
                 showAddDialog = false
             }
         )
@@ -379,7 +463,7 @@ fun AddCategoryDialog(
 @Composable
 fun CategorySelectScreenPreview() {
     CategorySelectScreen(
-        onCategorySelected = {}
+        onCategorySelected = { _ -> }
     )
 }
 

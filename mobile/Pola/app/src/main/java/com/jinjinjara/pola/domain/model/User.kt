@@ -8,5 +8,6 @@ data class User(
     val email: String,
     val displayName: String,
     val profileImageUrl: String? = null,
-    val createdAt: String
+    val createdAt: String,
+    val onboardingCompleted: Boolean = false
 )
