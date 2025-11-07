@@ -63,7 +63,7 @@ public class DataService {
         file.setLastViewedAt(LocalDateTime.now());
         fileRepository.save(file);
 
-        // 🏷파일에 연결된 태그 조회
+        // 🏷 파일에 연결된 태그 조회
         List<TagResponse> tags = tagRepository.findAllByFileId(fileId).stream()
                 .map(tag -> TagResponse.builder()
                         .id(tag.getId())
@@ -71,12 +71,17 @@ public class DataService {
                         .build())
                 .toList();
 
+        // presigned URL 생성 (파일 1개용)
+        String presignedUrl = s3Service.generatePreviewUrl(
+                new S3Service.FileMeta(file.getSrc(), file.getType())
+        );
+
         // 응답 DTO 구성
         return FileDetailResponse.builder()
                 .id(file.getId())
                 .userId(file.getUserId())
                 .categoryId(file.getCategoryId())
-                .src(file.getSrc())
+                .src(presignedUrl) // presigned URL 반환
                 .type(file.getType())
                 .context(file.getContext())
                 .ocrText(file.getOcrText())
@@ -131,7 +136,7 @@ public class DataService {
         // 변환: File → DataResponse
         return files.map(file -> DataResponse.builder()
                 .id(file.getId())
-                .src(previewUrls.get(file.getId()))  // ✅ 미리보기용 presigned URL
+                .src(previewUrls.get(file.getId()))  // 미리보기용 presigned URL
                 .type(file.getType())
                 .context(file.getContext())
                 .favorite(file.getFavorite())
