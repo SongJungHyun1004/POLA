@@ -3,7 +3,7 @@ package com.jinjinjara.pola.data.repository;
 import com.jinjinjara.pola.data.entity.CategoryTag;
 import com.jinjinjara.pola.data.entity.Category;
 import com.jinjinjara.pola.data.entity.Tag;
-import io.lettuce.core.dynamic.annotation.Param;
+import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
