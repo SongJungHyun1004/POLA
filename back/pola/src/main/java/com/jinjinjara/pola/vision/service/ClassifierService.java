@@ -3,6 +3,10 @@ package com.jinjinjara.pola.vision.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jinjinjara.pola.vision.dto.common.Evidence;
+import com.jinjinjara.pola.vision.dto.common.InputRel;
+import com.jinjinjara.pola.vision.dto.common.Result;
+import com.jinjinjara.pola.vision.dto.common.Score;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ResourceLoader;
@@ -133,19 +137,19 @@ public class ClassifierService {
                     ev.add(new Evidence(t, s));
                 }
             }
-            ev.sort((a,b)->Double.compare(b.similarity, a.similarity));
+            ev.sort((a,b)->Double.compare(b.getSimilarity(), a.getSimilarity()));
             if (ev.size() > evidenceTopN) ev = ev.subList(0, evidenceTopN);
 
             scores.add(new Score(cat, sim, ev));
         }
-        scores.sort((a,b)->Double.compare(b.similarity, a.similarity));
+        scores.sort((a,b)->Double.compare(b.getSimilarity(), a.getSimilarity()));
 
         if (topk < 1) topk = 1;
         if (topk > scores.size()) topk = scores.size();
         List<Score> topScores = scores.subList(0, topk);
 
         // 4) 최종 1위 카테고리에 대해: 각 "입력 태그" vs "카테고리 센트로이드" 유사도 Top-N
-        String topCategory = topScores.get(0).category();
+        String topCategory = topScores.get(0).getCategory();
         float[] topCentroid = embedding.categoryCentroid(topCategory);
 
         List<InputRel> topCategoryInputs = new ArrayList<>();
@@ -169,7 +173,7 @@ public class ClassifierService {
                 topCategoryInputs.add(new InputRel(tag, s));
             }
         }
-        topCategoryInputs.sort((a,b)->Double.compare(b.similarity, a.similarity));
+        topCategoryInputs.sort((a,b)->Double.compare(b.getSimilarity(), a.getSimilarity()));
         if (topCategoryInputs.size() > topInputN) {
             topCategoryInputs = topCategoryInputs.subList(0, topInputN);
         }
@@ -209,11 +213,4 @@ public class ClassifierService {
         String t = s.trim();
         return Normalizer.normalize(t, Normalizer.Form.NFC);
     }
-
-    // ========================= DTO =========================
-    public record Evidence(String tag, double similarity) {}
-    public record Score(String category, double similarity, List<Evidence> topTags) {}
-    /** 최종 1위 카테고리에 대해, 각 입력 태그가 그 카테고리에 얼마나 가까운지 */
-    public record InputRel(String inputTag, double similarity) {}
-    public record Result(List<Score> results, String topCategory, List<InputRel> topCategoryInputs) {}
 }

@@ -1,9 +1,11 @@
 package com.jinjinjara.pola.vision.service;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
+import com.jinjinjara.pola.vision.dto.common.Instance;
+import com.jinjinjara.pola.vision.dto.common.Prediction;
+import com.jinjinjara.pola.vision.dto.request.PredictRequest;
+import com.jinjinjara.pola.vision.dto.response.PredictResponse;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -113,13 +115,13 @@ public class EmbeddingService {
                 .retrieve()
                 .body(PredictResponse.class);
 
-        if (res == null || res.predictions == null || res.predictions.isEmpty())
+        if (res == null || res.getPredictions() == null || res.getPredictions().isEmpty())
             throw new RuntimeException("Empty embedding response");
 
         List<float[]> out = new ArrayList<>();
-        for (Prediction p : res.predictions) {
-            float[] v = new float[p.embeddings.values.size()];
-            for (int i = 0; i < v.length; i++) v[i] = p.embeddings.values.get(i).floatValue();
+        for (Prediction p : res.getPredictions()) {
+            float[] v = new float[p.getEmbeddings().getValues().size()];
+            for (int i = 0; i < v.length; i++) v[i] = p.getEmbeddings().getValues().get(i).floatValue();
             out.add(v);
         }
         return out;
@@ -142,14 +144,4 @@ public class EmbeddingService {
         for (int i = 0; i < d; i++) m[i] /= vs.size();
         return m;
     }
-
-    // ================== DTO ==================
-    record PredictRequest(List<Instance> instances) {}
-    record Instance(@JsonProperty("content") String content) {}
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    static class PredictResponse { public List<Prediction> predictions; }
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    static class Prediction { public Embedding embeddings; }
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    static class Embedding { public List<Double> values; }
 }
