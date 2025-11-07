@@ -1,0 +1,3 @@
+delimiters: ["_", "-", "/"]
+boundary: true
+min_token_len: 2

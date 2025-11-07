@@ -37,7 +37,6 @@ public class VertexService {
 
     // ————— 공통 헬퍼 —————
     private String endpoint(String model) {
-        // https://{location}-aiplatform.googleapis.com/v1/projects/{project}/locations/{location}/publishers/google/models/{model}:generateContent
         return String.format(
                 "https://%s-aiplatform.googleapis.com/v1/projects/%s/locations/%s/publishers/google/models/%s:generateContent",
                 location, projectId, location, model

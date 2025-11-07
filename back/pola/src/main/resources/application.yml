@@ -177,3 +177,22 @@ vertex:
   model:
     text: gemini-2.5-flash-lite
     vision: gemini-2.5-flash-lite
+
+nlp:
+  paths:
+    synonyms: classpath:nlp/synonyms.yml
+    generic:  classpath:nlp/generic.yml
+    split:    classpath:nlp/split.yml
+
+classifier:
+  alpha: 0.7
+  generic:
+    downscale: 0.3
+  input:
+    min-sim: 0.35
+
+embedding:
+  alpha: 0.7
+  spec:
+    threshold: 0.08
+    downscale: 0.7

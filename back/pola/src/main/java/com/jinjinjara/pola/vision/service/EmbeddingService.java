@@ -26,8 +26,9 @@ public class EmbeddingService {
 
     private static final List<String> SCOPES = List.of("https://www.googleapis.com/auth/cloud-platform");
     private final RestClient rest = RestClient.create();
+    private final AtomicBoolean warmedUp = new AtomicBoolean(false);
 
-    // -------------------- 카테고리-태그 --------------------
+    // ================== 테스트용 카테고리/태그 ==================
     private final Map<String, List<String>> CATEGORY_TAGS = Map.of(
             "한식", List.of("삼겹살","백반","찌개","김치","불고기","비빔밥","반찬","국밥"),
             "중식", List.of("사천","짜장면","짬뽕","탕수육","마라","볶음밥","깐풍기","중국요리"),
@@ -35,15 +36,14 @@ public class EmbeddingService {
             "양식", List.of("리조또","스테이크","파스타","피자","치즈","버거","감자튀김","프랑스요리"),
             "분식", List.of("쫄면","떡볶이","김밥","순대","튀김","어묵","라면","핫도그"),
             "술집", List.of("막걸리","회식","맥주","소주","와인","포차","호프집","이자카야"),
-            "카페", List.of("샌드위치","커피","디저트","케이크","브런치","라떼","빵","분위기"),
+            "카페", List.of("샌드위치","커피","디저트","케이크","브런치","라떼","빵","원두"),
             "배달", List.of("치킨","피자","햄버거","족발","보쌈","짜장면","떡볶이","야식")
     );
 
     private final Map<String, float[]> tagVec = new HashMap<>();
     private final Map<String, float[]> catCentroid = new HashMap<>();
-    private final AtomicBoolean warmedUp = new AtomicBoolean(false);
 
-    // -------------------- 초기화 --------------------
+    // ================== 초기화 ==================
     @PostConstruct
     public void warmup() {
         try {
@@ -58,6 +58,7 @@ public class EmbeddingService {
     public synchronized void rebuild() {
         List<String> all = CATEGORY_TAGS.values().stream().flatMap(List::stream).distinct().collect(toList());
         List<float[]> vecs = embedTexts(all);
+
         tagVec.clear();
         for (int i = 0; i < all.size(); i++) tagVec.put(all.get(i), vecs.get(i));
 
@@ -79,7 +80,7 @@ public class EmbeddingService {
         }
     }
 
-    // -------------------- 외부 접근 메서드 --------------------
+    // ================== 외부 접근 메서드 ==================
     public Set<String> categories() { ensureReady(); return CATEGORY_TAGS.keySet(); }
     public List<String> tagsOf(String cat) { ensureReady(); return CATEGORY_TAGS.getOrDefault(cat, List.of()); }
     public float[] tagVector(String tag) { ensureReady(); return tagVec.get(tag); }
@@ -91,7 +92,7 @@ public class EmbeddingService {
         return mean(vs);
     }
 
-    // -------------------- Vertex 임베딩 호출 --------------------
+    // ================== Vertex AI 호출 ==================
     public List<float[]> embedTexts(List<String> texts) {
         if (texts == null || texts.isEmpty()) return List.of();
 
@@ -142,10 +143,9 @@ public class EmbeddingService {
         return m;
     }
 
-    // -------------------- DTO --------------------
+    // ================== DTO ==================
     record PredictRequest(List<Instance> instances) {}
     record Instance(@JsonProperty("content") String content) {}
-
     @JsonIgnoreProperties(ignoreUnknown = true)
     static class PredictResponse { public List<Prediction> predictions; }
     @JsonIgnoreProperties(ignoreUnknown = true)
