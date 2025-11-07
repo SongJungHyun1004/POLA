@@ -1,57 +1,53 @@
 export async function apiClient(url: string, options: RequestInit = {}) {
-  if (typeof window === "undefined") {
-    throw new Error("apiClient cannot be used on the server.");
-  }
+  const base = process.env.NEXT_PUBLIC_POLA_API_BASE_URL ?? "";
+  const accessToken = localStorage.getItem("accessToken") ?? "";
+  const refreshToken = localStorage.getItem("refreshToken") ?? "";
 
-  const baseUrl = process.env.NEXT_PUBLIC_POLA_API_BASE_URL;
-  const accessToken = localStorage.getItem("accessToken");
-  const refreshToken = localStorage.getItem("refreshToken");
-
-  const originalBody = options.body;
-
-  const request = async (token?: string) => {
-    const headers = {
-      ...(options.headers || {}),
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
-
-    return fetch(baseUrl + url, {
-      ...options,
-      body: originalBody,
-      headers,
-    });
+  const headers: Record<string, string> = {
+    ...((options.headers as Record<string, string>) || {}),
+    Authorization: accessToken ? `Bearer ${accessToken}` : "",
+    "Content-Type": "application/json",
   };
 
-  let response = await request(accessToken || undefined);
+  let res: Response = await fetch(base + url, { ...options, headers });
 
-  if (response.status === 401 && refreshToken) {
-    const refreshResponse = await fetch(baseUrl + "/auth/refresh", {
+  // Access Token 만료 → 401
+  if (res.status === 401 && refreshToken) {
+    const refreshRes: Response = await fetch(base + "/auth/refresh", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refreshToken }),
     });
 
-    if (!refreshResponse.ok) {
+    // Refresh 실패 → 로그아웃 처리
+    if (!refreshRes.ok) {
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
       window.location.href = "/";
       throw new Error("Token refresh failed");
     }
 
-    const newTokens = await refreshResponse.json();
-    localStorage.setItem("accessToken", newTokens.data.accessToken);
+    // 새 Access Token 저장
+    const newTokens = await refreshRes.json();
+    const newAccessToken: string = newTokens?.data?.accessToken ?? "";
 
-    if (newTokens.data.refreshToken) {
-      localStorage.setItem("refreshToken", newTokens.data.refreshToken);
+    if (!newAccessToken) {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      window.location.href = "/";
+      throw new Error("New access token missing");
     }
 
-    response = await request(newTokens.data.accessToken);
+    localStorage.setItem("accessToken", newAccessToken);
+
+    res = await fetch(base + url, {
+      ...options,
+      headers: {
+        ...headers,
+        Authorization: `Bearer ${newAccessToken}`,
+      },
+    });
   }
 
-  if (!response.ok && response.status >= 500) {
-    console.error("Server Error:", response.status, url);
-  }
-
-  return response;
+  return res;
 }
