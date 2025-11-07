@@ -23,24 +23,24 @@ public class TagController {
     /**
      * 파일에 태그 추가 (POST)
      */
-    @Operation(summary = "파일 태그 추가", description = "해당 파일에 사용자가 원하는 태그를 추가합니다.")
+    @Operation(summary = "파일 태그 추가", description = "해당 파일에 사용자가 원하는 태그를 여러 개 추가합니다.")
     @PostMapping("/{fileId}/tags")
-    public ApiResponse<FileTagResponse> addTagToFile(
+    public ApiResponse<List<FileTagResponse>> addTagsToFile(
             @PathVariable("fileId") Long fileId,
             @RequestBody AddTagsRequest request
     ) {
-        // AddTagsRequest는 태그 ID 목록을 전달받는 용도로 사용
-        // ex) { "tagIds": [1, 2, 3] }
-        if (request.tagIds().isEmpty()) {
+        if (request.tagIds() == null || request.tagIds().isEmpty()) {
             return ApiResponse.fail("INVALID_REQUEST", "추가할 태그 ID가 없습니다.");
         }
 
-        // 단일 추가라면 첫 번째 값만 사용 (필요 시 bulk 처리 확장 가능)
-        Long tagId = request.tagIds().get(0);
+        // 여러 개 처리
+        List<FileTagResponse> responses = request.tagIds().stream()
+                .map(tagId -> fileTagService.addTagToFile(fileId, tagId))
+                .toList();
 
-        FileTagResponse response = fileTagService.addTagToFile(fileId, tagId);
-        return ApiResponse.ok(response, "태그가 성공적으로 추가되었습니다.");
+        return ApiResponse.ok(responses, "태그가 성공적으로 추가되었습니다.");
     }
+
 
     /**
      * 파일의 태그 목록 조회 (GET)
