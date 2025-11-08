@@ -17,6 +17,8 @@ import com.jinjinjara.pola.data.repository.FileRepository;
 import com.jinjinjara.pola.data.repository.TagRepository;
 import com.jinjinjara.pola.s3.service.S3Service;
 import com.jinjinjara.pola.user.entity.Users;
+import com.jinjinjara.pola.vision.dto.response.AnalyzeResponse;
+import com.jinjinjara.pola.vision.service.AnalyzeFacadeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -25,6 +27,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.net.URL;
 import java.util.List;
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -38,6 +42,8 @@ public class DataService {
     private final CategoryRepository categoryRepository;
     private final S3Service s3Service;
     private final TagRepository tagRepository;
+    private final AnalyzeFacadeService analyzeFacadeService;
+    private final FileTagService fileTagService;
 
     public List<DataResponse> getRemindFiles(Long userId) {
         LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
@@ -177,7 +183,14 @@ public class DataService {
                 .views(0)
                 .build();
 
-        return fileRepository.save(file);
+        URL downUrl = s3Service.generateDownloadUrl(file.getSrc());
+        AnalyzeResponse analyzeResponse = analyzeFacadeService.analyze(user.getId(), downUrl.toString());
+        file.setCategoryId(analyzeResponse.getCategoryId());
+        file.setContext(analyzeResponse.getDescription());
+
+        File saveFile = fileRepository.save(file);
+        fileTagService.addTagsToFile(saveFile.getId(),analyzeResponse.getTags());
+        return saveFile;
     }
 
     /**
