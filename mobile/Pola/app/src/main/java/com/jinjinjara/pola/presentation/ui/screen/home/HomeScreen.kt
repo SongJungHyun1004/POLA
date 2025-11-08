@@ -334,7 +334,7 @@ private fun HomeContent(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
                             ) {
-                                // 전체보기
+                                onNavigateToCategory("전체")
                             },
                         text = "전체보기",
                         color = MaterialTheme.colorScheme.tertiary,
