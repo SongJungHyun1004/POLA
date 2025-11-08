@@ -190,12 +190,10 @@ nlp:
 classifier:
   alpha: 0.7
   generic:
-    downscale: 0.3
+    downscale: 0.7
   input:
-    min-sim: 0.35
+    min-sim: 0.08
 
 embedding:
-  alpha: 0.7
-  spec:
-    threshold: 0.08
-    downscale: 0.7
+  cache:
+    centroids-ttl-ms: 86400000

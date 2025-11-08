@@ -23,11 +23,11 @@ public class ClassifierService {
     private final ResourceLoader resourceLoader;
     private final ObjectMapper yaml = new ObjectMapper(new YAMLFactory());
 
-    // ---- 튜닝 파라미터 (application.yml 없으면 기본값) ----
+    // ---- 튜닝 파라미터 ----
     @Value("${classifier.alpha:0.7}")
-    private double alpha;                // (예비) 센트로이드/태그 블렌딩 비율
+    private double alpha;                // (예비) 블렌딩 비율
     @Value("${classifier.generic.downscale:0.3}")
-    private double genericDown;          // generic(프로모션성) 입력/증거 다운가중
+    private double genericDown;          // 프로모션성 입력/증거 다운가중
     @Value("${classifier.input.min-sim:0.35}")
     private double minInputSim;          // 입력-카테고리 최소 유사도 컷
     @Value("${classifier.evidence.top:3}")
@@ -50,8 +50,6 @@ public class ClassifierService {
     public ClassifierService(EmbeddingService embedding, ResourceLoader rl) {
         this.embedding = embedding;
         this.resourceLoader = rl;
-        // 주의: 여기서 사전을 로드하면 @Value 주입 전이라 경로가 기본값/빈 값일 수 있음.
-        // 반드시 @PostConstruct에서 로드한다.
     }
 
     @PostConstruct
@@ -86,15 +84,23 @@ public class ClassifierService {
                 SYNONYM.size(), GENERIC.size(), synonymsPath, genericPath);
     }
 
-    // ========================= 분류 본체 =========================
-    public Result classify(List<String> inputTags, int topk) {
+    // ========================= 외부 센트로이드/카테고리-태그 기반 분류 =========================
+    public Result classifyWithCentroids(
+            List<String> inputTags,
+            Map<String, float[]> centroids,                 // category -> centroid
+            Map<String, List<String>> categoryTags,         // category -> tags (evidence 계산용)
+            Integer topk                                     // null이면 기본 3
+    ) {
         if (inputTags == null || inputTags.isEmpty()) {
+            return new Result(List.of(), null, List.of());
+        }
+        if (centroids == null || centroids.isEmpty()) {
             return new Result(List.of(), null, List.of());
         }
 
         // 1) 정규화 + 동의어 치환
         List<String> canonInputs = inputTags.stream()
-                .map(this::canonicalize)               // trim + NFC + synonyms
+                .map(this::canonicalize)
                 .filter(s -> !s.isEmpty())
                 .distinct()
                 .toList();
@@ -103,75 +109,98 @@ public class ClassifierService {
             return new Result(List.of(), null, List.of());
         }
 
-        // 디버그: 어떤 입력이 generic으로 인식되는지 확인
-        // (배포 후엔 로그 레벨에 따라 끄면 됨)
         for (String t : canonInputs) {
             if (GENERIC.contains(t)) {
                 System.out.println("[Classifier] generic hit (input): " + t);
             }
         }
 
-        // 2) 입력 태그 임베딩 + 가중치(일반 키워드 다운가중)
+        // 2) 입력 태그 임베딩 + 가중치
         double[] weights = new double[canonInputs.size()];
         for (int i = 0; i < canonInputs.size(); i++) {
             String t = canonInputs.get(i);
-            weights[i] = GENERIC.contains(t) ? genericDown : 1.0; // generic이면 다운가중
+            weights[i] = GENERIC.contains(t) ? genericDown : 1.0;
         }
         List<float[]> inputVecs = embedding.embedTexts(canonInputs);
-
-        // 가중 평균 쿼리 벡터 q
         float[] q = weightedMean(inputVecs, weights);
 
-        // 3) 카테고리 점수 + 근거 태그(카테고리 내부 태그 기준)
+        // 3) 근거 태그 임베딩(전체 카테고리 태그를 한 번에 배치 임베딩)
+        Map<String, float[]> tagVec = Collections.emptyMap();
+        if (categoryTags != null && !categoryTags.isEmpty()) {
+            LinkedHashSet<String> allTags = new LinkedHashSet<>();
+            categoryTags.values().forEach(list -> {
+                if (list != null) {
+                    list.stream()
+                            .filter(Objects::nonNull)
+                            .map(String::trim)
+                            .filter(s -> !s.isEmpty())
+                            .forEach(allTags::add);
+                }
+            });
+            if (!allTags.isEmpty()) {
+                List<String> tagList = new ArrayList<>(allTags);
+                List<float[]> tagEmbeds = embedding.embedTexts(tagList);
+                Map<String, float[]> m = new HashMap<>(tagList.size());
+                for (int i = 0; i < tagList.size(); i++) {
+                    float[] v = tagEmbeds.get(i);
+                    if (v != null && v.length > 0) m.put(tagList.get(i), v);
+                }
+                tagVec = m;
+            }
+        }
+
+        // 4) 카테고리 점수 및 근거 태그
         List<Score> scores = new ArrayList<>();
-        for (String cat : embedding.categories()) {
-            double sim = cosine(q, embedding.categoryCentroid(cat));
+        for (var e : centroids.entrySet()) {
+            String cat = e.getKey();
+            float[] centroid = e.getValue();
+            if (centroid == null || centroid.length == 0) continue;
+
+            double sim = cosine(q, centroid);
 
             List<Evidence> ev = new ArrayList<>();
-            for (String t : embedding.tagsOf(cat)) {
-                float[] tv = embedding.tagVector(t);
-                if (tv != null) {
-                    double s = cosine(q, tv);
-                    // 근거 태그에도 generic 다운가중(해당 도메인에 generic이 있을 경우)
-                    if (GENERIC.contains(t)) s *= genericDown;
-                    ev.add(new Evidence(t, s));
+            List<String> tags = (categoryTags == null) ? null : categoryTags.get(cat);
+            if (tags != null && !tags.isEmpty() && !tagVec.isEmpty()) {
+                for (String t : tags) {
+                    String tt = (t == null) ? null : t.trim();
+                    if (tt == null || tt.isEmpty()) continue;
+                    float[] tv = tagVec.get(tt);
+                    if (tv != null) {
+                        double s = cosine(q, tv);
+                        if (GENERIC.contains(tt)) s *= genericDown;
+                        ev.add(new Evidence(tt, s));
+                    }
                 }
+                ev.sort((a,b)->Double.compare(b.getSimilarity(), a.getSimilarity()));
+                if (ev.size() > evidenceTopN) ev = ev.subList(0, evidenceTopN);
             }
-            ev.sort((a,b)->Double.compare(b.getSimilarity(), a.getSimilarity()));
-            if (ev.size() > evidenceTopN) ev = ev.subList(0, evidenceTopN);
 
             scores.add(new Score(cat, sim, ev));
         }
+        if (scores.isEmpty()) {
+            return new Result(List.of(), null, List.of());
+        }
         scores.sort((a,b)->Double.compare(b.getSimilarity(), a.getSimilarity()));
 
-        if (topk < 1) topk = 1;
-        if (topk > scores.size()) topk = scores.size();
-        List<Score> topScores = scores.subList(0, topk);
+        int k = (topk == null ? 3 : topk);
+        if (k < 1) k = 1;
+        if (k > scores.size()) k = scores.size();
+        List<Score> topScores = scores.subList(0, k);
 
-        // 4) 최종 1위 카테고리에 대해: 각 "입력 태그" vs "카테고리 센트로이드" 유사도 Top-N
+        // 5) 1위 카테고리에 대한 입력 태그별 유사도 Top-N
         String topCategory = topScores.get(0).getCategory();
-        float[] topCentroid = embedding.categoryCentroid(topCategory);
+        float[] topCentroid = centroids.get(topCategory);
 
         List<InputRel> topCategoryInputs = new ArrayList<>();
         for (int i = 0; i < canonInputs.size(); i++) {
             String tag = canonInputs.get(i);
-
-            // 옵션: generic 입력은 TopInputs에서 제외
             if (skipGenericInTopInputs && GENERIC.contains(tag)) {
                 System.out.println("[Classifier] skip generic in topInputs: " + tag);
                 continue;
             }
-
             double s = cosine(inputVecs.get(i), topCentroid);
-
-            // 핵심: 개별 입력 랭킹에도 generic 다운가중 적용
-            if (GENERIC.contains(tag)) {
-                s *= genericDown;
-            }
-
-            if (s >= minInputSim) {
-                topCategoryInputs.add(new InputRel(tag, s));
-            }
+            if (GENERIC.contains(tag)) s *= genericDown;
+            if (s >= minInputSim) topCategoryInputs.add(new InputRel(tag, s));
         }
         topCategoryInputs.sort((a,b)->Double.compare(b.getSimilarity(), a.getSimilarity()));
         if (topCategoryInputs.size() > topInputN) {
