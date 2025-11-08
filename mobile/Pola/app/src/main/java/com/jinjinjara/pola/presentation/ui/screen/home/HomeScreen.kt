@@ -272,7 +272,8 @@ private fun HomeContent(
                         .horizontalScroll(rememberScrollState())
                 ) {
                     Spacer(Modifier.width(16.dp))
-                    homeData.timeline.forEach { fileInfo ->
+                    repeat(10) { index ->
+                        val fileInfo = homeData.timeline.getOrNull(index)
                         val painter = painterResource(R.drawable.film)
                         val ratio = painter.intrinsicSize.width / painter.intrinsicSize.height
                         Box(
@@ -286,18 +287,21 @@ private fun HomeContent(
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Fit
                             )
-                            Box(
-                                modifier = Modifier
-                                    .size(88.dp)
-                                    .clip(RoundedCornerShape(5.dp))
-                                    .align(Alignment.Center)
-                            ) {
-                                AsyncImage(
-                                    model = fileInfo.imageUrl,
-                                    contentDescription = "Content",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                                )
+                            // 실제 데이터가 있을 때만 이미지 표시
+                            fileInfo?.let {
+                                Box(
+                                    modifier = Modifier
+                                        .size(88.dp)
+                                        .clip(RoundedCornerShape(5.dp))
+                                        .align(Alignment.Center)
+                                ) {
+                                    AsyncImage(
+                                        model = it.imageUrl,
+                                        contentDescription = "Content",
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                }
                             }
                         }
                     }
