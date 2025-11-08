@@ -3,18 +3,24 @@ package com.jinjinjara.pola.vision.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jinjinjara.pola.data.dto.response.CategoryIdResponse;
 import com.jinjinjara.pola.data.dto.response.CategoryWithTagsResponse;
 import com.jinjinjara.pola.data.dto.response.TagResponse;
+import com.jinjinjara.pola.data.service.CategoryService;
 import com.jinjinjara.pola.data.service.CategoryTagService;
 import com.jinjinjara.pola.user.entity.Users;
 import com.jinjinjara.pola.vision.dto.common.Result;
+import com.jinjinjara.pola.vision.dto.common.VertexParsedResult;
 import com.jinjinjara.pola.vision.dto.response.AnalyzeResponse;
+import com.jinjinjara.pola.vision.dto.response.AnalyzeTestResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -29,13 +35,66 @@ public class AnalyzeFacadeService {
     private final VertexService vertexService;
     private final CategoryEmbeddingService categoryEmbeddingService;
     private final EmbeddingCacheService embeddingCacheService;
-    private final CategoryTagService categoryTagService; // evidence용 태그 맵 구성
+    private final CategoryTagService categoryTagService;
+    private final CategoryService categoryService;
     private final ClassifierService classifierService;
 
     private final ObjectMapper om = new ObjectMapper();
 
-
     public AnalyzeResponse analyze(Long userId, String s3Url) {
+
+        // (1) Vertex
+        String vertexBody = vertexService.analyzeImageFromUrl(s3Url);
+        var parsed = parseVertexJson(vertexBody);
+        List<String> inputTags = parsed.getTags();
+        String description = parsed.getDescription();
+        log.debug("[Analyze] Parsed from Vertex -> tags({}): {}, descLen={}",
+                inputTags.size(), inputTags, description.length());
+
+        if (inputTags.isEmpty()) {
+            log.warn("[Analyze] No tags extracted. url={}", s3Url);
+            return AnalyzeResponse.builder()
+                    .categoryId(null).categoryName(null)
+                    .tags(List.of()).description(description)
+                    .build();
+        }
+
+        // (2) Centroids
+        Map<String, float[]> centroids = loadCentroidsOrBuild(userId);
+        log.debug("[Analyze] Centroids loaded. size={}", centroids.size());
+        if (centroids.isEmpty()) {
+            log.warn("[Analyze] No centroids for user={}", userId);
+            return AnalyzeResponse.builder()
+                    .categoryId(null).categoryName(null)
+                    .tags(inputTags).description(description)
+                    .build();
+        }
+
+        // (3) Category->Tags evidence
+        Map<String, List<String>> categoryTags = loadCategoryTagsMap(userId);
+        log.debug("[Analyze] CategoryTags loaded. size={}", categoryTags.size());
+
+        // (4) Classify
+        Result result = classifierService.classifyWithCentroids(inputTags, centroids, categoryTags, 3);
+        String topCategory = result.getTopCategory();
+        log.debug("[Analyze] Classify results top={}, scoresTopK={}",
+                topCategory, result.getResults());
+
+        // (5) categoryId 매핑
+        CategoryIdResponse categoryInfo = categoryService.findCategoryIdByName(userId, topCategory);
+        log.info("[Analyze] Matched category {}({}) for user={}",
+                categoryInfo.getCategoryName(), categoryInfo.getCategoryId(), userId);
+
+        // (6) 응답
+        return AnalyzeResponse.builder()
+                .categoryId(categoryInfo.getCategoryId())
+                .categoryName(categoryInfo.getCategoryName())
+                .tags(inputTags)
+                .description(description)
+                .build();
+    }
+
+    public AnalyzeTestResponse testAnalyze(Long userId, String s3Url) {
 
         int k = 3;
 
@@ -44,7 +103,7 @@ public class AnalyzeFacadeService {
         List<String> inputTags = extractTagsFromGemini(llmBody);
         if (inputTags.isEmpty()) {
             log.warn("[Analyze] No tags extracted. url={}", s3Url);
-            return AnalyzeResponse.builder()
+            return AnalyzeTestResponse.builder()
                     .inputTags(List.of())
                     .topCategory(null)
                     .scores(List.of())
@@ -59,7 +118,7 @@ public class AnalyzeFacadeService {
         if (centroids.isEmpty()) {
             log.warn("[Analyze] No centroids available for user={}", userId);
             // 센트로이드가 없으면 분류 불가 → 최소 응답
-            return AnalyzeResponse.builder()
+            return AnalyzeTestResponse.builder()
                     .inputTags(inputTags)
                     .topCategory(null)
                     .scores(List.of())
@@ -92,7 +151,7 @@ public class AnalyzeFacadeService {
                 })
                 .orElse(null);
 
-        return AnalyzeResponse.builder()
+        return AnalyzeTestResponse.builder()
                 .inputTags(inputTags)
                 .topCategory(result.getTopCategory())
                 .scores(result.getResults())
@@ -275,5 +334,75 @@ public class AnalyzeFacadeService {
                 .filter(t -> !t.isEmpty())
                 .distinct()
                 .toList();
+    }
+
+
+    private String stripCodeFence(String s) {
+        if (s == null) return null;
+        String t = s.trim();
+        if (t.startsWith("```")) {
+            Matcher m = Pattern.compile("(?s)```[a-zA-Z0-9_-]*\\s*(.*?)\\s*```").matcher(t);
+            if (m.find()) return m.group(1).trim();
+        }
+        return t;
+    }
+
+    // ② 객체 파서 강화 (기존 safeParseVertexObject 대체)
+    private VertexParsedResult safeParseVertexObject(String text) {
+        String raw = stripCodeFence(text);
+        if (raw == null || raw.isBlank()) return new VertexParsedResult(List.of(), "");
+
+        // (a) 그대로 시도
+        try {
+            JsonNode node = om.readTree(raw);
+            List<String> tags = new ArrayList<>();
+            if (node.has("tags") && node.get("tags").isArray()) node.get("tags").forEach(n -> tags.add(n.asText()));
+            String desc = node.has("description") ? node.get("description").asText() : "";
+            return new VertexParsedResult(sanitizeTags(tags), desc == null ? "" : desc.trim());
+        } catch (Exception ignore) {}
+
+        // (b) 중괄호 영역만 슬라이스해서 재시도
+        int li = raw.indexOf('{');
+        int ri = raw.lastIndexOf('}');
+        if (li >= 0 && ri > li) {
+            String obj = raw.substring(li, ri + 1);
+            try {
+                JsonNode node = om.readTree(obj);
+                List<String> tags = new ArrayList<>();
+                if (node.has("tags") && node.get("tags").isArray()) node.get("tags").forEach(n -> tags.add(n.asText()));
+                String desc = node.has("description") ? node.get("description").asText() : "";
+                return new VertexParsedResult(sanitizeTags(tags), desc == null ? "" : desc.trim());
+            } catch (Exception ignore) {}
+        }
+
+        log.warn("[Analyze] Non-JSON vertex text after fence/brace handling: {}", raw);
+        return new VertexParsedResult(List.of(), "");
+    }
+
+    // ③ parseVertexJson 안에서 스니펫 로그 + fence 처리 전진 배치
+    private VertexParsedResult parseVertexJson(String body) {
+        try {
+            // 원문 스니펫 로그
+            String snippet = body == null ? "null" : body.substring(0, Math.min(300, body.length()));
+            log.debug("[Analyze] Vertex raw snippet: {}", snippet);
+
+            JsonNode root = om.readTree(body);
+            JsonNode candidates = root.get("candidates");
+            if (candidates != null && candidates.isArray() && candidates.size() > 0) {
+                JsonNode parts = candidates.get(0).path("content").path("parts");
+                for (JsonNode p : parts) {
+                    JsonNode t = p.get("text");
+                    if (t != null && t.isTextual()) {
+                        return safeParseVertexObject(t.asText());
+                    }
+                }
+            }
+            // fallback: body 자체가 fence 포함일 수도
+            return safeParseVertexObject(body);
+
+        } catch (Exception e) {
+            log.warn("[Analyze] Failed to parse Vertex response JSON: {}", e.getMessage());
+            return new VertexParsedResult(List.of(), "");
+        }
     }
 }

@@ -74,10 +74,16 @@ public class VertexService {
         try {
             HttpEntity<Map<String, Object>> req = new HttpEntity<>(body, jsonHeaders());
             ResponseEntity<String> res = rt.exchange(url, HttpMethod.POST, req, String.class);
+            String resBody = res.getBody();
+            log.debug("[VertexService] RESPONSE status={} len={} snippet={}",
+                    res.getStatusCodeValue(),
+                    resBody == null ? 0 : resBody.length(),
+                    resBody == null ? "null" : resBody.substring(0, Math.min(300, resBody.length())));
+
             if (!res.getStatusCode().is2xxSuccessful()) {
-                throw new RuntimeException("Vertex error: " + res.getStatusCodeValue() + " - " + res.getBody());
+                throw new RuntimeException("Vertex error: " + res.getStatusCodeValue() + " - " + resBody);
             }
-            return res.getBody();
+            return resBody;
         } catch (Exception e) {
             log.error("Vertex call failed", e);
             throw new RuntimeException("Vertex call failed: " + e.getMessage(), e);
@@ -91,13 +97,19 @@ public class VertexService {
         }
 
         String prompt = """
-                너는 한국어 태그 추출기다.
-                입력 문장에서 핵심 키워드/해시태그를 한국어로 JSON 배열로만 출력해.
-                중요한 키워드는 가능한 뽑아내되 없는 내용을 만들 필요는 없어.
-                예) ["말차","초코","크림빵","디저트","간식"]
+        너는 한국어 콘텐츠 분석기다.
+        입력 문장에서 핵심적인 키워드(태그)와 간단한 설명을 함께 JSON으로만 출력해.
+        설명은 4문장 이내로, 입력 내용의 주요 주제를 빠트리지 않게 요약해줘.
+        없는 내용을 만들어내지 말고, 입력에 기반해서만 작성해.
 
-                입력:
-                """ + text;
+        출력 형식 예시:
+        {
+          "tags": ["말차","초코","크림빵","디저트","간식"],
+          "description": "연세 말차 크림빵 제품으로, 디저트 관련 콘텐츠입니다."
+        }
+
+        입력:
+        """ + text;
 
         Map<String, Object> body = Map.of(
                 "contents", List.of(Map.of(
@@ -124,11 +136,18 @@ public class VertexService {
         String mime = sniffMime(imageBytes);
 
         String userText = """
-                        먼저 이미지에서 글자라고 생각되는 부분을 모두 읽고 
-                        중요한 부분이나 주제라고 생각되는 키워드를 분석해서 한국어 태그를 JSON 배열로만 출력해.
-                        핵심적인 키워드를 가능한 뽑아내되 없는 내용을 만들 필요는 없어.
-                        예) ["말차","초코","크림빵","디저트","간식"]
-                        """;
+        너는 한국어 이미지 분석기다.
+        이미지 속의 글자(텍스트)와 시각적인 요소를 모두 참고해,
+        핵심적인 키워드(태그)와 짧은 설명을 JSON 객체 하나로만 출력해.
+        설명은 4문장 이내로 이미지의 주요 주제를 빠트리지 않게 요약해줘.
+        없는 내용을 만들어내지 말고, 이미지 내용에 기반해서만 작성해.
+
+        출력 형식 예시:
+        {
+          "tags": ["말차","초코","크림빵","디저트","간식"],
+          "description": "연세 말차 크림빵 제품으로, 디저트 관련 콘텐츠입니다."
+        }
+        """;
 
         Map<String, Object> inlineImage = Map.of(
                 "inlineData", Map.of(

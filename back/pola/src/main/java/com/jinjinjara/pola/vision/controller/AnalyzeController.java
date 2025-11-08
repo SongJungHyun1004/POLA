@@ -6,6 +6,7 @@ import com.jinjinjara.pola.common.ErrorCode;
 import com.jinjinjara.pola.user.entity.Users;
 import com.jinjinjara.pola.vision.dto.request.AnalyzeRequest;
 import com.jinjinjara.pola.vision.dto.response.AnalyzeResponse;
+import com.jinjinjara.pola.vision.dto.response.AnalyzeTestResponse;
 import com.jinjinjara.pola.vision.service.AnalyzeFacadeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -24,11 +25,11 @@ public class AnalyzeController {
     private final AnalyzeFacadeService analyzeFacadeService;
 
     @Operation(
-            summary = "S3 URL 분석",
-            description = "S3(또는 프리사인드) URL을 입력으로 받아 태그 추출 및 카테고리 분류를 수행합니다."
+            summary = "S3 URL 분석 (실서비스용)",
+            description = "S3(또는 프리사인드) URL을 입력으로 받아 태그 추출, 설명 생성, 카테고리 분류를 수행합니다."
     )
     @PostMapping("/url")
-    public ApiResponse<AnalyzeResponse> analyzeByUrl(
+    public ApiResponse<AnalyzeResponse> analyzeByUrlMain(
             @AuthenticationPrincipal @Parameter(hidden = true) Users user,
             @RequestBody AnalyzeRequest request
     ) {
@@ -40,6 +41,26 @@ public class AnalyzeController {
         }
 
         AnalyzeResponse data = analyzeFacadeService.analyze(user.getId(), request.getS3Url());
+        return ApiResponse.ok(data, "분석이 완료되었습니다.");
+    }
+
+    @Operation(
+            summary = "S3 URL 분석",
+            description = "S3(또는 프리사인드) URL을 입력으로 받아 태그 추출 및 카테고리 분류를 수행합니다."
+    )
+    @PostMapping("/urlTest")
+    public ApiResponse<AnalyzeTestResponse> analyzeByUrl(
+            @AuthenticationPrincipal @Parameter(hidden = true) Users user,
+            @RequestBody AnalyzeRequest request
+    ) {
+        if (user == null || user.getId() == null) {
+            throw new CustomException(ErrorCode.USER_UNAUTHORIZED, "로그인이 필요합니다.");
+        }
+        if (request == null || !StringUtils.hasText(request.getS3Url())) {
+            throw new CustomException(ErrorCode.INVALID_REQUEST, "url이 비어 있습니다.");
+        }
+
+        AnalyzeTestResponse data = analyzeFacadeService.testAnalyze(user.getId(), request.getS3Url());
         return ApiResponse.ok(data, "분석이 완료되었습니다.");
     }
 }
