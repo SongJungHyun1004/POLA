@@ -12,24 +12,31 @@ import com.jinjinjara.pola.data.dto.response.InsertDataResponse;
 import com.jinjinjara.pola.data.dto.response.TagResponse;
 import com.jinjinjara.pola.data.entity.Category;
 import com.jinjinjara.pola.data.entity.File;
+import com.jinjinjara.pola.data.entity.Tag;
 import com.jinjinjara.pola.data.repository.CategoryRepository;
 import com.jinjinjara.pola.data.repository.FileRepository;
 import com.jinjinjara.pola.data.repository.TagRepository;
 import com.jinjinjara.pola.s3.service.S3Service;
+import com.jinjinjara.pola.search.model.FileSearch;
+import com.jinjinjara.pola.search.service.FileSearchService;
 import com.jinjinjara.pola.user.entity.Users;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DataService {
@@ -38,6 +45,7 @@ public class DataService {
     private final CategoryRepository categoryRepository;
     private final S3Service s3Service;
     private final TagRepository tagRepository;
+    private final FileSearchService fileSearchService; // ← 추가
 
     public List<DataResponse> getRemindFiles(Long userId) {
         LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
@@ -145,7 +153,7 @@ public class DataService {
     }
 
     /**
-     * Presigned URL 업로드 완료 후 DB 메타데이터 저장
+     * Presigned URL 업로드 완료 후 DB 메타데이터 저장 + OpenSearch 색인
      */
     @Transactional
     public File saveUploadedFile(Users user, FileUploadCompleteRequest request) {
@@ -177,7 +185,45 @@ public class DataService {
                 .views(0)
                 .build();
 
-        return fileRepository.save(file);
+        File savedFile = fileRepository.save(file);
+
+        // OpenSearch에 색인 (비동기)
+        indexToOpenSearchAsync(savedFile, uncategorized.getCategoryName());
+
+        return savedFile;
+    }
+
+    /**
+     * OpenSearch 색인 (비동기 처리)
+     * AI 팀원이 나중에 태그/OCR 추가하면 자동으로 업데이트됨
+     */
+    @Async
+    public void indexToOpenSearchAsync(File file, String categoryName) {
+        try {
+            // 현재 저장된 태그 조회 (수동으로 추가한 태그)
+            List<String> tagNames = tagRepository.findAllByFileId(file.getId())
+                    .stream()
+                    .map(Tag::getTagName)
+                    .collect(Collectors.toList());
+
+            FileSearch fileSearch = FileSearch.builder()
+                    .fileId(file.getId())
+                    .userId(file.getUserId())
+                    .categoryName(categoryName)
+                    .tags(String.join(", ", tagNames))  // 현재는 빈 문자열일 수도 있음
+                    .context(file.getContext() != null ? file.getContext() : "")
+                    .ocrText(file.getOcrText() != null ? file.getOcrText() : "")  // AI 팀원이 추가 예정
+                    .imageUrl(file.getSrc())
+                    .createdAt(file.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
+                    .build();
+
+            fileSearchService.save(fileSearch);
+            log.info("✅ OpenSearch 색인 완료: fileId={}", file.getId());
+
+        } catch (Exception e) {
+            log.error("❌ OpenSearch 색인 실패: fileId={}", file.getId(), e);
+            // 실패해도 파일은 PostgreSQL에 저장되어 있음
+        }
     }
 
     /**
