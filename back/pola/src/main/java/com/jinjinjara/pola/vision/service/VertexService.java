@@ -1,185 +1,266 @@
 package com.jinjinjara.pola.vision.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.tomcat.util.codec.binary.Base64;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.util.Base64;
+import javax.net.ssl.HttpsURLConnection;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Vertex AI (Gemini 1.5) REST 호출 서비스
- * - 클라이언트 → Spring → Vertex AI REST API
- * - 항상 application/json으로 Vertex에 요청
- */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class VertexService {
 
-    @Value("${gcp.project-id}")
-    private String projectId;
+    // ————— 환경설정 —————
+    @Value("${gcp.project-id}") private String projectId;
+    @Value("${vertex.location:us-central1}") private String location;
 
-    @Value("${gcp.location:asia-northeast3}")
-    private String location; // 서울 리전 예시
+    @Value("${vertex.model.text:gemini-2.5-flash-lite}")
+    private String textModel;
 
-    private static final String MODEL = "gemini-2.5-flash-lite-preview-09-2025";
+    @Value("${vertex.model.vision:gemini-2.5-flash-lite}")
+    private String visionModel;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    // 다운로드 안전 가드
+    private static final long MAX_IMAGE_BYTES = 20L * 1024 * 1024; // 20MB
+    private static final long MAX_TEXT_BYTES  = 2L  * 1024 * 1024; // 2MB
 
-    private String endpoint() {
+    private final ObjectMapper om = new ObjectMapper();
+    // Vertex 호출용
+    private final RestTemplate rt = new RestTemplate();
+
+    // ————— 공통 헬퍼 —————
+    private String endpoint(String model) {
         return String.format(
                 "https://%s-aiplatform.googleapis.com/v1/projects/%s/locations/%s/publishers/google/models/%s:generateContent",
-                location, projectId, location, MODEL
+                location, projectId, location, model
         );
     }
 
-    /** Google ADC(Service Account)로 액세스 토큰 발급 */
-    private String getAccessToken() throws IOException {
-        GoogleCredentials cred = GoogleCredentials.getApplicationDefault()
+    private String bearerToken() throws Exception {
+        GoogleCredentials creds = GoogleCredentials.getApplicationDefault()
                 .createScoped(List.of("https://www.googleapis.com/auth/cloud-platform"));
-        cred.refreshIfExpired();
-        return cred.getAccessToken().getTokenValue();
+        creds.refreshIfExpired();
+        AccessToken t = creds.getAccessToken();
+        if (t == null || t.getExpirationTime() == null || t.getExpirationTime().toInstant().isBefore(Instant.now())) {
+            creds.refresh();
+            t = creds.getAccessToken();
+        }
+        return "Bearer " + t.getTokenValue();
     }
 
-    /** 텍스트 → 태그 추출 (JSON 요청) */
+    private HttpHeaders jsonHeaders() throws Exception {
+        HttpHeaders h = new HttpHeaders();
+        h.setContentType(MediaType.APPLICATION_JSON);
+        h.set(HttpHeaders.AUTHORIZATION, bearerToken());
+        return h;
+    }
+
+    private String postJson(String url, Map<String, Object> body) {
+        try {
+            HttpEntity<Map<String, Object>> req = new HttpEntity<>(body, jsonHeaders());
+            ResponseEntity<String> res = rt.exchange(url, HttpMethod.POST, req, String.class);
+            String resBody = res.getBody();
+            log.debug("[VertexService] RESPONSE status={} len={} snippet={}",
+                    res.getStatusCodeValue(),
+                    resBody == null ? 0 : resBody.length(),
+                    resBody == null ? "null" : resBody.substring(0, Math.min(300, resBody.length())));
+
+            if (!res.getStatusCode().is2xxSuccessful()) {
+                throw new RuntimeException("Vertex error: " + res.getStatusCodeValue() + " - " + resBody);
+            }
+            return resBody;
+        } catch (Exception e) {
+            log.error("Vertex call failed", e);
+            throw new RuntimeException("Vertex call failed: " + e.getMessage(), e);
+        }
+    }
+
+    // ————— 텍스트 → 태그 —————
     public String generateTagsFromText(String text) {
-        try {
-            if (text == null || text.isBlank()) {
-                throw new IllegalArgumentException("text is required");
-            }
-
-            Map<String, Object> userPart = Map.of(
-                    "role", "user",
-                    "parts", List.of(Map.of("text", buildTagPrompt(text)))
-            );
-            Map<String, Object> body = Map.of(
-                    "contents", List.of(userPart),
-                    "generationConfig", Map.of(
-                            "temperature", 0.2,
-                            "responseMimeType", "application/json"
-                    )
-            );
-
-            String json = objectMapper.writeValueAsString(body);
-
-            HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create(endpoint()))
-                    .header("Authorization", "Bearer " + getAccessToken())
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(json))
-                    .build();
-
-            HttpClient client = HttpClient.newHttpClient();
-            HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString());
-
-            if (resp.statusCode() / 100 != 2) {
-                throw new RuntimeException("Vertex error: " + resp.statusCode() + " - " + resp.body());
-            }
-
-            return extractTextFromGenerateContent(resp.body());
-
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        if (text == null || text.isBlank()) {
+            return "{\"error\":\"text is empty\"}";
         }
+
+        String prompt = """
+        너는 한국어 콘텐츠 분석기다.
+        입력 문장에서 핵심적인 키워드(태그)와 간단한 설명을 함께 JSON으로만 출력해.
+        설명은 4문장 이내로, 입력 내용의 주요 주제를 빠트리지 않게 요약해줘.
+        없는 내용을 만들어내지 말고, 입력에 기반해서만 작성해.
+
+        출력 형식 예시:
+        {
+          "tags": ["말차","초코","크림빵","디저트","간식"],
+          "description": "연세 말차 크림빵 제품으로, 디저트 관련 콘텐츠입니다."
+        }
+
+        입력:
+        """ + text;
+
+        Map<String, Object> body = Map.of(
+                "contents", List.of(Map.of(
+                        "role", "user",
+                        "parts", List.of(Map.of("text", prompt))
+                )),
+                "generationConfig", Map.of(
+                        "temperature", 0.2,
+                        "maxOutputTokens", 256
+                )
+        );
+
+        String url = endpoint(textModel);
+        return postJson(url, body);
     }
 
-    /** 이미지 → 설명 및 태그 추출 */
+    // ————— 이미지 → 캡션/태그 —————
     public String analyzeImage(byte[] imageBytes) {
+        if (imageBytes == null || imageBytes.length == 0) {
+            return "{\"error\":\"image is empty\"}";
+        }
+
+        String b64 = Base64.encodeBase64String(imageBytes);
+        String mime = sniffMime(imageBytes);
+
+        String userText = """
+        너는 한국어 이미지 분석기다.
+        이미지 속의 글자(텍스트)와 시각적인 요소를 모두 참고해,
+        핵심적인 키워드(태그)와 짧은 설명을 JSON 객체 하나로만 출력해.
+        설명은 4문장 이내로 이미지의 주요 주제를 빠트리지 않게 요약해줘.
+        없는 내용을 만들어내지 말고, 이미지 내용에 기반해서만 작성해.
+
+        출력 형식 예시:
+        {
+          "tags": ["말차","초코","크림빵","디저트","간식"],
+          "description": "연세 말차 크림빵 제품으로, 디저트 관련 콘텐츠입니다."
+        }
+        """;
+
+        Map<String, Object> inlineImage = Map.of(
+                "inlineData", Map.of(
+                        "mimeType", mime,
+                        "data", b64
+                )
+        );
+
+        Map<String, Object> textPart = Map.of("text", userText);
+
+        Map<String, Object> body = Map.of(
+                "contents", List.of(Map.of(
+                        "role", "user",
+                        "parts", List.of(inlineImage, textPart)
+                )),
+                "generationConfig", Map.of(
+                        "temperature", 0.2,
+                        "maxOutputTokens", 512
+                )
+        );
+
+        String url = endpoint(visionModel);
+        return postJson(url, body);
+    }
+
+    // ————— URL 입력 (이미지/텍스트 presigned 모두 처리, HEAD 없이 단일 GET) —————
+    public String analyzeImageFromUrl(String url) {
+        if (url == null || url.isBlank() || !(url.startsWith("https://") || url.startsWith("http://"))) {
+            return "{\"error\":\"invalid url\"}";
+        }
+
+        // presigned URL은 보통 GET 서명만 포함 → HEAD 금지, 단일 GET로 바이트 수신
+        byte[] data = directDownloadBytes(url, MAX_IMAGE_BYTES);
+        if (data == null || data.length == 0) {
+            return "{\"error\":\"empty content\"}";
+        }
+
+        // 이미지 판별 (매직바이트)
+        String mime = sniffMime(data);
+        if (mime.startsWith("image/")) {
+            return analyzeImage(data);
+        }
+
+        // 이미지 아니면 텍스트로 시도
+        if (data.length > MAX_TEXT_BYTES) {
+            return "{\"error\":\"text too large\"}";
+        }
+        String text = new String(data, StandardCharsets.UTF_8);
+        if (text.isBlank()) {
+            return "{\"error\":\"unsupported content\"}";
+        }
+        return generateTagsFromText(text);
+    }
+
+    // ————— 순수 JDK 다운로드 (헤더 파싱 무의존) —————
+    private byte[] directDownloadBytes(String urlStr, long maxBytes) {
+        HttpURLConnection conn = null;
         try {
-            String b64 = Base64.getEncoder().encodeToString(imageBytes);
+            URL url = new URL(urlStr);
+            conn = (HttpURLConnection) url.openConnection();
+            if (conn instanceof HttpsURLConnection https) {
+                https.setInstanceFollowRedirects(true);
+            }
+            conn.setInstanceFollowRedirects(true);
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(20000);
+            conn.setRequestProperty("User-Agent", "pola-vertex-downloader/1.0");
 
-            Map<String, Object> imagePart = Map.of(
-                    "inline_data", Map.of(
-                            "mime_type", "image/png",
-                            "data", b64
-                    )
-            );
+            int code = conn.getResponseCode();
+            InputStream is = (code >= 200 && code < 400) ? conn.getInputStream() : conn.getErrorStream();
+            if (is == null) throw new RuntimeException("No response stream, status=" + code);
 
-            Map<String, Object> userPart = Map.of(
-                    "role", "user",
-                    "parts", List.of(
-                            Map.of("text", buildImagePrompt()),
-                            imagePart
-                    )
-            );
-
-            Map<String, Object> body = Map.of(
-                    "contents", List.of(userPart),
-                    "generationConfig", Map.of(
-                            "temperature", 0.2,
-                            "responseMimeType", "application/json"
-                    )
-            );
-
-            String json = objectMapper.writeValueAsString(body);
-
-            HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create(endpoint()))
-                    .header("Authorization", "Bearer " + getAccessToken())
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(json))
-                    .build();
-
-            HttpClient client = HttpClient.newHttpClient();
-            HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString());
-
-            if (resp.statusCode() / 100 != 2) {
-                throw new RuntimeException("Vertex error: " + resp.statusCode() + " - " + resp.body());
+            long declared = conn.getContentLengthLong(); // -1 가능
+            if (declared > 0 && declared > maxBytes) {
+                throw new RuntimeException("Object too large (Content-Length): " + declared);
             }
 
-            return extractTextFromGenerateContent(resp.body());
+            byte[] data = is.readAllBytes(); // JDK 11+
+            if (data.length > maxBytes) {
+                throw new RuntimeException("Object too large (actual): " + data.length);
+            }
+            if (code < 200 || code >= 300) {
+                String snippet = new String(data, 0, Math.min(256, data.length), StandardCharsets.UTF_8);
+                log.error("[VertexService] GET {} -> {} bodySnippet={}", urlStr, code, snippet);
+                throw new RuntimeException("HTTP " + code);
+            }
+            return data;
 
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            log.error("[VertexService] directDownloadBytes failed: {}", e.toString());
+            throw new RuntimeException("Failed to download image: " + urlStr, e);
+        } finally {
+            if (conn != null) conn.disconnect();
         }
     }
 
-    /* ======= 프롬프트 & 응답 파서 ======= */
+    // ————— 매직바이트로 MIME 추정 —————
+    private String sniffMime(byte[] img) {
+        // JPEG
+        if (img.length >= 3 && img[0] == (byte)0xFF && img[1] == (byte)0xD8) return "image/jpeg";
+        // PNG
+        if (img.length >= 8 &&
+                img[0] == (byte)0x89 && img[1] == 0x50 && img[2] == 0x4E && img[3] == 0x47) return "image/png";
+        // WEBP: "RIFF....WEBP"
+        if (img.length >= 12 &&
+                img[0] == 'R' && img[1] == 'I' && img[2] == 'F' && img[3] == 'F' &&
+                img[8] == 'W' && img[9] == 'E' && img[10] == 'B' && img[11] == 'P') return "image/webp";
+        // GIF: "GIF87a"/"GIF89a"
+        if (img.length >= 6 &&
+                img[0] == 'G' && img[1] == 'I' && img[2] == 'F' && img[3] == '8' &&
+                (img[4] == '7' || img[4] == '9') && img[5] == 'a') return "image/gif";
 
-    private String buildTagPrompt(String input) {
-        return """
-               너는 태그 생성기다. 아래 텍스트의 핵심을 3~8개의 한국어 태그로 뽑아라.
-               금지: 해시(#), 이모지, 공백 많은 문자열
-               출력 형식(반드시 JSON 배열): ["태그1","태그2",...]
-               입력:
-               """ + input;
-    }
-
-    private String buildImagePrompt() {
-        return """
-               이미지를 한국어로 한 줄 설명하고, 연관 태그 5~10개를 생성하라.
-               오브젝트/브랜드/스타일/상황을 균형있게 뽑되 허상 금지.
-               출력은 JSON:
-               {
-                 "caption": "설명문",
-                 "tags": ["태그1","태그2", ...]
-               }
-               """;
-    }
-
-    /** candidates[0].content.parts[*].text 를 이어붙여 반환 */
-    private String extractTextFromGenerateContent(String respJson) throws JsonProcessingException {
-        JsonNode root = objectMapper.readTree(respJson);
-        JsonNode candidates = root.path("candidates");
-        if (!candidates.isArray() || candidates.isEmpty()) return "";
-
-        StringBuilder sb = new StringBuilder();
-        JsonNode parts = candidates.get(0).path("content").path("parts");
-        if (parts.isArray()) {
-            for (JsonNode p : parts) {
-                if (p.has("text")) sb.append(p.get("text").asText());
-            }
-        }
-        return sb.toString().trim();
+        return "application/octet-stream";
     }
 }

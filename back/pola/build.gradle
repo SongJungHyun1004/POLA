@@ -71,6 +71,7 @@ dependencies {
     implementation 'com.google.cloud:google-cloud-vision'
     implementation "com.google.cloud:google-cloud-translate"
     implementation "com.google.genai:google-genai:1.25.0"
+    implementation 'com.google.auth:google-auth-library-oauth2-http'
 }
 
 tasks.named('test') {

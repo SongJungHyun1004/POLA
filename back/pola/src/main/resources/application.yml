@@ -173,3 +173,27 @@ app:
 gcp:
   vision:
     credentials-path: ${GOOGLE_APPLICATION_CREDENTIALS}
+
+
+vertex:
+  location: us-central1
+  model:
+    text: gemini-2.5-flash-lite
+    vision: gemini-2.5-flash-lite
+
+nlp:
+  paths:
+    synonyms: classpath:nlp/synonyms.yml
+    generic:  classpath:nlp/generic.yml
+    split:    classpath:nlp/split.yml
+
+classifier:
+  alpha: 0.7
+  generic:
+    downscale: 0.7
+  input:
+    min-sim: 0.08
+
+embedding:
+  cache:
+    centroids-ttl-ms: 86400000
