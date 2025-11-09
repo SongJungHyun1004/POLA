@@ -1,0 +1,8 @@
+{
+  "name": "pola-chrome-extension",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "node build.js",
+    "setup": "cp config.example.js config.js && echo '⚠️  config.js 파일을 수정해주세요!'"
+  }
+}

@@ -1,15 +1,29 @@
 {
   "manifest_version": 3,
-  "name": "캡처 확장 프로그램",
+  "name": "Pola 캡처 확장 프로그램",
   "version": "1.0.0",
-  "description": "화면 캡처와 텍스트 복사 기능",
+  "description": "화면 캡처와 Pola 연동",
   
   "permissions": [
     "contextMenus",
     "activeTab",
     "tabs",
     "scripting",
-    "notifications"
+    "notifications",
+    "identity",
+    "storage"
+  ],
+  
+  "oauth2": {
+    "client_id": "YOUR_GOOGLE_CLIENT_ID_HERE",
+    "scopes": [
+      "https://www.googleapis.com/auth/userinfo.email",
+      "https://www.googleapis.com/auth/userinfo.profile"
+    ]
+  },
+  
+  "host_permissions": [
+    "YOUR_API_BASE_URL_HERE/*"
   ],
   
   "background": {

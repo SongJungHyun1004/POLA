@@ -1,3 +1,7 @@
+importScripts('config.js');
+
+const API_BASE_URL = CONFIG.API_BASE_URL;
+
 // 확장 프로그램 설치 시 실행
 chrome.runtime.onInstalled.addListener(() => {
     console.log('확장 프로그램이 설치되었습니다.');
@@ -25,13 +29,237 @@ function createContextMenus() {
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     console.log('메뉴 클릭됨:', info.menuItemId);
 
+    // 로그인 상태 확인
+    const authStatus = await checkAuthStatus();
+
+    if (!authStatus.isAuthenticated) {
+        showNotification(
+            '로그인 필요',
+            'Pola에 로그인한 후 사용해주세요.'
+        );
+        return;
+    }
+
     if (info.menuItemId === "captureScreen") {
-        // Content script 주입 및 영역 선택 시작
         await startAreaCaptureWithInjection(tab);
     } else if (info.menuItemId === "copyText") {
-        handleTextCapture(info, tab);
+        await handleTextCapture(info, tab);
     }
 });
+
+// ============================================
+// 메시지 리스너
+// ============================================
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log('메시지 수신:', request);
+
+  // 로그인 요청
+  if (request.action === 'login') {
+    handleLogin().then(sendResponse).catch(error => {
+      sendResponse({ success: false, error: error.message });
+    });
+    return true;
+  }
+  
+  // 로그아웃 요청
+  if (request.action === 'logout') {
+    handleLogout().then(sendResponse).catch(error => {
+      sendResponse({ success: false, error: error.message });
+    });
+    return true;
+  }
+  
+  // 인증 상태 확인
+  if (request.action === 'checkAuth') {
+    checkAuthStatus().then(sendResponse);
+    return true;
+  }
+  
+  // 영역 캡처 완료
+  if (request.action === 'captureArea') {
+    handleAreaCapture(request.area, sender.tab);
+    sendResponse({ success: true });
+  }
+
+  return true;
+});
+
+/**
+ * 구글 로그인 처리 (디버깅 강화)
+ */
+async function handleLogin() {
+  try {
+    console.log('=== 로그인 시작 ===');
+    console.log('API_BASE_URL:', API_BASE_URL);
+    
+    // 1. Chrome Identity API로 구글 토큰 획득
+    console.log('1. Chrome Identity API 호출 중...');
+    const googleToken = await new Promise((resolve, reject) => {
+      chrome.identity.getAuthToken({ interactive: true }, (token) => {
+        if (chrome.runtime.lastError) {
+          console.error('Chrome Identity 오류:', chrome.runtime.lastError);
+          reject(chrome.runtime.lastError);
+        } else {
+          console.log('✅ 구글 토큰 획득 성공');
+          console.log('토큰 길이:', token?.length);
+          resolve(token);
+        }
+      });
+    });
+    
+    // 2. 구글 사용자 정보 가져오기
+    console.log('2. 구글 사용자 정보 요청 중...');
+    const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: {
+        'Authorization': `Bearer ${googleToken}`
+      }
+    });
+    
+    if (!userInfoResponse.ok) {
+      console.error('❌ 사용자 정보 가져오기 실패:', userInfoResponse.status);
+      throw new Error(`사용자 정보 가져오기 실패: ${userInfoResponse.status}`);
+    }
+    
+    const userInfo = await userInfoResponse.json();
+    console.log('✅ 사용자 정보 획득:', {
+      id: userInfo.id,
+      email: userInfo.email,
+      name: userInfo.name
+    });
+    
+    // 3. 백엔드에 구글 토큰 전송하여 JWT 토큰 받기
+    console.log('3. 백엔드 인증 요청 중...');
+    const authUrl = `${API_BASE_URL}oauth/token`;
+    console.log('요청 URL:', authUrl);
+    console.log('요청 Body:', { idToken: '(토큰 길이: ' + googleToken.length + ')' });
+    
+    const authResponse = await fetch(authUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Client-Type': 'WEB'
+      },
+      body: JSON.stringify({ idToken: googleToken })
+    });
+    
+    console.log('백엔드 응답 상태:', authResponse.status);
+    console.log('백엔드 응답 헤더:', Object.fromEntries(authResponse.headers.entries()));
+    
+    // 응답 본문 읽기 (에러 디버깅용)
+    const responseText = await authResponse.text();
+    console.log('백엔드 응답 본문:', responseText);
+    
+    if (!authResponse.ok) {
+      console.error('❌ 백엔드 인증 실패');
+      console.error('상태 코드:', authResponse.status);
+      console.error('응답 내용:', responseText);
+      
+      // 상세 오류 메시지
+      let errorMessage = '백엔드 인증 실패';
+      try {
+        const errorData = JSON.parse(responseText);
+        errorMessage = errorData.message || errorData.error || errorMessage;
+      } catch (e) {
+        errorMessage = `${errorMessage} (${authResponse.status})`;
+      }
+      
+      throw new Error(errorMessage);
+    }
+    
+    // JSON 파싱
+    const authData = JSON.parse(responseText);
+    console.log('✅ 백엔드 인증 성공');
+    console.log('응답 데이터 구조:', Object.keys(authData));
+    
+    // 토큰 추출
+    const accessToken = authData.data?.accessToken || authData.accessToken;
+    const refreshToken = authData.data?.refreshToken || authData.refreshToken;
+    
+    if (!accessToken || !refreshToken) {
+      console.error('❌ 토큰 누락:', {
+        hasAccessToken: !!accessToken,
+        hasRefreshToken: !!refreshToken,
+        authData: authData
+      });
+      throw new Error('서버 응답에 토큰이 없습니다');
+    }
+    
+    console.log('✅ 토큰 추출 성공');
+    
+    // 4. JWT 토큰 및 사용자 정보 저장
+    console.log('4. 토큰 저장 중...');
+    await chrome.storage.local.set({
+      accessToken: accessToken,
+      refreshToken: refreshToken,
+      user: {
+        id: userInfo.id,
+        email: userInfo.email,
+        display_name: userInfo.name,
+        profile_image_url: userInfo.picture
+      },
+      loginTime: Date.now()
+    });
+    
+    console.log('✅ 로그인 완료!');
+    showNotification('로그인 성공', `${userInfo.name}님 환영합니다!`);
+    
+    return { 
+      success: true, 
+      user: {
+        email: userInfo.email,
+        name: userInfo.name,
+        picture: userInfo.picture
+      }
+    };
+    
+  } catch (error) {
+    console.error('=== 로그인 실패 ===');
+    console.error('오류 타입:', error.constructor.name);
+    console.error('오류 메시지:', error.message);
+    console.error('오류 스택:', error.stack);
+    
+    showNotification('로그인 실패', error.message);
+    throw error;
+  }
+}
+
+/**
+ * 로그아웃 처리
+ */
+async function handleLogout() {
+  try {
+    // Chrome Identity 캐시 제거
+    const result = await chrome.storage.local.get(['accessToken']);
+    if (result.accessToken) {
+      await new Promise((resolve) => {
+        chrome.identity.removeCachedAuthToken({ token: result.accessToken }, resolve);
+      });
+    }
+    
+    // 저장된 모든 인증 정보 삭제
+    await chrome.storage.local.remove(['accessToken', 'refreshToken', 'user', 'loginTime']);
+    
+    console.log('로그아웃 완료');
+    showNotification('로그아웃', '로그아웃되었습니다.');
+    
+    return { success: true };
+    
+  } catch (error) {
+    console.error('로그아웃 실패:', error);
+    throw error;
+  }
+}
+
+/**
+ * 인증 상태 확인
+ */
+async function checkAuthStatus() {
+  const result = await chrome.storage.local.get(['accessToken', 'user']);
+  return {
+    isAuthenticated: !!result.accessToken,
+    user: result.user || null
+  };
+}
 
 // Content script 주입 후 영역 선택 시작
 async function startAreaCaptureWithInjection(tab) {
@@ -131,19 +359,6 @@ function showNotification(title, message) {
     });
 }
 
-// Content script로부터 메시지 수신
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    console.log('메시지 수신:', request);
-
-    if (request.action === 'captureArea') {
-        // 영역 선택 완료 - 캡처 실행
-        handleAreaCapture(request.area, sender.tab);
-        sendResponse({ success: true });
-    }
-
-    return true;
-});
-
 // 선택한 영역 캡처 처리
 async function handleAreaCapture(area, tab) {
     try {
@@ -174,19 +389,7 @@ async function handleAreaCapture(area, tab) {
                 timestamp: new Date().toISOString()
             });
 
-            // ========== 실제 이미지 확인 ==========
-            console.log('Base64 이미지 데이터:');
-            console.log(response.croppedImage);
-
             showNotification('캡처 완료!', '선택한 영역이 캡처되었습니다.');
-
-            // TODO: 나중에 백엔드로 전송
-            // await sendToBackend({ 
-            //   type: 'screenshot', 
-            //   data: response.croppedImage,
-            //   area: area,
-            //   ... 
-            // });
         }
 
     } catch (error) {
