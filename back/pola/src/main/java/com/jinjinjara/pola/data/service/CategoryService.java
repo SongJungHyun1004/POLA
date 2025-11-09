@@ -5,6 +5,7 @@ import com.jinjinjara.pola.common.CustomException;
 import com.jinjinjara.pola.common.ErrorCode;
 import com.jinjinjara.pola.data.dto.request.CategoryWithTags;
 import com.jinjinjara.pola.data.dto.request.InitCategoryTagRequest;
+import com.jinjinjara.pola.data.dto.response.CategoryIdResponse;
 import com.jinjinjara.pola.data.dto.response.CategoryResponse;
 import com.jinjinjara.pola.data.entity.Category;
 import com.jinjinjara.pola.data.entity.CategoryTag;
@@ -159,6 +160,27 @@ public class CategoryService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
+    public CategoryIdResponse findCategoryIdByName(Long userId, String categoryName) {
+        try {
+            Optional<Long> categoryIdOpt = categoryRepository.findIdByUserIdAndCategoryName(userId, categoryName);
+            if (categoryIdOpt.isEmpty()) {
+                throw new CustomException(ErrorCode.CATEGORY_NOT_FOUND, "해당 이름의 카테고리를 찾을 수 없습니다: " + categoryName);
+            }
 
+            // 카테고리 이름을 함께 내려주기 위해 추가 조회
+            Category category = categoryRepository.findById(categoryIdOpt.get())
+                    .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
 
+            return CategoryIdResponse.builder()
+                    .categoryId(category.getId())
+                    .categoryName(category.getCategoryName())
+                    .build();
+
+        } catch (CustomException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new CustomException(ErrorCode.DATA_NOT_FOUND, "카테고리 조회 중 오류 발생: " + e.getMessage());
+        }
+    }
 }
