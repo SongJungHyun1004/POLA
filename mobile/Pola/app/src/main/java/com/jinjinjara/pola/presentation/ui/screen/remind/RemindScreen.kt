@@ -579,8 +579,8 @@ private fun RemindPolaCard(
                 this.rotationZ = rotationZ
                 this.alpha = alpha
             }
-            .clickable( // 상세화면 이동
-                indication = ripple(bounded = false, radius = 48.dp),
+            .clickable(
+                indication = null,
                 interactionSource = remember { MutableInteractionSource() }
             ) {
                 Toast.makeText(context, "상세화면 이동", Toast.LENGTH_SHORT).show()
