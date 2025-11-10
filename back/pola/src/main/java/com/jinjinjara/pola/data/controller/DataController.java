@@ -159,59 +159,7 @@ public class DataController {
         return ApiResponse.okMessage("파일이 성공적으로 삭제되었습니다.");
     }
 
-    // ==========================================
-    // 홈/카테고리 조회 (샘플)
-    // ==========================================
-    @Operation(summary = "카테고리별 데이터 조회",
-            description = "유저 프로필과 함께 홈 화면에서 사용될 파일들을 리턴합니다.\n" +
-                    "즐겨찾기, 리마인드, 최신 업로드 등 데이터를 포함합니다.")
-    @GetMapping("/home")
-    public ApiResponse<HomeDataResponse> getRecentDataList() {
 
-        UserInfoResponse user = UserInfoResponse.builder()
-                .id(1L)
-                .email("user@google.com")
-                .displayName("PolaUser")
-                .profileImageUrl("https://s3-bucket/path/to/profile.png")
-                .createdAt(LocalDateTime.parse("2025-10-27T10:00:00"))
-                .build();
-
-        List<DataResponse> favorites = List.of(
-                new DataResponse(101L, "https://s3-bucket/path/to/image1.png", "image/png", "파란색 버튼이 있는 로그인 화면", true),
-                new DataResponse(102L, "https://s3-bucket/path/to/image2.png", "image/jpeg", "회원가입 화면 버튼 디자인", true)
-        );
-
-        List<DataResponse> remind = List.of(
-                new DataResponse(201L, "https://s3-bucket/path/to/remind1.png", "image/png", "UI 개선 피드백 이미지", false)
-        );
-
-        List<DataResponse> recent = List.of(
-                new DataResponse(301L, "https://s3-bucket/path/to/recent1.png", "image/png", "다크 모드 메인 페이지 시안", true),
-                new DataResponse(302L, "https://s3-bucket/path/to/recent2.png", "image/png", "프로필 편집 페이지 시안", false)
-        );
-
-        List<CategoryDataResponse> categories = List.of(
-                CategoryDataResponse.builder()
-                        .id(5L)
-                        .categoryName("UI/UX")
-                        .categorySort(1)
-                        .data(List.of(
-                                new DataResponse(401L, "https://s3-bucket/path/to/uiux1.png", "image/png", "버튼 컬러 실험 디자인", false),
-                                new DataResponse(402L, "https://s3-bucket/path/to/uiux2.png", "image/png", "로그인 입력창 배치 시안", true)
-                        ))
-                        .build()
-        );
-
-        HomeDataResponse data = HomeDataResponse.builder()
-                .userInfo(user)
-                .favoriteData(favorites)
-                .remindData(remind)
-                .recentData(recent)
-                .categoryData(categories)
-                .build();
-
-        return ApiResponse.ok(data, "데이터 목록 조회에 성공했습니다.");
-    }
     @Operation(
             summary = "파일 목록(타임라인) 조회",
             description = """
