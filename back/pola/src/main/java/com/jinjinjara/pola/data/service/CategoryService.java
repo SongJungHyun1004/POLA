@@ -128,18 +128,26 @@ public class CategoryService {
     /**
      * DELETE
      */
+    @Transactional
     public void deleteCategory(Long id) {
         try {
             if (!categoryRepository.existsById(id)) {
                 throw new CustomException(ErrorCode.CATEGORY_NOT_FOUND);
             }
+
+            // 1️⃣ category_tags 먼저 삭제
+            categoryTagRepository.deleteByCategoryId(id);
+
+            // 2️⃣ 카테고리 삭제
             categoryRepository.deleteById(id);
+
         } catch (CustomException e) {
             throw e;
         } catch (Exception e) {
             throw new CustomException(ErrorCode.CATEGORY_DELETE_FAIL, e.getMessage());
         }
     }
+
 
 
 
