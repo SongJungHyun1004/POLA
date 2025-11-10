@@ -55,8 +55,10 @@ public enum ErrorCode {
     VALIDATION_ERROR("COMMON-002", "요청 데이터가 유효하지 않습니다.", HttpStatus.BAD_REQUEST),
 
     /* ------------------------- [서버 공통 / 내부 오류] ------------------------- */
-    INTERNAL_SERVER_ERROR("SERVER-001", "서버 내부 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR);
-
+    INTERNAL_SERVER_ERROR("SERVER-001", "서버 내부 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
+    SHARE_EXPIRED("SHARE-001", "공유 링크가 만료되었습니다.", HttpStatus.GONE),
+    SHARE_DISABLED("SHARE-002", "이 파일은 더 이상 공유되지 않습니다.", HttpStatus.FORBIDDEN),
+    SHARE_NOT_FOUND("SHARE-003", "유효하지 않은 공유 링크입니다.", HttpStatus.NOT_FOUND);
     private final String code;
     private final String message;
     private final HttpStatus status;

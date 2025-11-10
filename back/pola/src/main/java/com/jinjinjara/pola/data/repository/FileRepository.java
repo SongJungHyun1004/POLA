@@ -23,6 +23,7 @@ public interface FileRepository extends JpaRepository<File, Long> {
     Page<File> findAllByUserIdAndFavoriteTrueOrderByFavoriteSortAscFavoritedAtDesc(Long userId, Pageable pageable);
 
     Page<File> findAllByUserIdAndFavoriteTrue(Long userId, Pageable pageable);
+    Optional<File> findByShareToken(String shareToken);
 
     // 즐겨찾기 정렬 순서 밀기 (+1)
     @Modifying
