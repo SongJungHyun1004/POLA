@@ -1,27 +1,43 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import CategoryCard from "./components/CategoryCard";
 import CategoryModal from "./components/CategoryModal";
 import Link from "next/link";
+import { getRecommendedCategories } from "@/services/categoryService";
 
 interface Category {
   name: string;
   tags: string[];
 }
 
-const initialCategories: Category[] = [
-  { name: "Travel", tags: ["여행"] },
-  { name: "Food", tags: ["맛집"] },
-  { name: "Daily", tags: ["일상"] },
-  { name: "Friends", tags: ["친구"] },
-  { name: "Memories", tags: ["추억"] },
-];
-
 export default function OnboardingPage() {
-  const [categories, setCategories] = useState<Category[]>(initialCategories);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
+
+  // ✅ 추천 카테고리 불러오기
+  useEffect(() => {
+    async function loadRecommendations() {
+      try {
+        const data = await getRecommendedCategories(); // 서버 호출
+        const mapped = data.map((item) => ({
+          name: item.categoryName,
+          tags: item.tags,
+        }));
+        setCategories(mapped);
+      } catch (err) {
+        console.error("추천 카테고리를 불러오지 못했습니다.", err);
+        // 서버가 실패하면 기본 2개 넣어서라도 페이지 작동 보장
+        setCategories([
+          { name: "Daily", tags: ["일상"] },
+          { name: "Memory", tags: ["추억"] },
+        ]);
+      }
+    }
+
+    loadRecommendations();
+  }, []);
 
   const openAdd = () => {
     if (categories.length >= 10) return;
