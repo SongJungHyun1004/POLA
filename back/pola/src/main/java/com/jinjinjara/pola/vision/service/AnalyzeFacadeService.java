@@ -330,7 +330,10 @@ public class AnalyzeFacadeService {
         return in.stream()
                 .filter(Objects::nonNull)
                 .map(String::trim)
-                .map(t -> t.replaceAll("^['\"]|['\"]$", "")) // 양끝 따옴표 제거
+                .map(t -> t.replaceAll("^['\"]|['\"]$", "")) // 따옴표 제거
+                .filter(t -> !t.isEmpty())
+                .flatMap(t -> Arrays.stream(t.split("\\s+"))) // 공백 단위 분리 추가
+                .map(String::trim)
                 .filter(t -> !t.isEmpty())
                 .distinct()
                 .toList();
@@ -405,4 +408,5 @@ public class AnalyzeFacadeService {
             return new VertexParsedResult(List.of(), "");
         }
     }
+
 }

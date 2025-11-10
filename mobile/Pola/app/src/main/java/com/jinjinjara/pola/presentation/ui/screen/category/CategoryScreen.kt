@@ -53,6 +53,7 @@ data class CategoryItem(
     override val id: String,
     val name: String,
     override val imageRes: Int = R.drawable.temp_image,
+    override val imageUrl: String = "",
     override val tags: List<String> = listOf(name),
     override val description: String = "",
     override val isFavorite: Boolean = false

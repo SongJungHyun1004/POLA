@@ -2,6 +2,7 @@ package com.jinjinjara.pola.presentation.ui.component
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import coil.compose.AsyncImage
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -39,6 +40,7 @@ import com.jinjinjara.pola.R
 interface DisplayItem {
     val id: String
     val imageRes: Int
+    val imageUrl: String
     val tags: List<String>
     val description: String
     val isFavorite: Boolean
@@ -121,19 +123,35 @@ fun <T : DisplayItem> ItemListItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         // 왼쪽: 1:1 이미지
-        Image(
-            painter = painterResource(id = item.imageRes),
-            contentDescription = null,
-            modifier = Modifier
-                .size(80.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .border(
-                    width = 1.dp,
-                    color = MaterialTheme.colorScheme.tertiary,
-                    shape = RoundedCornerShape(8.dp)
-                ),
-            contentScale = ContentScale.Crop
-        )
+        if (item.imageRes != 0) {
+            Image(
+                painter = painterResource(id = item.imageRes),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.tertiary,
+                        shape = RoundedCornerShape(8.dp)
+                    ),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            AsyncImage(
+                model = item.imageUrl,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.tertiary,
+                        shape = RoundedCornerShape(8.dp)
+                    ),
+                contentScale = ContentScale.Crop
+            )
+        }
 
         // 중간: 태그와 설명
         Column(
@@ -142,7 +160,7 @@ fun <T : DisplayItem> ItemListItem(
         ) {
             // 해시태그들
             ClippedTagRow(
-                tags = item.tags,
+                tags = item.tags.map { "#${it.removePrefix("#")}" },
                 fontSize = 16.sp,
                 color = MaterialTheme.colorScheme.tertiary,
                 spacing = 4.dp,
@@ -245,7 +263,8 @@ fun <T : DisplayItem> ItemGrid3View(
                         start = 4.dp,
                         end = 4.dp
                     ),
-                    imageResId = item.imageRes,
+                    imageResId = if (item.imageRes != 0) item.imageRes else null,
+                    imageUrl = if (item.imageRes == 0) item.imageUrl else null,
                     textList = item.tags.map { it.removePrefix("#") },
                     textSize = 12.sp,
                     textSpacing = 8.dp,
@@ -316,7 +335,8 @@ fun <T : DisplayItem> ItemGrid2View(
                         start = 8.dp,
                         end = 8.dp
                     ),
-                    imageResId = item.imageRes,
+                    imageResId = if (item.imageRes != 0) item.imageRes else null,
+                    imageUrl = if (item.imageRes == 0) item.imageUrl else null,
                     textList = item.tags.map { it.removePrefix("#") },
                     textSize = 16.sp,
                     textSpacing = 8.dp,

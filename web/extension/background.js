@@ -1,0 +1,704 @@
+importScripts('config.js');
+
+const API_BASE_URL = CONFIG.API_BASE_URL;
+
+// 확장 프로그램 설치 시 실행
+chrome.runtime.onInstalled.addListener(() => {
+  console.log('확장 프로그램이 설치되었습니다.');
+  createContextMenus();
+});
+
+// 컨텍스트 메뉴 생성
+function createContextMenus() {
+  chrome.contextMenus.create({
+    id: "captureScreen",
+    title: "📸 영역 선택하여 캡처하기",
+    contexts: ["page", "image", "link", "video"]
+  });
+
+  chrome.contextMenus.create({
+    id: "copyText",
+    title: "📝 선택한 텍스트 가져오기",
+    contexts: ["selection"]
+  });
+
+  console.log('컨텍스트 메뉴가 생성되었습니다.');
+}
+
+// 컨텍스트 메뉴 클릭 이벤트
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  console.log('메뉴 클릭됨:', info.menuItemId);
+
+  // 로그인 상태 확인
+  const authStatus = await checkAuthStatus();
+
+  if (!authStatus.isAuthenticated) {
+    showNotification(
+      '로그인 필요',
+      'Pola에 로그인한 후 사용해주세요.'
+    );
+    return;
+  }
+
+  if (info.menuItemId === "captureScreen") {
+    await startAreaCaptureWithInjection(tab);
+  } else if (info.menuItemId === "copyText") {
+    await handleTextCapture(info, tab);
+  }
+});
+
+// ============================================
+// 메시지 리스너
+// ============================================
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log('메시지 수신:', request);
+
+  // 로그인 요청
+  if (request.action === 'login') {
+    handleLogin().then(sendResponse).catch(error => {
+      sendResponse({ success: false, error: error.message });
+    });
+    return true;
+  }
+
+  // 로그아웃 요청
+  if (request.action === 'logout') {
+    handleLogout().then(sendResponse).catch(error => {
+      sendResponse({ success: false, error: error.message });
+    });
+    return true;
+  }
+
+  // 인증 상태 확인
+  if (request.action === 'checkAuth') {
+    checkAuthStatus().then(sendResponse);
+    return true;
+  }
+
+  // 영역 캡처 완료
+  if (request.action === 'captureArea') {
+    handleAreaCapture(request.area, sender.tab);
+    sendResponse({ success: true });
+  }
+
+  return true;
+});
+
+/**
+ * 구글 로그인 처리 (ID Token 방식)
+ */
+async function handleLogin() {
+  try {
+    console.log('=== 로그인 시작 ===');
+    console.log('API_BASE_URL:', API_BASE_URL);
+
+    // manifest.json에서 client_id 가져오기
+    const manifest = chrome.runtime.getManifest();
+    const clientId = manifest.oauth2.client_id;
+
+    if (!clientId) {
+      throw new Error('manifest.json에 oauth2.client_id가 설정되지 않았습니다.');
+    }
+
+    console.log('Client ID:', clientId);
+
+    // 1. OAuth2 인증 플로우로 ID Token 가져오기
+    console.log('1. Google OAuth2 인증 플로우 시작...');
+    const redirectUrl = chrome.identity.getRedirectURL();
+    console.log('Redirect URL:', redirectUrl);
+
+    // nonce 생성 (보안을 위해)
+    const nonce = Math.random().toString(36).substring(2, 15);
+
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+      `client_id=${encodeURIComponent(clientId)}&` +
+      `response_type=id_token&` +
+      `redirect_uri=${encodeURIComponent(redirectUrl)}&` +
+      `scope=${encodeURIComponent('openid email profile')}&` +
+      `nonce=${nonce}`;
+
+    console.log('Auth URL 생성 완료');
+
+    const responseUrl = await new Promise((resolve, reject) => {
+      chrome.identity.launchWebAuthFlow(
+        {
+          url: authUrl,
+          interactive: true
+        },
+        (callbackUrl) => {
+          if (chrome.runtime.lastError) {
+            console.error('launchWebAuthFlow 오류:', chrome.runtime.lastError);
+            reject(chrome.runtime.lastError);
+          } else {
+            console.log('✅ OAuth2 플로우 완료');
+            console.log('Callback URL:', callbackUrl);
+            resolve(callbackUrl);
+          }
+        }
+      );
+    });
+
+    // 2. URL에서 ID Token 추출
+    console.log('2. ID Token 추출 중...');
+    const url = new URL(responseUrl);
+    const hash = url.hash.substring(1); // # 제거
+    const params = new URLSearchParams(hash);
+    const idToken = params.get('id_token');
+
+    if (!idToken) {
+      console.error('응답 URL:', responseUrl);
+      console.error('Hash:', hash);
+      console.error('Params:', Object.fromEntries(params));
+      throw new Error('ID Token을 가져올 수 없습니다');
+    }
+
+    console.log('✅ ID Token 획득 성공');
+    console.log('ID Token 길이:', idToken.length);
+    console.log('ID Token 시작:', idToken.substring(0, 50) + '...');
+
+    // 3. ID Token에서 사용자 정보 디코딩 (JWT 디코딩)
+    console.log('3. 사용자 정보 디코딩 중...');
+    const payload = JSON.parse(atob(idToken.split('.')[1]));
+    console.log('✅ 사용자 정보:', {
+      email: payload.email,
+      name: payload.name,
+      picture: payload.picture
+    });
+
+    // 4. 백엔드에 ID Token 전송
+    console.log('4. 백엔드 인증 요청 중...');
+    const authUrl2 = `${API_BASE_URL}oauth/token`;
+    console.log('요청 URL:', authUrl2);
+
+    const authResponse = await fetch(authUrl2, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Client-Type': 'WEB'
+      },
+      body: JSON.stringify({ idToken: idToken })
+    });
+
+    console.log('백엔드 응답 상태:', authResponse.status);
+
+    // 응답 본문 읽기
+    const responseText = await authResponse.text();
+    console.log('백엔드 응답 본문:', responseText);
+
+    if (!authResponse.ok) {
+      console.error('❌ 백엔드 인증 실패');
+
+      let errorMessage = '백엔드 인증 실패';
+      try {
+        const errorData = JSON.parse(responseText);
+        errorMessage = errorData.message || errorData.error || errorMessage;
+      } catch (e) {
+        errorMessage = `${errorMessage} (${authResponse.status})`;
+      }
+
+      throw new Error(errorMessage);
+    }
+
+    // JSON 파싱
+    const authData = JSON.parse(responseText);
+    console.log('✅ 백엔드 인증 성공');
+    console.log('응답 데이터 구조:', Object.keys(authData));
+
+    // 토큰 추출
+    const accessToken = authData.data?.accessToken || authData.accessToken;
+    // WEB 클라이언트는 refresh token을 쿠키로 받으므로 응답에 없음
+
+    if (!accessToken) {
+      console.error('❌ Access Token 누락:', authData);
+      throw new Error('서버 응답에 Access Token이 없습니다');
+    }
+
+    console.log('✅ Access Token 추출 성공');
+
+    // 5. 백엔드 Access Token 검증 및 사용자 정보 가져오기
+    console.log('5. Access Token 검증 중...');
+    const verifyResponse = await fetch(`${API_BASE_URL}oauth/verify`, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`
+      }
+    });
+
+    if (!verifyResponse.ok) {
+      throw new Error('Access Token 검증 실패');
+    }
+
+    const verifyData = await verifyResponse.json();
+    console.log('✅ Token 검증 성공:', verifyData);
+
+    // 6. Access Token 및 사용자 정보 저장
+    console.log('6. 토큰 저장 중...');
+    await chrome.storage.local.set({
+      accessToken: accessToken,
+      user: {
+        id: verifyData.data.userId,
+        email: verifyData.data.email || payload.email,
+        display_name: payload.name,
+        profile_image_url: payload.picture
+      },
+      loginTime: Date.now()
+    });
+
+    console.log('✅ 로그인 완료!');
+    showNotification('로그인 성공', `${payload.name}님 환영합니다!`);
+
+    return {
+      success: true,
+      user: {
+        email: payload.email,
+        name: payload.name,
+        picture: payload.picture
+      }
+    };
+
+  } catch (error) {
+    console.error('=== 로그인 실패 ===');
+    console.error('오류 타입:', error.constructor.name);
+    console.error('오류 메시지:', error.message);
+    console.error('오류 스택:', error.stack);
+
+    showNotification('로그인 실패', error.message);
+    throw error;
+  }
+}
+
+/**
+ * 로그아웃 처리
+ */
+async function handleLogout() {
+  try {
+    // 저장된 모든 인증 정보 삭제
+    await chrome.storage.local.remove(['accessToken', 'user', 'loginTime']);
+
+    // Chrome Identity 캐시 제거
+    await chrome.identity.clearAllCachedAuthTokens();
+
+    console.log('로그아웃 완료');
+    showNotification('로그아웃', '로그아웃되었습니다.');
+
+    return { success: true };
+
+  } catch (error) {
+    console.error('로그아웃 실패:', error);
+    throw error;
+  }
+}
+
+/**
+ * 인증 상태 확인 (토큰 검증 포함)
+ */
+async function checkAuthStatus() {
+  try {
+    const result = await chrome.storage.local.get(['accessToken', 'user']);
+
+    if (!result.accessToken) {
+      return {
+        isAuthenticated: false,
+        user: null
+      };
+    }
+
+    // Access Token 검증
+    try {
+      const verifyResponse = await fetch(`${API_BASE_URL}oauth/verify`, {
+        headers: {
+          'Authorization': `Bearer ${result.accessToken}`
+        }
+      });
+
+      if (verifyResponse.ok) {
+        return {
+          isAuthenticated: true,
+          user: result.user
+        };
+      } else {
+        // 토큰이 만료되었으면 저장소에서 삭제
+        await chrome.storage.local.remove(['accessToken', 'user']);
+        return {
+          isAuthenticated: false,
+          user: null
+        };
+      }
+    } catch (error) {
+      console.error('토큰 검증 실패:', error);
+      return {
+        isAuthenticated: false,
+        user: null
+      };
+    }
+
+  } catch (error) {
+    console.error('인증 상태 확인 실패:', error);
+    return {
+      isAuthenticated: false,
+      user: null
+    };
+  }
+}
+
+// Content script 주입 후 영역 선택 시작
+async function startAreaCaptureWithInjection(tab) {
+  try {
+    // 1. 페이지 URL 확인 (제한된 페이지 체크)
+    if (isRestrictedUrl(tab.url)) {
+      showNotification(
+        '캡처 불가',
+        '이 페이지에서는 캡처를 사용할 수 없습니다.'
+      );
+      return;
+    }
+
+    // 2. Content script가 이미 로드되어 있는지 확인
+    let isContentScriptLoaded = false;
+    try {
+      const response = await Promise.race([
+        chrome.tabs.sendMessage(tab.id, { action: "ping" }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('timeout')), 300)
+        )
+      ]);
+      isContentScriptLoaded = response?.pong === true;
+    } catch (e) {
+      isContentScriptLoaded = false;
+    }
+
+    // 3. Content script가 없으면 주입
+    if (!isContentScriptLoaded) {
+      console.log('Content script 주입 중...');
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ['content.js']
+      });
+
+      // 주입 후 잠시 대기
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+
+    // 4. 영역 선택 시작 요청
+    await chrome.tabs.sendMessage(tab.id, {
+      action: "startAreaSelection"
+    });
+
+  } catch (error) {
+    console.error('영역 캡처 시작 실패:', error);
+    showNotification('오류', '캡처를 시작할 수 없습니다: ' + error.message);
+  }
+}
+
+// 제한된 URL 체크
+function isRestrictedUrl(url) {
+  const restrictedPatterns = [
+    /^chrome:\/\//,
+    /^chrome-extension:\/\//,
+    /^edge:\/\//,
+    /^about:/,
+    /^data:/,
+    /^file:\/\//,
+    /chrome\.google\.com\/webstore/,
+    /microsoftedge\.microsoft\.com/
+  ];
+
+  return restrictedPatterns.some(pattern => pattern.test(url));
+}
+
+// 텍스트 캡처 처리
+async function handleTextCapture(info, tab) {
+  try {
+    const selectedText = info.selectionText;
+
+    console.log('텍스트 캡처 완료!');
+    console.log('선택된 텍스트:', selectedText);
+    console.log('페이지 정보:', {
+      url: tab.url,
+      title: tab.title,
+      timestamp: new Date().toISOString()
+    });
+
+    try {
+            showNotification('저장 중...', '텍스트를 Pola에 저장하고 있습니다.');
+            
+            // 텍스트를 Blob으로 변환
+            const textBlob = new Blob([selectedText], { type: 'text/plain; charset=utf-8' });
+            const fileSize = textBlob.size;
+            
+            console.log('텍스트 Blob 생성 완료, 크기:', fileSize, 'bytes');
+            
+            // 토큰 가져오기
+            const { accessToken } = await chrome.storage.local.get(['accessToken']);
+            
+            if (!accessToken) {
+                throw new Error('로그인이 필요합니다.');
+            }
+            
+            // 1단계: S3 Presigned URL 생성
+            console.log('1단계: S3 업로드 URL 생성 중...');
+            const timestamp = Date.now();
+            const fileName = `text_${timestamp}.txt`;
+            
+            const presignedResponse = await fetch(
+                `${API_BASE_URL}files/s3/presigned/upload?fileName=${encodeURIComponent(fileName)}`,
+                {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                }
+            );
+            
+            if (!presignedResponse.ok) {
+                const errorText = await presignedResponse.text();
+                console.error('Presigned URL 생성 실패:', errorText);
+                throw new Error('업로드 URL 생성 실패');
+            }
+            
+            const presignedData = await presignedResponse.json();
+            const uploadUrl = presignedData.data.url;
+            const fileKey = presignedData.data.key;
+            
+            console.log('✅ 1단계 완료 - Upload URL:', uploadUrl.substring(0, 100) + '...');
+            console.log('✅ File Key:', fileKey);
+            
+            // 2단계: S3에 직접 업로드
+            console.log('2단계: S3에 텍스트 업로드 중...');
+            
+            const s3UploadResponse = await fetch(uploadUrl, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'text/plain; charset=utf-8'
+                },
+                body: textBlob
+            });
+            
+            if (!s3UploadResponse.ok) {
+                console.error('S3 업로드 실패:', s3UploadResponse.status, s3UploadResponse.statusText);
+                throw new Error('S3 업로드 실패');
+            }
+            
+            console.log('✅ 2단계 완료 - S3 업로드 성공');
+            
+            // 3단계: DB에 파일 메타데이터 저장
+            console.log('3단계: 파일 정보 저장 중...');
+            
+            // originUrl 추출 (? 앞부분까지)
+            const originUrl = uploadUrl.split('?')[0];
+            
+            const completeResponse = await fetch(`${API_BASE_URL}files/complete`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    key: fileKey,
+                    type: 'text/plain',
+                    fileSize: fileSize,
+                    originUrl: originUrl
+                })
+            });
+            
+            if (!completeResponse.ok) {
+                const errorText = await completeResponse.text();
+                console.error('파일 등록 실패:', errorText);
+                throw new Error('파일 등록 실패');
+            }
+            
+            const completeData = await completeResponse.json();
+            console.log('✅ 3단계 완료 - 파일 등록 성공:', completeData);
+            
+            // 업로드 성공!
+            const preview = selectedText.length > 30 
+                ? selectedText.substring(0, 30) + '...'
+                : selectedText;
+                
+            showNotification(
+                '✨ 저장 완료!',
+                `"${preview}" 가 Pola에 저장되었습니다.`
+            );
+            
+            console.log('🎉 전체 업로드 플로우 완료!');
+            console.log('파일 ID:', completeData.data.id);
+            console.log('저장 URL:', completeData.data.originUrl);
+            
+        } catch (uploadError) {
+            console.error('❌ 저장 실패:', uploadError);
+            showNotification(
+                '저장 실패',
+                uploadError.message || '텍스트 저장 중 오류가 발생했습니다.'
+            );
+        }
+
+  } catch (error) {
+    console.error('텍스트 저장 실패:', error);
+    showNotification('저장 실패', error.message);
+  }
+}
+
+// 알림 표시
+function showNotification(title, message) {
+  chrome.notifications.create({
+    type: 'basic',
+    iconUrl: 'icons/icon48.png',
+    title: title,
+    message: message,
+    priority: 2
+  });
+}
+
+// 선택한 영역 캡처 처리
+async function handleAreaCapture(area, tab) {
+  try {
+    console.log('선택 영역 캡처 시작:', area);
+
+    // 1. 전체 화면 캡처
+    const fullScreenshot = await chrome.tabs.captureVisibleTab(
+      tab.windowId,
+      { format: 'png' }
+    );
+
+    console.log('전체 화면 캡처 완료');
+
+    // 2. Content script에 이미지 크롭 요청
+    const response = await chrome.tabs.sendMessage(tab.id, {
+      action: 'cropImage',
+      imageData: fullScreenshot,
+      area: area
+    });
+
+    if (response.success) {
+      console.log('영역 캡처 완료!');
+      console.log('크롭된 이미지 데이터 길이:', response.croppedImage.length);
+      console.log('페이지 정보:', {
+        url: tab.url,
+        title: tab.title,
+        area: area,
+        timestamp: new Date().toISOString()
+      });
+
+      try {
+        showNotification('업로드 중...', '이미지를 Pola에 업로드하고 있습니다.');
+
+        // Base64를 Blob으로 변환
+        const base64Data = response.croppedImage.split(',')[1];
+        const byteCharacters = atob(base64Data);
+        const byteNumbers = new Array(byteCharacters.length);
+
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'image/png' });
+        const fileSize = blob.size;
+
+        console.log('이미지 Blob 생성 완료, 크기:', fileSize, 'bytes');
+
+        // 토큰 가져오기
+        const { accessToken } = await chrome.storage.local.get(['accessToken']);
+
+        if (!accessToken) {
+          throw new Error('로그인이 필요합니다.');
+        }
+
+        // 1단계: S3 Presigned URL 생성
+        console.log('1단계: S3 업로드 URL 생성 중...');
+        const timestamp = Date.now();
+        const fileName = `capture_${timestamp}.png`;
+
+        const presignedResponse = await fetch(
+          `${API_BASE_URL}files/s3/presigned/upload?fileName=${encodeURIComponent(fileName)}`,
+          {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`
+            }
+          }
+        );
+
+        if (!presignedResponse.ok) {
+          const errorText = await presignedResponse.text();
+          console.error('Presigned URL 생성 실패:', errorText);
+          throw new Error('업로드 URL 생성 실패');
+        }
+
+        const presignedData = await presignedResponse.json();
+        const uploadUrl = presignedData.data.url;
+        const fileKey = presignedData.data.key;
+
+        console.log('✅ 1단계 완료 - Upload URL:', uploadUrl.substring(0, 100) + '...');
+        console.log('✅ File Key:', fileKey);
+
+        // 2단계: S3에 직접 업로드
+        console.log('2단계: S3에 이미지 업로드 중...');
+
+        const s3UploadResponse = await fetch(uploadUrl, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'image/png'
+          },
+          body: blob
+        });
+
+        if (!s3UploadResponse.ok) {
+          console.error('S3 업로드 실패:', s3UploadResponse.status, s3UploadResponse.statusText);
+          throw new Error('S3 업로드 실패');
+        }
+
+        console.log('✅ 2단계 완료 - S3 업로드 성공');
+
+        // 3단계: DB에 파일 메타데이터 저장
+        console.log('3단계: 파일 정보 저장 중...');
+
+        // originUrl 추출 (? 앞부분까지)
+        const originUrl = uploadUrl.split('?')[0];
+
+        const completeResponse = await fetch(`${API_BASE_URL}files/complete`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            key: fileKey,
+            type: 'image/png',
+            fileSize: fileSize,
+            originUrl: originUrl
+          })
+        });
+
+        if (!completeResponse.ok) {
+          const errorText = await completeResponse.text();
+          console.error('파일 등록 실패:', errorText);
+          throw new Error('파일 등록 실패');
+        }
+
+        const completeData = await completeResponse.json();
+        console.log('✅ 3단계 완료 - 파일 등록 성공:', completeData);
+
+        // 업로드 성공!
+        showNotification(
+          '✨ 업로드 완료!',
+          '이미지가 Pola에 성공적으로 저장되었습니다.'
+        );
+
+        console.log('🎉 전체 업로드 플로우 완료!');
+        console.log('파일 ID:', completeData.data.id);
+        console.log('저장 URL:', completeData.data.originUrl);
+
+      } catch (uploadError) {
+        console.error('❌ 업로드 실패:', uploadError);
+        showNotification(
+          '업로드 실패',
+          uploadError.message || '이미지 업로드 중 오류가 발생했습니다.'
+        );
+      }
+    }
+
+  } catch (error) {
+    console.error('영역 캡처 실패:', error);
+    showNotification('캡처 실패', error.message);
+  }
+}
