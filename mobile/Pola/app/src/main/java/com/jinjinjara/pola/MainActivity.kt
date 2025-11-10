@@ -63,6 +63,8 @@ class MainActivity : ComponentActivity() {
     private var sharedText: String? = null
     private var sharedContentType: String? = null
 
+    private var hasStartedUpload = false
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -138,8 +140,11 @@ class MainActivity : ComponentActivity() {
 
                             // 로그인 되어있으면 바로 업로드 시작
                             LaunchedEffect(Unit) {
-                                Log.d("MainActivity", "Logged in, starting upload")
-                                startUpload()
+                                if (!hasStartedUpload) {  // 플래그 체크
+                                    Log.d("MainActivity", "Logged in, starting upload")
+                                    hasStartedUpload = true
+                                    startUpload()
+                                }
                             }
 
                             Box(
@@ -300,11 +305,12 @@ class MainActivity : ComponentActivity() {
         super.onResume()
 
         // 로그인 화면에서 돌아왔을 때 업로드 시작
-        if (isSharedContent) {
+        if (isSharedContent && !hasStartedUpload) {
             lifecycleScope.launch {
                 val isLoggedIn = authRepository.observeLoginState().first()
                 if (isLoggedIn == true) {
                     Log.d("MainActivity", "Logged in after resume, starting upload")
+                    hasStartedUpload = true
                     startUpload()
                 }
             }
