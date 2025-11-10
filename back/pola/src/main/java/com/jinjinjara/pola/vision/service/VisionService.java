@@ -33,7 +33,7 @@ public class VisionService {
 
             String mime = AIUtil.sniffMime(data);
             if (mime.startsWith("image/")) {
-                return documentOcrFromUri(url);
+                return documentOcr(data);
             }
 
             if (data.length > MAX_TEXT_BYTES) {
@@ -50,6 +50,22 @@ public class VisionService {
             log.error("[VisionService] extractTextFromS3Url failed: {}", e.toString());
             throw new RuntimeException("Failed to extract text from S3 URL", e);
         }
+    }
+
+    public String documentOcr(byte[] bytes) throws Exception {
+        Image img = Image.newBuilder()
+                .setContent(ByteString.copyFrom(bytes))
+                .build();
+        Feature feature = Feature.newBuilder()
+                .setType(Feature.Type.DOCUMENT_TEXT_DETECTION)
+                .build();
+        AnnotateImageRequest req = AnnotateImageRequest.newBuilder()
+                .setImage(img)
+                .addFeatures(feature)
+                .build();
+        AnnotateImageResponse r = client.batchAnnotateImages(List.of(req)).getResponses(0);
+        if (r.hasError()) throw new RuntimeException(r.getError().getMessage());
+        return r.getFullTextAnnotation().getText();
     }
 
     // -----------------------------

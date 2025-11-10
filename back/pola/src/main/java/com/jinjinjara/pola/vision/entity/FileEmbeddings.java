@@ -37,7 +37,7 @@ public class FileEmbeddings {
     private String context;
 
     @JdbcTypeCode(SqlTypes.VECTOR)
-    @Column(name = "embedding", columnDefinition = "vector(1536)")
+    @Column(name = "embedding", columnDefinition = "vector(768)")
     private float[] embedding;
 
     @CreationTimestamp

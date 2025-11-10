@@ -25,6 +25,7 @@ import com.jinjinjara.pola.vision.service.AnalyzeFacadeService;
 import com.jinjinjara.pola.vision.service.EmbeddingService;
 import com.jinjinjara.pola.vision.service.VisionService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -39,6 +40,7 @@ import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DataService {
@@ -343,30 +345,66 @@ public class DataService {
     }
 
     @Transactional
-    public File postProcessingFile (Users user, Long fileId) throws Exception {
+    public File postProcessingFile(Users user, Long fileId) throws Exception {
+        log.info("[PostProcess] Start post-processing fileId={}, userId={}", fileId, user.getId());
+
         File file = fileRepository.findById(fileId)
                 .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
+        log.info("[PostProcess] File entity loaded: src={}", file.getSrc());
 
         URL downUrl = s3Service.generateDownloadUrl(file.getSrc());
+        log.info("[PostProcess] S3 download URL generated: {}", downUrl);
+
+        String ocrText = visionService.extractTextFromS3Url(downUrl.toString());
+        log.info("[PostProcess] OCR extraction completed: textLength={}",
+                ocrText != null ? ocrText.length() : 0);
 
         AnalyzeResponse analyzeResponse = analyzeFacadeService.analyze(user.getId(), downUrl.toString());
-        file.setCategoryId(analyzeResponse.getCategoryId());
-        file.setContext(analyzeResponse.getDescription());
-        fileTagService.addTagsToFile(fileId,analyzeResponse.getTags());
+        log.info("[PostProcess] Analyze completed: categoryId={}, tagsCount={}",
+                analyzeResponse.getCategoryId(),
+                analyzeResponse.getTags() != null ? analyzeResponse.getTags().size() : 0);
 
-        file.setOcrText(visionService.extractTextFromS3Url(downUrl.toString()));
-        FileEmbeddings fileEmbeddings = new FileEmbeddings(
-                0L,
-                user.getId(),
-                file,
-                file.getOcrText(),
-                file.getContext(),
-                embeddingService.embedOcrAndContext(file.getOcrText(),file.getContext()),
-                null
-        );
+        fileTagService.addTagsToFile(fileId, analyzeResponse.getTags());
+        log.info("[PostProcess] Tags saved for fileId={}", fileId);
+
+        float[] embedding = embeddingService.embedOcrAndContext(file.getOcrText(), file.getContext());
+        log.info("[PostProcess] Embedding generated: dimension={}",
+                embedding != null ? embedding.length : 0);
+
+        FileEmbeddings fileEmbeddings = FileEmbeddings.builder()
+                .userId(user.getId())
+                .file(file)
+                .ocrText(ocrText)
+                .context(analyzeResponse.getDescription())
+                .embedding(embeddingService.embedOcrAndContext(ocrText, analyzeResponse.getDescription()))
+                .build();
+
+        log.info("[PostProcess] FileEmbeddings entity created (pre-save)");
 
         file.setVectorId(fileEmbeddings.getId());
+        fileEmbeddings = fileEmbeddingsRepository.save(fileEmbeddings);
+        log.info("[PostProcess] FileEmbeddings saved: embeddingId={}", fileEmbeddings.getId());
 
+        fileRepository.updatePostProcessing(
+                file.getId(),
+                user.getId(),
+                analyzeResponse.getCategoryId(),
+                analyzeResponse.getDescription(),
+                ocrText,
+                fileEmbeddings.getId()
+        );
+        log.info("[PostProcess] File repository updated with new OCR/context/category");
+
+        file.setCategoryId(analyzeResponse.getCategoryId());
+        file.setContext(fileEmbeddings.getContext());
+        file.setOcrText(ocrText);
+        file.setVectorId(fileEmbeddings.getId());
+
+        log.info("[PostProcess] File entity updated (in-memory): fileId={}, vectorId={}",
+                file.getId(), file.getVectorId());
+
+        log.info("[PostProcess] Post-processing completed successfully for fileId={}", fileId);
         return file;
     }
+
 }
