@@ -467,7 +467,8 @@ fun CategoryCard(
                         start = 8.dp,
                         end = 8.dp
                     ),
-                    imageUrl = fileInfo.imageUrl
+                    imageUrl = fileInfo.imageUrl,
+                    type = fileInfo.type,
                 )
             }
 
@@ -489,7 +490,8 @@ fun CategoryCard(
                         start = 8.dp,
                         end = 8.dp
                     ),
-                    imageUrl = fileInfo.imageUrl
+                    imageUrl = fileInfo.imageUrl,
+                    type = fileInfo.type,
                 )
             }
 
@@ -506,7 +508,8 @@ fun CategoryCard(
                         start = 8.dp,
                         end = 8.dp
                     ),
-                    imageUrl = fileInfo.imageUrl
+                    imageUrl = fileInfo.imageUrl,
+                    type = fileInfo.type,
                 )
             }
         }
