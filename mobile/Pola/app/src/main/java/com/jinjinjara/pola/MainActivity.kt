@@ -109,7 +109,7 @@ class MainActivity : ComponentActivity() {
                 // initial = null로 설정하여 로딩 상태 표시
 
                 val isLoggedIn by authRepository.observeLoginState().collectAsState(initial = null)
-                val onboardingCompleted by preferencesDataStore.observeOnboardingCompleted().collectAsState(initial = false)
+                val onboardingCompleted by preferencesDataStore.observeOnboardingCompleted().collectAsState(initial = null)
 
                 LaunchedEffect(isLoggedIn, onboardingCompleted) {
                     Log.d("MainActivity", "State changed - isLoggedIn: $isLoggedIn, onboardingCompleted: $onboardingCompleted")
@@ -288,8 +288,9 @@ class MainActivity : ComponentActivity() {
 
                 } else {
                     // 일반 실행: 기존 로그인 플로우
-                    when (isLoggedIn) {
-                        null -> {
+                    when {
+                        isLoggedIn == null || onboardingCompleted == null -> {
+                            // 둘 중 하나라도 로딩 중이면 로딩 표시
                             Box(
                                 modifier = Modifier.fillMaxSize(),
                                 contentAlignment = Alignment.Center
@@ -298,13 +299,13 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                         else -> {
+                            // 둘 다 로드 완료되면 네비게이션 시작
                             PolaNavHost(
                                 modifier = Modifier.fillMaxSize(),
                                 isLoggedIn = isLoggedIn ?: false,
-                                onboardingCompleted = onboardingCompleted
+                                onboardingCompleted = onboardingCompleted ?: false
                             )
                         }
-
                     }
                 }
             }

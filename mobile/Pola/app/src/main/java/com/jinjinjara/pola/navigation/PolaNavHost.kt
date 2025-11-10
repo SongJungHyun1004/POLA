@@ -34,12 +34,9 @@ fun PolaNavHost(
     // - 테스트 모드: MAIN으로 이동
     // - 로그인 완료 && 온보딩 완료: MAIN으로 이동
     // - 그 외: AUTH로 이동 (로그인 또는 온보딩 필요)
-    val startDestination = if (isTestMode) {
-        NavGraphs.MAIN
-    } else if (isLoggedIn && onboardingCompleted) {
-        NavGraphs.MAIN
-    } else {
-        NavGraphs.AUTH
+    val startDestination = when {
+        isLoggedIn -> NavGraphs.MAIN  // 로그인 -> 메인
+        else -> NavGraphs.AUTH  // 로그인 안됨 -> 로그인 화면
     }
 
     NavHost(
