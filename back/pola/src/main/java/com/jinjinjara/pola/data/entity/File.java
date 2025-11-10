@@ -47,6 +47,13 @@ public class File {
     @Column(name = "share_status", nullable = false)
     private Boolean shareStatus;
 
+    @Column(name = "share_token", unique = true)
+    private String shareToken; // 공유 링크용 UUID 토큰
+
+    @Column(name = "share_expired_at", nullable = true)
+    private LocalDateTime shareExpiredAt;
+
+
     @Column(nullable = false)
     private Boolean favorite;
 
