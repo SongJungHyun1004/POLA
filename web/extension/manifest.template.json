@@ -23,6 +23,8 @@
   },
   
   "host_permissions": [
+    "https://www.googleapis.com/*",
+    "https://accounts.google.com/*",
     "YOUR_API_BASE_URL_HERE/*"
   ],
   

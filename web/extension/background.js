@@ -85,76 +85,109 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 /**
- * 구글 로그인 처리 (디버깅 강화)
+ * 구글 로그인 처리 (ID Token 방식)
  */
 async function handleLogin() {
   try {
     console.log('=== 로그인 시작 ===');
     console.log('API_BASE_URL:', API_BASE_URL);
     
-    // 1. Chrome Identity API로 구글 토큰 획득
-    console.log('1. Chrome Identity API 호출 중...');
-    const googleToken = await new Promise((resolve, reject) => {
-      chrome.identity.getAuthToken({ interactive: true }, (token) => {
-        if (chrome.runtime.lastError) {
-          console.error('Chrome Identity 오류:', chrome.runtime.lastError);
-          reject(chrome.runtime.lastError);
-        } else {
-          console.log('✅ 구글 토큰 획득 성공');
-          console.log('토큰 길이:', token?.length);
-          resolve(token);
-        }
-      });
-    });
+    // manifest.json에서 client_id 가져오기
+    const manifest = chrome.runtime.getManifest();
+    const clientId = manifest.oauth2.client_id;
     
-    // 2. 구글 사용자 정보 가져오기
-    console.log('2. 구글 사용자 정보 요청 중...');
-    const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-      headers: {
-        'Authorization': `Bearer ${googleToken}`
-      }
-    });
-    
-    if (!userInfoResponse.ok) {
-      console.error('❌ 사용자 정보 가져오기 실패:', userInfoResponse.status);
-      throw new Error(`사용자 정보 가져오기 실패: ${userInfoResponse.status}`);
+    if (!clientId) {
+      throw new Error('manifest.json에 oauth2.client_id가 설정되지 않았습니다.');
     }
     
-    const userInfo = await userInfoResponse.json();
-    console.log('✅ 사용자 정보 획득:', {
-      id: userInfo.id,
-      email: userInfo.email,
-      name: userInfo.name
+    console.log('Client ID:', clientId);
+    
+    // 1. OAuth2 인증 플로우로 ID Token 가져오기
+    console.log('1. Google OAuth2 인증 플로우 시작...');
+    const redirectUrl = chrome.identity.getRedirectURL();
+    console.log('Redirect URL:', redirectUrl);
+    
+    // nonce 생성 (보안을 위해)
+    const nonce = Math.random().toString(36).substring(2, 15);
+    
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+      `client_id=${encodeURIComponent(clientId)}&` +
+      `response_type=id_token&` +
+      `redirect_uri=${encodeURIComponent(redirectUrl)}&` +
+      `scope=${encodeURIComponent('openid email profile')}&` +
+      `nonce=${nonce}`;
+    
+    console.log('Auth URL 생성 완료');
+    
+    const responseUrl = await new Promise((resolve, reject) => {
+      chrome.identity.launchWebAuthFlow(
+        {
+          url: authUrl,
+          interactive: true
+        },
+        (callbackUrl) => {
+          if (chrome.runtime.lastError) {
+            console.error('launchWebAuthFlow 오류:', chrome.runtime.lastError);
+            reject(chrome.runtime.lastError);
+          } else {
+            console.log('✅ OAuth2 플로우 완료');
+            console.log('Callback URL:', callbackUrl);
+            resolve(callbackUrl);
+          }
+        }
+      );
     });
     
-    // 3. 백엔드에 구글 토큰 전송하여 JWT 토큰 받기
-    console.log('3. 백엔드 인증 요청 중...');
-    const authUrl = `${API_BASE_URL}oauth/token`;
-    console.log('요청 URL:', authUrl);
-    console.log('요청 Body:', { idToken: '(토큰 길이: ' + googleToken.length + ')' });
+    // 2. URL에서 ID Token 추출
+    console.log('2. ID Token 추출 중...');
+    const url = new URL(responseUrl);
+    const hash = url.hash.substring(1); // # 제거
+    const params = new URLSearchParams(hash);
+    const idToken = params.get('id_token');
     
-    const authResponse = await fetch(authUrl, {
+    if (!idToken) {
+      console.error('응답 URL:', responseUrl);
+      console.error('Hash:', hash);
+      console.error('Params:', Object.fromEntries(params));
+      throw new Error('ID Token을 가져올 수 없습니다');
+    }
+    
+    console.log('✅ ID Token 획득 성공');
+    console.log('ID Token 길이:', idToken.length);
+    console.log('ID Token 시작:', idToken.substring(0, 50) + '...');
+    
+    // 3. ID Token에서 사용자 정보 디코딩 (JWT 디코딩)
+    console.log('3. 사용자 정보 디코딩 중...');
+    const payload = JSON.parse(atob(idToken.split('.')[1]));
+    console.log('✅ 사용자 정보:', {
+      email: payload.email,
+      name: payload.name,
+      picture: payload.picture
+    });
+    
+    // 4. 백엔드에 ID Token 전송
+    console.log('4. 백엔드 인증 요청 중...');
+    const authUrl2 = `${API_BASE_URL}oauth/token`;
+    console.log('요청 URL:', authUrl2);
+    
+    const authResponse = await fetch(authUrl2, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-Client-Type': 'WEB'
       },
-      body: JSON.stringify({ idToken: googleToken })
+      body: JSON.stringify({ idToken: idToken })
     });
     
     console.log('백엔드 응답 상태:', authResponse.status);
-    console.log('백엔드 응답 헤더:', Object.fromEntries(authResponse.headers.entries()));
     
-    // 응답 본문 읽기 (에러 디버깅용)
+    // 응답 본문 읽기
     const responseText = await authResponse.text();
     console.log('백엔드 응답 본문:', responseText);
     
     if (!authResponse.ok) {
       console.error('❌ 백엔드 인증 실패');
-      console.error('상태 코드:', authResponse.status);
-      console.error('응답 내용:', responseText);
       
-      // 상세 오류 메시지
       let errorMessage = '백엔드 인증 실패';
       try {
         const errorData = JSON.parse(responseText);
@@ -173,42 +206,52 @@ async function handleLogin() {
     
     // 토큰 추출
     const accessToken = authData.data?.accessToken || authData.accessToken;
-    const refreshToken = authData.data?.refreshToken || authData.refreshToken;
+    // WEB 클라이언트는 refresh token을 쿠키로 받으므로 응답에 없음
     
-    if (!accessToken || !refreshToken) {
-      console.error('❌ 토큰 누락:', {
-        hasAccessToken: !!accessToken,
-        hasRefreshToken: !!refreshToken,
-        authData: authData
-      });
-      throw new Error('서버 응답에 토큰이 없습니다');
+    if (!accessToken) {
+      console.error('❌ Access Token 누락:', authData);
+      throw new Error('서버 응답에 Access Token이 없습니다');
     }
     
-    console.log('✅ 토큰 추출 성공');
+    console.log('✅ Access Token 추출 성공');
     
-    // 4. JWT 토큰 및 사용자 정보 저장
-    console.log('4. 토큰 저장 중...');
+    // 5. 백엔드 Access Token 검증 및 사용자 정보 가져오기
+    console.log('5. Access Token 검증 중...');
+    const verifyResponse = await fetch(`${API_BASE_URL}oauth/verify`, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`
+      }
+    });
+    
+    if (!verifyResponse.ok) {
+      throw new Error('Access Token 검증 실패');
+    }
+    
+    const verifyData = await verifyResponse.json();
+    console.log('✅ Token 검증 성공:', verifyData);
+    
+    // 6. Access Token 및 사용자 정보 저장
+    console.log('6. 토큰 저장 중...');
     await chrome.storage.local.set({
       accessToken: accessToken,
-      refreshToken: refreshToken,
       user: {
-        id: userInfo.id,
-        email: userInfo.email,
-        display_name: userInfo.name,
-        profile_image_url: userInfo.picture
+        id: verifyData.data.userId,
+        email: verifyData.data.email || payload.email,
+        display_name: payload.name,
+        profile_image_url: payload.picture
       },
       loginTime: Date.now()
     });
     
     console.log('✅ 로그인 완료!');
-    showNotification('로그인 성공', `${userInfo.name}님 환영합니다!`);
+    showNotification('로그인 성공', `${payload.name}님 환영합니다!`);
     
     return { 
       success: true, 
       user: {
-        email: userInfo.email,
-        name: userInfo.name,
-        picture: userInfo.picture
+        email: payload.email,
+        name: payload.name,
+        picture: payload.picture
       }
     };
     
@@ -228,16 +271,11 @@ async function handleLogin() {
  */
 async function handleLogout() {
   try {
-    // Chrome Identity 캐시 제거
-    const result = await chrome.storage.local.get(['accessToken']);
-    if (result.accessToken) {
-      await new Promise((resolve) => {
-        chrome.identity.removeCachedAuthToken({ token: result.accessToken }, resolve);
-      });
-    }
-    
     // 저장된 모든 인증 정보 삭제
-    await chrome.storage.local.remove(['accessToken', 'refreshToken', 'user', 'loginTime']);
+    await chrome.storage.local.remove(['accessToken', 'user', 'loginTime']);
+    
+    // Chrome Identity 캐시 제거
+    await chrome.identity.clearAllCachedAuthTokens();
     
     console.log('로그아웃 완료');
     showNotification('로그아웃', '로그아웃되었습니다.');
@@ -251,14 +289,55 @@ async function handleLogout() {
 }
 
 /**
- * 인증 상태 확인
+ * 인증 상태 확인 (토큰 검증 포함)
  */
 async function checkAuthStatus() {
-  const result = await chrome.storage.local.get(['accessToken', 'user']);
-  return {
-    isAuthenticated: !!result.accessToken,
-    user: result.user || null
-  };
+  try {
+    const result = await chrome.storage.local.get(['accessToken', 'user']);
+    
+    if (!result.accessToken) {
+      return {
+        isAuthenticated: false,
+        user: null
+      };
+    }
+    
+    // Access Token 검증
+    try {
+      const verifyResponse = await fetch(`${API_BASE_URL}oauth/verify`, {
+        headers: {
+          'Authorization': `Bearer ${result.accessToken}`
+        }
+      });
+      
+      if (verifyResponse.ok) {
+        return {
+          isAuthenticated: true,
+          user: result.user
+        };
+      } else {
+        // 토큰이 만료되었으면 저장소에서 삭제
+        await chrome.storage.local.remove(['accessToken', 'user']);
+        return {
+          isAuthenticated: false,
+          user: null
+        };
+      }
+    } catch (error) {
+      console.error('토큰 검증 실패:', error);
+      return {
+        isAuthenticated: false,
+        user: null
+      };
+    }
+    
+  } catch (error) {
+    console.error('인증 상태 확인 실패:', error);
+    return {
+      isAuthenticated: false,
+      user: null
+    };
+  }
 }
 
 // Content script 주입 후 영역 선택 시작
