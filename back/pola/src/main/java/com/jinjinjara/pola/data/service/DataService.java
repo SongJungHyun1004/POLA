@@ -1,6 +1,5 @@
 package com.jinjinjara.pola.data.service;
 
-import com.jinjinjara.pola.auth.repository.UserRepository;
 import com.jinjinjara.pola.common.CustomException;
 import com.jinjinjara.pola.common.ErrorCode;
 import com.jinjinjara.pola.common.dto.PageRequestDto;
@@ -8,32 +7,40 @@ import com.jinjinjara.pola.data.dto.request.FileUpdateRequest;
 import com.jinjinjara.pola.data.dto.request.FileUploadCompleteRequest;
 import com.jinjinjara.pola.data.dto.response.DataResponse;
 import com.jinjinjara.pola.data.dto.response.FileDetailResponse;
-import com.jinjinjara.pola.data.dto.response.InsertDataResponse;
 import com.jinjinjara.pola.data.dto.response.TagResponse;
 import com.jinjinjara.pola.data.entity.Category;
 import com.jinjinjara.pola.data.entity.File;
 import com.jinjinjara.pola.data.entity.FileTag;
 import com.jinjinjara.pola.data.entity.Tag;
 import com.jinjinjara.pola.data.repository.*;
+import com.jinjinjara.pola.data.repository.CategoryRepository;
+import com.jinjinjara.pola.data.repository.FileRepository;
+import com.jinjinjara.pola.data.repository.TagRepository;
 import com.jinjinjara.pola.s3.service.S3Service;
+import com.jinjinjara.pola.search.model.FileSearch;
+import com.jinjinjara.pola.search.service.FileSearchService;
 import com.jinjinjara.pola.user.entity.Users;
 import com.jinjinjara.pola.vision.dto.response.AnalyzeResponse;
 import com.jinjinjara.pola.vision.service.AnalyzeFacadeService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.net.URL;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DataService {
@@ -46,6 +53,7 @@ public class DataService {
     private final FileTagService fileTagService;
     private final CategoryTagRepository categoryTagRepository;
     private final FileTagRepository fileTagRepository;
+    private final FileSearchService fileSearchService;
 
     public List<DataResponse> getRemindFiles(Long userId) {
         LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
@@ -218,12 +226,22 @@ public class DataService {
                 .build();
 
         URL downUrl = s3Service.generateDownloadUrl(file.getSrc());
+
+        // 1. AI 분석 (태그 + 설명 + 카테고리)
         AnalyzeResponse analyzeResponse = analyzeFacadeService.analyze(user.getId(), downUrl.toString());
         file.setCategoryId(analyzeResponse.getCategoryId());
         file.setContext(analyzeResponse.getDescription());
 
+        // 2. DB 저장
         File saveFile = fileRepository.save(file);
         fileTagService.addTagsToFile(saveFile.getId(),analyzeResponse.getTags());
+
+        // 3. OpenSearch에 색인 (비동기)
+        String categoryName = categoryRepository.findById(saveFile.getCategoryId())
+                .map(Category::getCategoryName)
+                .orElse("미분류");
+        indexToOpenSearchAsync(saveFile, categoryName);
+
         return saveFile;
     }
 
@@ -242,7 +260,15 @@ public class DataService {
         // category 엔티티 대신 categoryId(Long)만 설정
         file.setCategoryId(categoryId);
 
-        return fileRepository.save(file);
+        File savedFile = fileRepository.save(file);
+
+        // ✅ OpenSearch 업데이트
+        String categoryName = categoryRepository.findById(categoryId)
+                .map(Category::getCategoryName)
+                .orElse("미분류");
+        indexToOpenSearchAsync(savedFile, categoryName);
+
+        return savedFile;
     }
 
     /* =======================================================
@@ -353,6 +379,12 @@ public class DataService {
 
         File saved = fileRepository.save(file);
 
+        // ✅ OpenSearch 업데이트
+        String categoryName = categoryRepository.findById(saved.getCategoryId())
+                .map(Category::getCategoryName)
+                .orElse("미분류");
+        indexToOpenSearchAsync(saved, categoryName);
+
         return FileDetailResponse.builder()
                 .id(saved.getId())
                 .userId(saved.getUserId())
@@ -373,6 +405,39 @@ public class DataService {
                 .createdAt(saved.getCreatedAt())
                 .lastViewedAt(saved.getLastViewedAt())
                 .build();
+    }
+
+    /**
+     * OpenSearch 색인 (비동기 처리)
+     * 파일 저장/수정 시 자동으로 검색 인덱스 업데이트
+     */
+    @Async
+    public void indexToOpenSearchAsync(File file, String categoryName) {
+        try {
+            // 현재 저장된 태그 조회
+            List<String> tagNames = tagRepository.findAllByFileId(file.getId())
+                    .stream()
+                    .map(Tag::getTagName)
+                    .collect(Collectors.toList());
+
+            FileSearch fileSearch = FileSearch.builder()
+                    .fileId(file.getId())
+                    .userId(file.getUserId())
+                    .categoryName(categoryName)
+                    .tags(String.join(", ", tagNames))
+                    .context(file.getContext() != null ? file.getContext() : "")
+                    .ocrText(file.getOcrText() != null ? file.getOcrText() : "")
+                    .imageUrl(file.getSrc())
+                    .createdAt(file.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
+                    .build();
+
+            fileSearchService.save(fileSearch);
+            log.info("✅ OpenSearch 색인 완료: fileId={}", file.getId());
+
+        } catch (Exception e) {
+            log.error("❌ OpenSearch 색인 실패: fileId={}", file.getId(), e);
+            // 실패해도 파일은 PostgreSQL에 저장되어 있음
+        }
     }
 
 }

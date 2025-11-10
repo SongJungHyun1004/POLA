@@ -4,19 +4,27 @@ import com.jinjinjara.pola.common.CustomException;
 import com.jinjinjara.pola.common.ErrorCode;
 import com.jinjinjara.pola.data.dto.response.FileTagResponse;
 import com.jinjinjara.pola.data.dto.response.TagResponse;
+import com.jinjinjara.pola.data.entity.Category;
 import com.jinjinjara.pola.data.entity.File;
 import com.jinjinjara.pola.data.entity.Tag;
 import com.jinjinjara.pola.data.entity.FileTag;
+import com.jinjinjara.pola.data.repository.CategoryRepository;
 import com.jinjinjara.pola.data.repository.FileRepository;
 import com.jinjinjara.pola.data.repository.TagRepository;
 import com.jinjinjara.pola.data.repository.FileTagRepository;
+import com.jinjinjara.pola.search.model.FileSearch;
+import com.jinjinjara.pola.search.service.FileSearchService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -25,6 +33,8 @@ public class FileTagService {
     private final FileRepository fileRepository;
     private final TagRepository tagRepository;
     private final FileTagRepository fileTagRepository;
+    private final CategoryRepository categoryRepository; // ← 추가
+    private final FileSearchService fileSearchService;   // ← 추가
 
     /**
      * 파일에 태그 추가
@@ -54,7 +64,7 @@ public class FileTagService {
     }
 
     /**
-     * 파일에서 태그 제거
+     * 파일에서 태그 제거 + OpenSearch 업데이트
      */
     public void removeTagFromFile(Long fileId, Long tagId) {
         File file = fileRepository.findById(fileId)
@@ -64,8 +74,51 @@ public class FileTagService {
 
         try {
             fileTagRepository.deleteByFileAndTag(file, tag);
+
+            // ✅ OpenSearch 업데이트
+            updateOpenSearchTags(fileId);
         } catch (Exception e) {
             throw new CustomException(ErrorCode.DATA_DELETE_FAIL, e.getMessage());
+        }
+    }
+
+    /**
+     * OpenSearch 문서의 tags 필드 업데이트
+     * (태그 추가/제거 시 자동 호출)
+     */
+    private void updateOpenSearchTags(Long fileId) {
+        try {
+            File file = fileRepository.findById(fileId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
+
+            // 현재 모든 태그 조회 (수동 + AI 추가 태그 모두)
+            List<String> tagNames = tagRepository.findAllByFileId(fileId)
+                    .stream()
+                    .map(Tag::getTagName)
+                    .collect(Collectors.toList());
+
+            String categoryName = categoryRepository.findById(file.getCategoryId())
+                    .map(Category::getCategoryName)
+                    .orElse("미분류");
+
+            // OpenSearch 문서 업데이트 (save()는 upsert 역할)
+            FileSearch fileSearch = FileSearch.builder()
+                    .fileId(file.getId())
+                    .userId(file.getUserId())
+                    .categoryName(categoryName)
+                    .tags(String.join(", ", tagNames))
+                    .context(file.getContext() != null ? file.getContext() : "")
+                    .ocrText(file.getOcrText() != null ? file.getOcrText() : "")
+                    .imageUrl(file.getSrc())
+                    .createdAt(file.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
+                    .build();
+
+            fileSearchService.save(fileSearch);
+            log.info("✅ OpenSearch 태그 업데이트 완료: fileId={}, tags={}", fileId, tagNames);
+
+        } catch (Exception e) {
+            log.error("❌ OpenSearch 태그 업데이트 실패: fileId={}", fileId, e);
+            // OpenSearch 실패는 무시 (검색만 일시적으로 불가)
         }
     }
 
@@ -120,6 +173,9 @@ public class FileTagService {
             FileTag saved = fileTagRepository.save(fileTag);
             results.add(FileTagResponse.fromEntity(saved));
         }
+
+        // ✅ OpenSearch 업데이트
+        updateOpenSearchTags(fileId);
 
         return results;
     }
