@@ -1,8 +1,11 @@
 package com.jinjinjara.pola.presentation.ui.screen.remind
 
+import android.util.Log
+import android.widget.Toast
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -24,10 +27,14 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import com.jinjinjara.pola.R
 import com.jinjinjara.pola.presentation.ui.component.PolaCard
 import kotlinx.coroutines.async
@@ -37,25 +44,127 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RemindScreen(modifier: Modifier = Modifier) {
-    // 이미지 리스트
-    val imageList = listOf(
-        "temp_image_1" to R.drawable.temp_image_1,
-        "temp_image_2" to R.drawable.temp_image_2,
-        "temp_image_3" to R.drawable.temp_image_3,
-        "temp_image_4" to R.drawable.temp_image_4,
-        "temp_image_1" to R.drawable.temp_image_1,
-        "temp_image_2" to R.drawable.temp_image_2,
-        "temp_image_3" to R.drawable.temp_image_3,
-        "temp_image_4" to R.drawable.temp_image_4
-    )
+fun RemindScreen(
+    modifier: Modifier = Modifier,
+    viewModel: RemindViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+
+    // 에러 토스트 처리
+    LaunchedEffect(Unit) {
+        viewModel.errorEvent.collect { errorMessage ->
+            Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // UI 상태에 따른 분기
+    when (val state = uiState) {
+        is RemindUiState.Loading -> {
+            Log.d(TAG, "UI State: Loading")
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+            return
+        }
+        is RemindUiState.Error -> {
+            Log.e(TAG, "UI State: Error - ${state.message}")
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(text = state.message, color = MaterialTheme.colorScheme.error)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(onClick = { viewModel.loadReminders() }) {
+                        Text("다시 시도")
+                    }
+                }
+            }
+            return
+        }
+        is RemindUiState.Success -> {
+            val imageList = state.data
+            Log.d(TAG, "UI State: Success - 이미지 개수: ${imageList.size}")
+            imageList.forEachIndexed { index, remindData ->
+                Log.d(TAG, "  [$index] id: ${remindData.id}, imageUrl: ${remindData.imageUrl}")
+            }
+
+            if (imageList.isEmpty()) {
+                Log.w(TAG, "이미지 리스트가 비어있음")
+                Scaffold(
+                    modifier = modifier.fillMaxSize(),
+                    contentWindowInsets = WindowInsets(0.dp),
+                    topBar = {
+                        TopAppBar(
+                            title = {
+                                Box(Modifier.fillMaxHeight(), contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = "Remind",
+                                        color = MaterialTheme.colorScheme.tertiary,
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.titleLarge
+                                    )
+                                }
+                            },
+                            windowInsets = WindowInsets(0.dp)
+                        )
+                    }
+                ) { padding ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(padding),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.empty),
+                            contentDescription = "No content",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 32.dp),
+                            contentScale = ContentScale.Fit
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Text(
+                            text = "리마인드 할 컨텐츠가 없어요",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.tertiary
+                        )
+                    }
+                }
+                return
+            }
+
+            RemindScreenContent(
+                modifier = modifier,
+                imageList = imageList,
+                viewModel = viewModel
+            )
+        }
+    }
+}
+
+private const val TAG = "RemindScreen"
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RemindScreenContent(
+    modifier: Modifier = Modifier,
+    imageList: List<com.jinjinjara.pola.domain.model.RemindData>,
+    viewModel: RemindViewModel
+) {
+    Log.d(TAG, "RemindScreenContent 시작 - 이미지 개수: ${imageList.size}")
 
     // 상태 변수
     var frontIndex by remember { mutableStateOf(0) }
     var displayIndex by remember { mutableStateOf(0) }
     var isAnimating by remember { mutableStateOf(false) }
     var animationDirection by remember { mutableStateOf("") }
-    var favoriteStates by remember { mutableStateOf(imageList.map { false }) }
 
     val scope = rememberCoroutineScope()
 
@@ -280,14 +389,16 @@ fun RemindScreen(modifier: Modifier = Modifier) {
                         // 뒤쪽 카드들
                         if (frontIndex < imageList.lastIndex - 1 && back2Alpha.value > 0f)
                             RemindPolaCard(
-                                imageResId = imageList[back2Index].second,
+                                imageUrl = imageList[back2Index].imageUrl,
+                                tags = imageList[back2Index].tags,
                                 translationX = back2OffsetX.value,
                                 rotationZ = back2RotationZ.value,
                                 alpha = 1f
                             )
                         if (frontIndex < imageList.lastIndex)
                             RemindPolaCard(
-                                imageResId = imageList[backIndex].second,
+                                imageUrl = imageList[backIndex].imageUrl,
+                                tags = imageList[backIndex].tags,
                                 translationX = backOffsetX.value,
                                 rotationZ = backRotationZ.value,
                                 alpha = backAlpha.value
@@ -297,7 +408,7 @@ fun RemindScreen(modifier: Modifier = Modifier) {
                         if (frontIndex > 0) {
                             if (animationDirection == "right" && isAnimating)
                                 PrevThenFrontLayer(
-                                    images = imageList.map { it.second },
+                                    imageList = imageList,
                                     frontIndex = frontIndex,
                                     prevIndex = prevIndex,
                                     frontOffsetX = frontOffsetX.value,
@@ -309,7 +420,7 @@ fun RemindScreen(modifier: Modifier = Modifier) {
                                 )
                             else
                                 FrontThenPrevLayer(
-                                    images = imageList.map { it.second },
+                                    imageList = imageList,
                                     frontIndex = frontIndex,
                                     prevIndex = prevIndex,
                                     frontOffsetX = frontOffsetX.value,
@@ -321,7 +432,8 @@ fun RemindScreen(modifier: Modifier = Modifier) {
                                 )
                         } else {
                             RemindPolaCard(
-                                imageResId = imageList[frontIndex].second,
+                                imageUrl = imageList[frontIndex].imageUrl,
+                                tags = imageList[frontIndex].tags,
                                 translationX = frontOffsetX.value,
                                 rotationZ = frontRotationZ.value,
                                 alpha = frontAlpha.value
@@ -344,15 +456,9 @@ fun RemindScreen(modifier: Modifier = Modifier) {
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Spacer(Modifier.width(8.dp))
-                            imageList.forEachIndexed { index, pair ->
+                            imageList.forEachIndexed { index, remindData ->
                                 val isFocused = index == displayIndex
-                                Image(
-                                    painter = painterResource(id = pair.second),
-                                    contentDescription = pair.first,
-                                    contentScale = ContentScale.Crop,
-                                    colorFilter = if (!isFocused)
-                                        ColorFilter.tint(Color.Black.copy(alpha = 0.5f), BlendMode.Multiply)
-                                    else null,
+                                Box(
                                     modifier = Modifier
                                         .size(80.dp)
                                         .clip(RoundedCornerShape(8.dp))
@@ -375,7 +481,21 @@ fun RemindScreen(modifier: Modifier = Modifier) {
                                                 displayIndex = index
                                             }
                                         }
-                                )
+                                ) {
+                                    AsyncImage(
+                                        model = remindData.imageUrl,
+                                        contentDescription = "Remind ${remindData.id}",
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                    if (!isFocused) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .background(Color.Black.copy(alpha = 0.5f))
+                                        )
+                                    }
+                                }
                             }
                             Spacer(Modifier.width(8.dp))
                         }
@@ -400,7 +520,10 @@ fun RemindScreen(modifier: Modifier = Modifier) {
                         )
                         Image(
                             painter = painterResource(
-                                id = if (favoriteStates[frontIndex]) R.drawable.star_primary_solid else R.drawable.star_primary
+                                id = if (imageList[displayIndex].isFavorite)
+                                    R.drawable.star_primary_solid
+                                else
+                                    R.drawable.star_primary
                             ),
                             contentDescription = "즐겨찾기",
                             modifier = Modifier
@@ -410,9 +533,7 @@ fun RemindScreen(modifier: Modifier = Modifier) {
                                     indication = null,
                                     interactionSource = remember { MutableInteractionSource() }
                                 ) {
-                                    favoriteStates = favoriteStates.toMutableList().also {
-                                        it[frontIndex] = !it[frontIndex]
-                                    }
+                                    viewModel.toggleFavorite(displayIndex)
                                 },
                         )
                         Image(
@@ -436,13 +557,20 @@ fun RemindScreen(modifier: Modifier = Modifier) {
 // PolaCard Wrapper
 @Composable
 private fun RemindPolaCard(
-    imageResId: Int,
+    imageUrl: String,
+    tags: List<String>,
     translationX: Float,
     rotationZ: Float,
     alpha: Float
 ) {
+    val context = LocalContext.current
+
     PolaCard(
-        imageResId = imageResId,
+        imageUrl = imageUrl,
+        textList = tags.map { it.removePrefix("#") },
+        textSize = 24.sp,
+        textSpacing = 8.dp,
+        clipTags = true,
         modifier = Modifier
             .height(410.dp)
             .aspectRatio(0.7816f)
@@ -450,6 +578,12 @@ private fun RemindPolaCard(
                 this.translationX = translationX
                 this.rotationZ = rotationZ
                 this.alpha = alpha
+            }
+            .clickable( // 상세화면 이동
+                indication = ripple(bounded = false, radius = 48.dp),
+                interactionSource = remember { MutableInteractionSource() }
+            ) {
+                Toast.makeText(context, "상세화면 이동", Toast.LENGTH_SHORT).show()
             },
         ratio = 0.7523f,
         imageRatio = 0.8352f,
@@ -460,7 +594,7 @@ private fun RemindPolaCard(
 // 카드 순서 조합
 @Composable
 private fun FrontThenPrevLayer(
-    images: List<Int>,
+    imageList: List<com.jinjinjara.pola.domain.model.RemindData>,
     frontIndex: Int,
     prevIndex: Int,
     frontOffsetX: Float,
@@ -471,13 +605,15 @@ private fun FrontThenPrevLayer(
     prevAlpha: Float
 ) {
     RemindPolaCard(
-        imageResId = images[prevIndex],
+        imageUrl = imageList[prevIndex].imageUrl,
+        tags = imageList[prevIndex].tags,
         translationX = prevOffsetX,
         rotationZ = prevRotationZ,
         alpha = prevAlpha
     )
     RemindPolaCard(
-        imageResId = images[frontIndex],
+        imageUrl = imageList[frontIndex].imageUrl,
+        tags = imageList[frontIndex].tags,
         translationX = frontOffsetX,
         rotationZ = frontRotationZ,
         alpha = frontAlpha
@@ -486,7 +622,7 @@ private fun FrontThenPrevLayer(
 
 @Composable
 private fun PrevThenFrontLayer(
-    images: List<Int>,
+    imageList: List<com.jinjinjara.pola.domain.model.RemindData>,
     frontIndex: Int,
     prevIndex: Int,
     frontOffsetX: Float,
@@ -497,15 +633,18 @@ private fun PrevThenFrontLayer(
     prevAlpha: Float
 ) {
     RemindPolaCard(
-        imageResId = images[frontIndex],
+        imageUrl = imageList[frontIndex].imageUrl,
+        tags = imageList[frontIndex].tags,
         translationX = frontOffsetX,
         rotationZ = frontRotationZ,
         alpha = frontAlpha
     )
     RemindPolaCard(
-        imageResId = images[prevIndex],
+        imageUrl = imageList[prevIndex].imageUrl,
+        tags = imageList[prevIndex].tags,
         translationX = prevOffsetX,
         rotationZ = prevRotationZ,
         alpha = prevAlpha
     )
 }
+

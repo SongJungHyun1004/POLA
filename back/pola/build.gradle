@@ -17,7 +17,7 @@ java {
 repositories {
     mavenCentral()
     // 필요 시 추가 (AWS SDK snapshot이나 Opensearch 내부 lib용)
-    maven { url "https://opensearch-project.jfrog.io/artifactory/maven/" }
+    maven { url = "https://opensearch-project.jfrog.io/artifactory/maven/" }
 }
 
 dependencies {

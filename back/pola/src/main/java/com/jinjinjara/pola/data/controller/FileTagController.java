@@ -4,6 +4,7 @@ import com.jinjinjara.pola.common.ApiResponse;
 import com.jinjinjara.pola.data.dto.request.AddTagNamesRequest;
 import com.jinjinjara.pola.data.dto.response.FileTagResponse;
 import com.jinjinjara.pola.data.dto.response.TagResponse;
+import com.jinjinjara.pola.data.dto.response.TagLatestFileResponse;
 import com.jinjinjara.pola.data.service.FileTagService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -37,7 +38,6 @@ public class FileTagController {
         return ResponseEntity.ok(ApiResponse.ok(responses, "파일에 태그가 추가되었습니다."));
     }
 
-
     @Operation(summary = "파일에서 태그 제거", description = "특정 파일에서 지정된 태그를 제거합니다.")
     @DeleteMapping("/files/{fileId}/tags/{tagId}")
     public ResponseEntity<ApiResponse<Void>> removeTagFromFile(
@@ -55,5 +55,14 @@ public class FileTagController {
     ) {
         List<TagResponse> tags = fileTagService.getTagsByFile(fileId);
         return ResponseEntity.ok(ApiResponse.ok(tags, "파일에 연결된 태그 목록 조회 완료"));
+    }
+
+    @Operation(summary = "카테고리 내 태그별 최신 파일 조회", description = "특정 카테고리 내의 모든 태그를 파일 개수순으로 정렬하고, 각 태그별로 가장 최근에 업로드된 파일을 함께 반환합니다.")
+    @GetMapping("/categories/{categoryId}/tags/latest-files")
+    public ResponseEntity<ApiResponse<List<TagLatestFileResponse>>> getTagsWithLatestFiles(
+            @Parameter(description = "카테고리 ID", example = "1") @PathVariable Long categoryId
+    ) {
+        List<TagLatestFileResponse> result = fileTagService.getTagsWithLatestFiles(categoryId);
+        return ResponseEntity.ok(ApiResponse.ok(result, "카테고리 내 태그별 최신 파일 목록 조회 완료"));
     }
 }

@@ -4,42 +4,104 @@ import { useParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import PolaroidCard from "@/app/home/components/PolaroidCard";
 import PolaroidDetail from "./components/PolaroidDetail";
-import { Plus, Pencil } from "lucide-react";
+import { Plus } from "lucide-react";
+
+import {
+  getCategoryInfo,
+  getCategoryTags,
+  getCategoryFiles,
+  getFileDetail,
+} from "@/services/categoryService";
 
 export default function CategoryPage() {
-  const { id } = useParams();
-  const [selected, setSelected] = useState<number | null>(null);
+  const params = useParams();
+
+  if (typeof params.id !== "string") {
+    return (
+      <div className="p-10 text-center text-xl text-red-600">
+        잘못된 접근입니다. (id 없음)
+      </div>
+    );
+  }
+
+  const id = params.id;
+
+  const [categoryName, setCategoryName] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [files, setFiles] = useState<any[]>([]);
+  const [selectedFile, setSelectedFile] = useState<any | null>(null);
   const [rotations, setRotations] = useState<string[]>([]);
 
-  const images = Array.from({ length: 30 }, (_, i) => ({
-    id: i + 1,
-    src: "/images/dummy_image_1.png",
-    tags: ["#태그1", "#태그2", "#태그3", "#태그4", "#태그5", "#태그6"],
-    contexts: "내용을 입력하세요...",
-    favorite: i % 4 === 0,
-    date: "2025.10.30",
-  }));
-
-  const selectedImage = images.find((img) => img.id === selected);
-
   useEffect(() => {
-    const newRotations = Array.from({ length: images.length }, () => {
-      const deg = Math.random() * 8 - 4;
-      return `rotate(${deg}deg)`;
+    async function load() {
+      try {
+        const [info, tagList] = await Promise.all([
+          getCategoryInfo(id),
+          getCategoryTags(id),
+        ]);
+
+        setCategoryName(info.categoryName ?? "");
+        setTags(tagList.map((t: any) => t.tagName));
+
+        const fileList = await getCategoryFiles(id, 0);
+        setFiles(fileList);
+
+        setRotations(
+          Array.from({ length: fileList.length }, () => {
+            const deg = Math.random() * 8 - 4;
+            return `rotate(${deg}deg)`;
+          })
+        );
+      } catch (e) {
+        console.error(e);
+        alert("카테고리 데이터를 불러오는 중 오류가 발생했습니다.");
+      }
+    }
+
+    load();
+  }, [id]);
+
+  // 파일 상세 조회
+  const handleSelectFile = async (file: any) => {
+    setSelectedFile({
+      id: file.id,
+      src: file.src ?? "/images/dummy_image_1.png",
+      favorite: file.favorite,
+      tags: [],
+      context: "",
+      created_at: "",
     });
-    setRotations(newRotations);
-  }, [images.length]);
+
+    try {
+      const detail = await getFileDetail(file.id);
+
+      const normalizedTags = (detail.tags ?? []).map(
+        (t: any) => `#${t.tagName}`
+      );
+
+      setSelectedFile({
+        id: detail.id,
+        src: detail.src ?? file.src ?? "/images/dummy_image_1.png",
+        tags: normalizedTags,
+        context: detail.context ?? "",
+        created_at: detail.created_at,
+        category_id: detail.category_id,
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   return (
     <div className="flex h-full bg-[#FFFEF8] text-[#4C3D25] px-8 py-6 gap-8">
-      {/* 좌측 메인 */}
+      {/* 좌측 */}
       <div className="flex flex-col flex-1 overflow-hidden">
-        {/* 상단 타이틀 영역 */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-6xl font-bold mb-2">Category {id}</h1>
+            <h1 className="text-6xl font-bold mb-2">{categoryName}</h1>
+
             <p className="text-2xl text-[#7A6A48]">
-              #태그1 #태그2 #태그3 #태그4 #태그5 #태그6
+              {tags.length > 0 ? tags.map((t) => `#${t}`).join(" ") : ""}
             </p>
           </div>
 
@@ -47,32 +109,30 @@ export default function CategoryPage() {
             <button className="p-2 rounded-full hover:bg-[#EDE6D8]">
               <Plus className="w-5 h-5" />
             </button>
-            <button className="p-2 rounded-full hover:bg-[#EDE6D8]">
-              <Pencil className="w-5 h-5" />
-            </button>
           </div>
         </div>
-        {/* 폴라로이드 리스트 */}
+
+        {/* 파일 리스트 */}
         <div className="flex-1 overflow-y-auto pr-2">
           <div className="grid grid-cols-6 gap-6 overflow-visible p-6">
-            {images.map((img, i) => (
+            {files.map((file, i) => (
               <div
-                key={img.id}
+                key={file.id}
                 style={{
-                  transform: rotations[i],
+                  transform: rotations[i] ?? "rotate(0deg)",
                   transition: "transform 0.2s ease",
                   transformOrigin: "center bottom",
                 }}
-                className="w-fit overflow-visible"
               >
                 <button
-                  onClick={() => setSelected(img.id)}
+                  onClick={() => handleSelectFile(file)}
                   className={`relative hover:scale-[1.08] transition-transform ${
-                    selected === img.id ? "opacity-90" : "opacity-100"
+                    selectedFile?.id === file.id ? "opacity-90" : "opacity-100"
                   }`}
                 >
-                  <PolaroidCard src={img.src} />
-                  {img.favorite && (
+                  <PolaroidCard src={file.src || "/images/dummy_image_1.png"} />
+
+                  {file.favorite && (
                     <span className="absolute top-2 right-2 text-yellow-500 text-lg">
                       ★
                     </span>
@@ -84,14 +144,19 @@ export default function CategoryPage() {
         </div>
       </div>
 
-      {/* 우측 상세 */}
-      <div className="w-2/7 flex-shrink-0 border-l border-[#E3DCC8] pl-6 flex flex-col items-center justify-center">
+      {/* 상세 영역 */}
+      <div className="w-2/7 border-l border-[#E3DCC8] pl-6 flex flex-col items-center justify-center">
         <PolaroidDetail
-          id={selectedImage?.id}
-          src={selectedImage?.src}
-          tags={selectedImage?.tags ?? []}
-          contexts={selectedImage?.contexts ?? ""}
-          date={selectedImage?.date}
+          id={selectedFile?.id}
+          src={selectedFile?.src}
+          tags={selectedFile?.tags ?? []}
+          contexts={selectedFile?.context ?? ""}
+          date={selectedFile?.created_at}
+          categoryId={selectedFile?.category_id}
+          onCategoryUpdated={async () => {
+            const updated = await getCategoryFiles(id, 0);
+            setFiles(updated);
+          }}
         />
       </div>
     </div>

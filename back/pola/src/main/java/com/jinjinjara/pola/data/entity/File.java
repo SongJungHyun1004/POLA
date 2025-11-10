@@ -66,7 +66,7 @@ public class File {
     private String originUrl; // 원본 URL (선택)
 
     @Column(name = "last_viewed_at")
-    private LocalDateTime lastViewedAt; // ✅ 마지막 열람 시각
+    private LocalDateTime lastViewedAt; //  마지막 열람 시각
 
     /* --- 콜백 영역 --- */
     @PrePersist

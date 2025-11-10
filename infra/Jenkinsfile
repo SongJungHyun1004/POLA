@@ -65,8 +65,19 @@ pipeline {
                             steps {
                                 echo "Deploying Backend to K3s cluster..."
                                 sh '''
-                                    kubectl set image deployment/backend backend=${IMAGE_NAME}:${IMAGE_TAG} -n ${DEPLOY_NAMESPACE}
-                                    kubectl rollout status deployment/backend -n ${DEPLOY_NAMESPACE}
+                                    # 매니페스트의 이미지 태그를 현재 빌드 번호로 업데이트
+                                    sed -i "s|image: pola-backend:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|g" infra/k8s/backend-deployment.yaml
+
+                                    # Deployment 적용 (생성 또는 업데이트)
+                                    kubectl apply -f infra/k8s/backend-deployment.yaml
+
+                                    # 롤링 업데이트 완료 대기 (무중단 배포)
+                                    kubectl rollout status deployment/backend -n ${DEPLOY_NAMESPACE} --timeout=5m
+
+                                    # 배포된 이미지 확인
+                                    echo "=== Deployed Backend Image ==="
+                                    kubectl get deployment backend -n ${DEPLOY_NAMESPACE} -o jsonpath='{.spec.template.spec.containers[0].image}'
+                                    echo ""
                                 '''
                             }
                         }
@@ -150,8 +161,19 @@ pipeline {
                             steps {
                                 echo "Deploying Frontend to K3s cluster..."
                                 sh '''
-                                    kubectl set image deployment/frontend frontend=${IMAGE_NAME}:${IMAGE_TAG} -n ${DEPLOY_NAMESPACE}
-                                    kubectl rollout status deployment/frontend -n ${DEPLOY_NAMESPACE}
+                                    # 매니페스트의 이미지 태그를 현재 빌드 번호로 업데이트
+                                    sed -i "s|image: pola-frontend:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|g" infra/k8s/frontend-deployment.yaml
+
+                                    # Deployment 적용 (생성 또는 업데이트)
+                                    kubectl apply -f infra/k8s/frontend-deployment.yaml
+
+                                    # 롤링 업데이트 완료 대기 (무중단 배포)
+                                    kubectl rollout status deployment/frontend -n ${DEPLOY_NAMESPACE} --timeout=5m
+
+                                    # 배포된 이미지 확인
+                                    echo "=== Deployed Frontend Image ==="
+                                    kubectl get deployment frontend -n ${DEPLOY_NAMESPACE} -o jsonpath='{.spec.template.spec.containers[0].image}'
+                                    echo ""
                                 '''
                             }
                         }

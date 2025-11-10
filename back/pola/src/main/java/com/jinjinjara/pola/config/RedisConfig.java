@@ -11,7 +11,7 @@ import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactor
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.repository.configuration.EnableRedisRepositories;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
-import org.springframework.beans.factory.annotation.Value; // <-- (1) import 추가
+import org.springframework.beans.factory.annotation.Value;
 
 @RequiredArgsConstructor
 @Configuration
