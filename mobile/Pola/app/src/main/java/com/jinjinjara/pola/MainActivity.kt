@@ -103,7 +103,7 @@ class MainActivity : ComponentActivity() {
                     Log.d("MainActivity", "State changed - isLoggedIn: $isLoggedIn, onboardingCompleted: $onboardingCompleted")
                     if (isLoggedIn != null) {
                         val token = authRepository.getAccessToken()
-                        Log.d("MainActivity", "Current token: ${token?.take(20) ?: "null"}...")
+                        Log.d("MainActivity", "Current token: ${token ?: "null"}")
                     }
                 }
 

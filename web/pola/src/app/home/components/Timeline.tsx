@@ -1,9 +1,13 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useRef } from "react";
+import Image from "next/image";
 
-export default function Timeline() {
+interface TimelineProps {
+  timeline: any[];
+}
+
+export default function Timeline({ timeline }: TimelineProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -14,38 +18,49 @@ export default function Timeline() {
 
     const scroll = () => {
       if (!scrollContainer) return;
-      scrollPosition += 0.2; // ← 스크롤 속도 (0.1~1 사이로 조정 가능)
 
-      // 무한 루프 효과
+      scrollPosition += 0.2;
+
       if (scrollPosition >= scrollContainer.scrollWidth / 2) {
         scrollPosition = 0;
       }
 
       scrollContainer.scrollLeft = scrollPosition;
+
       requestAnimationFrame(scroll);
     };
 
     requestAnimationFrame(scroll);
   }, []);
 
-  const filmCount = 10;
+  /** ✅ 안전한 normalizedTimeline 생성 */
+  const minCount = 10;
+
+  const normalizedTimeline =
+    timeline.length === 0
+      ? Array.from({ length: minCount }, () => ({
+          src: "/images/dummy_image_1.png",
+        }))
+      : timeline.length >= minCount
+      ? timeline
+      : Array.from(
+          { length: minCount },
+          (_, i) => timeline[i % timeline.length]
+        );
 
   return (
     <div className="w-4/5 flex justify-center pt-8 pb-2 overflow-hidden">
-      {/* 타임라인 전체 너비 줄이기 */}
       <div
         ref={scrollRef}
         className="flex overflow-hidden whitespace-nowrap max-w-full rounded-md"
       >
-        {/* 무한 루프를 위한 2세트 */}
-        {[...Array(2)].map((_, setIdx) => (
+        {[0, 1].map((setIdx) => (
           <div key={setIdx} className="flex">
-            {[...Array(filmCount)].map((_, i) => (
+            {normalizedTimeline.map((item, i) => (
               <div
                 key={i}
                 className="relative w-[129px] h-40 flex-shrink-0 overflow-hidden"
               >
-                {/* 필름 배경 */}
                 <Image
                   src="/images/flim.png"
                   alt="film"
@@ -53,10 +68,9 @@ export default function Timeline() {
                   className="object-cover select-none pointer-events-none"
                 />
 
-                {/* 중앙 이미지 */}
                 <div className="absolute top-1/2 left-1/2 w-[120px] h-[120px] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-md bg-[#FFFEF8]">
                   <Image
-                    src={"/images/dummy_image_1.png"}
+                    src={item.src || "/images/dummy_image_1.png"}
                     alt="pola"
                     fill
                     className="object-cover object-center select-none pointer-events-none"

@@ -53,6 +53,7 @@ import com.jinjinjara.pola.presentation.ui.component.ItemGrid3View
 data class ContentsItem(
     override val id: String,
     override val imageRes: Int = R.drawable.temp_image,
+    override val imageUrl: String = "",
     override val tags: List<String> = listOf("말차", "라떼", "스타벅스"),
     override val description: String = "",
     override val isFavorite: Boolean = false

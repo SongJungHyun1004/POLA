@@ -21,6 +21,7 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     List<Category> findAllByUserId(@Param("userId") Long userId);
     Optional<Category> findByIdAndUserId(Long id, Long userId);
 
-
+    @Query("SELECT c.id FROM Category c WHERE c.user.id = :userId AND c.categoryName = :categoryName")
+    Optional<Long> findIdByUserIdAndCategoryName(@Param("userId") Long userId, @Param("categoryName") String categoryName);
 
 }

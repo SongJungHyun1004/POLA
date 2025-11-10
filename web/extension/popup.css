@@ -1,0 +1,266 @@
+body {
+  width: 360px;
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #f8f9fa;
+}
+
+.container {
+  padding: 20px;
+}
+
+h2 {
+  margin: 0 0 20px 0;
+  font-size: 20px;
+  color: #202124;
+  font-weight: 600;
+}
+
+h3 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: #5f6368;
+  font-weight: 600;
+}
+
+.section {
+  margin-bottom: 20px;
+  padding: 16px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.section:last-of-type {
+  margin-bottom: 0;
+}
+
+/* ============================================
+   로그인 섹션
+============================================ */
+.login-prompt {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.login-prompt p {
+  margin: 0 0 20px 0;
+  color: #5f6368;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ============================================
+   버튼 스타일
+============================================ */
+.button {
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.button-primary {
+  background: white;
+  color: #202124;
+  border: 1px solid #dadce0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.button-primary:hover {
+  background: #f8f9fa;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.button-primary:active {
+  background: #e8eaed;
+}
+
+.button-text {
+  background: none;
+  border: none;
+  color: #1a73e8;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.button-text:hover {
+  background: #e8f0fe;
+}
+
+/* ============================================
+   사용자 정보
+============================================ */
+.user-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.user-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #202124;
+}
+
+.user-email {
+  font-size: 12px;
+  color: #5f6368;
+}
+
+/* ============================================
+   사용 방법
+============================================ */
+ul {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13px;
+  color: #5f6368;
+}
+
+li {
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+li:last-child {
+  margin-bottom: 0;
+}
+
+/* ============================================
+   상태 표시
+============================================ */
+.status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #e6f4ea;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #1e8e3e;
+  font-weight: 500;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  background: #34a853;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* ============================================
+   통계
+============================================ */
+.stats {
+  padding: 16px;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.stat-item {
+  text-align: center;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a73e8;
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #5f6368;
+}
+
+/* ============================================
+   로딩
+============================================ */
+#loading {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 16px;
+  border: 3px solid #e8eaed;
+  border-top-color: #1a73e8;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-text {
+  color: #5f6368;
+  font-size: 14px;
+  margin: 0;
+}
+
+/* ============================================
+   푸터
+============================================ */
+.footer {
+  text-align: center;
+  color: #80868b;
+  margin-top: 16px;
+  padding: 0 16px;
+}
+
+.footer small {
+  font-size: 11px;
+}

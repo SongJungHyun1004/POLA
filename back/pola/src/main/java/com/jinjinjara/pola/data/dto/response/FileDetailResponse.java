@@ -35,7 +35,7 @@ public class FileDetailResponse {
     private String ocrText;
 
     @JsonProperty("vector_id")
-    private String vectorId;
+    private Long vectorId;
 
     @JsonProperty("file_size")
     private Long fileSize;
