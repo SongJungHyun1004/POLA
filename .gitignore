@@ -625,3 +625,5 @@ secrets/
 # 💾 데이터베이스 덤프
 *.sql
 *.dump
+web/extension/config.js
+web/extension/manifest.json
