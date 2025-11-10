@@ -397,9 +397,9 @@ public class DataService {
                 .expiredAt(expiredAt.toString())
                 .build();
     }
-
+//링크수정
     private String buildShareUrl(String token) {
-        return String.format("https://pola.app/share/%s", token);
+        return String.format("%s", token);
     }
 
     public File findByShareToken(String token) {
