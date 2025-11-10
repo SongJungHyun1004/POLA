@@ -145,9 +145,6 @@ public class DataService {
 
 
 
-    /**
-     * 파일 목록 조회 (페이징 + 정렬 + 필터 + Presigned URL)
-     */
     @Transactional(readOnly = true)
     public Page<DataResponse> getFiles(Users user, PageRequestDto request) {
         if (user == null) {
@@ -156,7 +153,6 @@ public class DataService {
 
         Pageable pageable = request.toPageable();
 
-        //  필터 타입 분기
         Page<File> files = switch (request.getFilterType() == null ? "" : request.getFilterType()) {
             case "category" -> {
                 if (request.getFilterId() == null)
@@ -167,7 +163,6 @@ public class DataService {
             default -> fileRepository.findAllByUserId(user.getId(), pageable);
         };
 
-        // presigned URL 매핑 (S3용)
         Map<Long, S3Service.FileMeta> metaMap = files.stream()
                 .collect(Collectors.toMap(
                         File::getId,
@@ -176,26 +171,26 @@ public class DataService {
 
         Map<Long, String> previewUrls = s3Service.generatePreviewUrls(metaMap);
 
-        //  파일별 태그 조회 (file_tags 기준)
         List<Long> fileIds = files.stream().map(File::getId).toList();
 
-        List<FileTag> fileTags = fileTagRepository.findAllByFileIds(fileIds); // 추가된 메서드
+        List<FileTag> fileTags = fileTagRepository.findAllByFileIds(fileIds);
         Map<Long, List<String>> tagMap = fileTags.stream()
                 .collect(Collectors.groupingBy(
                         ft -> ft.getFile().getId(),
                         Collectors.mapping(ft -> ft.getTag().getTagName(), Collectors.toList())
                 ));
 
-        //  변환: File → DataResponse
         return files.map(file -> DataResponse.builder()
                 .id(file.getId())
-                .src(previewUrls.get(file.getId()))  // presigned preview URL
+                .src(previewUrls.get(file.getId()))
                 .type(file.getType())
                 .context(file.getContext())
                 .favorite(file.getFavorite())
-                .tags(tagMap.getOrDefault(file.getId(), List.of())) // ✅ 파일별 태그 리스트 추가
+                .tags(tagMap.getOrDefault(file.getId(), List.of()))
+                .createdAt(file.getCreatedAt())
                 .build());
     }
+
 
 
 
