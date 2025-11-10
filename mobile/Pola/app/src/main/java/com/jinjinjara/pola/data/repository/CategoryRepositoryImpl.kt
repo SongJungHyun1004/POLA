@@ -5,10 +5,12 @@ import com.jinjinjara.pola.data.remote.api.CategoryApi
 import com.jinjinjara.pola.data.remote.dto.request.CategoryTagInitRequest
 import com.jinjinjara.pola.data.remote.dto.request.CategoryWithTags
 import com.jinjinjara.pola.data.mapper.toDomain
+import com.jinjinjara.pola.data.remote.api.AuthApi
 import com.jinjinjara.pola.data.remote.dto.request.FilesListRequest
 import com.jinjinjara.pola.di.IoDispatcher
 import com.jinjinjara.pola.domain.model.CategoryRecommendation
 import com.jinjinjara.pola.domain.model.FilesPage
+import com.jinjinjara.pola.domain.model.UserCategory
 import com.jinjinjara.pola.domain.repository.CategoryRepository
 import com.jinjinjara.pola.util.Result
 import kotlinx.coroutines.CoroutineDispatcher
@@ -20,6 +22,7 @@ import javax.inject.Inject
  */
 class CategoryRepositoryImpl @Inject constructor(
     private val categoryApi: CategoryApi,
+    private val authApi: AuthApi,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : CategoryRepository {
 
@@ -161,5 +164,32 @@ class CategoryRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun getUserCategories(): Result<List<UserCategory>> {
+        return withContext(ioDispatcher) {
+            try {
+                Log.d("Auth:Categories", "Fetching user categories")
+                val response = authApi.getUserCategories()
+
+                if (response.isSuccessful && response.body()?.data != null) {
+                    val categories = response.body()!!.data!!.map { it.toDomain() }
+                    Log.d("Auth:Categories", "Successfully fetched ${categories.size} categories")
+                    Result.Success(categories)
+                } else {
+                    val errorBody = response.errorBody()?.string()
+                    Log.e("Auth:Categories", "Failed to fetch categories: $errorBody")
+                    Result.Error(
+                        exception = Exception(response.message()),
+                        message = "카테고리 정보를 가져올 수 없습니다."
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("Auth:Categories", "Exception while fetching categories", e)
+                Result.Error(
+                    exception = e,
+                    message = e.message ?: "네트워크 오류가 발생했습니다."
+                )
+            }
+        }
+    }
 
 }

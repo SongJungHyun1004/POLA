@@ -248,8 +248,12 @@ fun CategoryScreen(
                 }
 
                 // CategoryChips
+                val categoryNames = remember(uiState.userCategories) {
+                    listOf("전체") + uiState.userCategories.map { it.categoryName }
+                }
+
                 CategoryChips(
-                    categories = listOf("전체", "말차", "초코", "딸기"),
+                    categories = categoryNames,
                     selectedCategory = selectedTab,
                     onCategorySelected = { selectedTab = it }
                 )

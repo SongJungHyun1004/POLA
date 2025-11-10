@@ -1,10 +1,13 @@
 package com.jinjinjara.pola.presentation.ui.screen.category
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jinjinjara.pola.domain.model.FileItem
+import com.jinjinjara.pola.domain.model.UserCategory
 import com.jinjinjara.pola.domain.usecase.category.GetFilesByCategoryUseCase
+import com.jinjinjara.pola.domain.usecase.category.GetUserCategoriesUseCase
 import com.jinjinjara.pola.util.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,7 +20,8 @@ import javax.inject.Inject
 @HiltViewModel
 class CategoryViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val getFilesByCategoryUseCase: GetFilesByCategoryUseCase
+    private val getFilesByCategoryUseCase: GetFilesByCategoryUseCase,
+    private val getUserCategoriesUseCase: GetUserCategoriesUseCase
 ) : ViewModel() {
 
     private val categoryId: Long = savedStateHandle.get<Long>("categoryId") ?: -1L
@@ -29,13 +33,40 @@ class CategoryViewModel @Inject constructor(
         val isLoading: Boolean = false,
         val categoryName: String = "",
         val files: List<FileItem> = emptyList(),
+        val userCategories: List<UserCategory> = emptyList(),
         val errorMessage: String? = null,
         val currentPage: Int = 0,
         val hasMorePages: Boolean = true
     )
 
     init {
+        loadUserCategories()
         loadCategoryFiles()
+    }
+
+    private fun loadUserCategories() {
+        viewModelScope.launch {
+            when (val result = getUserCategoriesUseCase()) {
+                is Result.Success -> {
+                    _uiState.update {
+                        it.copy(userCategories = result.data)
+                    }
+                    Log.d("Category:VM", "Loaded ${result.data.size} categories")
+                }
+                is Result.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = result.message
+                        )
+                    }
+                    Log.e("Category:VM", "Failed to load categories: ${result.message}")
+                }
+                is Result.Loading -> {
+                    _uiState.update { it.copy(isLoading = true) }
+                }
+            }
+        }
     }
 
     private fun loadCategoryFiles(page: Int = 0) {

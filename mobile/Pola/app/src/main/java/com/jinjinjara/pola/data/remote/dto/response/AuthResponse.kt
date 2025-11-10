@@ -78,5 +78,26 @@ data class OAuthVerifyData(
     val email: String
 )
 
+@JsonClass(generateAdapter = true)
+data class UserCategoryDto(
+    @Json(name = "id")
+    val id: Long,
+
+    @Json(name = "categoryName")
+    val categoryName: String,
+
+    @Json(name = "categorySort")
+    val categorySort: Int,
+
+    @Json(name = "createdAt")
+    val createdAt: String,
+
+    @Json(name = "userEmail")
+    val userEmail: String
+)
+
+// 카테고리 목록 응답
+typealias UserCategoriesResponse = OAuthApiResponse<List<UserCategoryDto>>
+
 // OAuth reissue 응답은 OAuthTokenData 타입
 typealias OAuthReissueResponse = OAuthApiResponse<OAuthTokenData>
