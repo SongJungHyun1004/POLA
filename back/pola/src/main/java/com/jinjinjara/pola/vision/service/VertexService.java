@@ -3,6 +3,7 @@ package com.jinjinjara.pola.vision.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
+import com.jinjinjara.pola.vision.util.AIUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tomcat.util.codec.binary.Base64;
@@ -11,10 +12,6 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import javax.net.ssl.HttpsURLConnection;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
@@ -133,7 +130,7 @@ public class VertexService {
         }
 
         String b64 = Base64.encodeBase64String(imageBytes);
-        String mime = sniffMime(imageBytes);
+        String mime = AIUtil.sniffMime(imageBytes);
 
         String userText = """
         너는 한국어 이미지 분석기다.
@@ -174,19 +171,19 @@ public class VertexService {
     }
 
     // ————— URL 입력 (이미지/텍스트 presigned 모두 처리, HEAD 없이 단일 GET) —————
-    public String analyzeImageFromUrl(String url) {
+    public String analyzeImageFromUrl(String url) throws Exception {
         if (url == null || url.isBlank() || !(url.startsWith("https://") || url.startsWith("http://"))) {
             return "{\"error\":\"invalid url\"}";
         }
 
         // presigned URL은 보통 GET 서명만 포함 → HEAD 금지, 단일 GET로 바이트 수신
-        byte[] data = directDownloadBytes(url, MAX_IMAGE_BYTES);
+        byte[] data = AIUtil.directDownloadBytes(url, MAX_IMAGE_BYTES);
         if (data == null || data.length == 0) {
             return "{\"error\":\"empty content\"}";
         }
 
         // 이미지 판별 (매직바이트)
-        String mime = sniffMime(data);
+        String mime = AIUtil.sniffMime(data);
         if (mime.startsWith("image/")) {
             return analyzeImage(data);
         }
@@ -200,67 +197,5 @@ public class VertexService {
             return "{\"error\":\"unsupported content\"}";
         }
         return generateTagsFromText(text);
-    }
-
-    // ————— 순수 JDK 다운로드 (헤더 파싱 무의존) —————
-    private byte[] directDownloadBytes(String urlStr, long maxBytes) {
-        HttpURLConnection conn = null;
-        try {
-            URL url = new URL(urlStr);
-            conn = (HttpURLConnection) url.openConnection();
-            if (conn instanceof HttpsURLConnection https) {
-                https.setInstanceFollowRedirects(true);
-            }
-            conn.setInstanceFollowRedirects(true);
-            conn.setRequestMethod("GET");
-            conn.setConnectTimeout(5000);
-            conn.setReadTimeout(20000);
-            conn.setRequestProperty("User-Agent", "pola-vertex-downloader/1.0");
-
-            int code = conn.getResponseCode();
-            InputStream is = (code >= 200 && code < 400) ? conn.getInputStream() : conn.getErrorStream();
-            if (is == null) throw new RuntimeException("No response stream, status=" + code);
-
-            long declared = conn.getContentLengthLong(); // -1 가능
-            if (declared > 0 && declared > maxBytes) {
-                throw new RuntimeException("Object too large (Content-Length): " + declared);
-            }
-
-            byte[] data = is.readAllBytes(); // JDK 11+
-            if (data.length > maxBytes) {
-                throw new RuntimeException("Object too large (actual): " + data.length);
-            }
-            if (code < 200 || code >= 300) {
-                String snippet = new String(data, 0, Math.min(256, data.length), StandardCharsets.UTF_8);
-                log.error("[VertexService] GET {} -> {} bodySnippet={}", urlStr, code, snippet);
-                throw new RuntimeException("HTTP " + code);
-            }
-            return data;
-
-        } catch (Exception e) {
-            log.error("[VertexService] directDownloadBytes failed: {}", e.toString());
-            throw new RuntimeException("Failed to download image: " + urlStr, e);
-        } finally {
-            if (conn != null) conn.disconnect();
-        }
-    }
-
-    // ————— 매직바이트로 MIME 추정 —————
-    private String sniffMime(byte[] img) {
-        // JPEG
-        if (img.length >= 3 && img[0] == (byte)0xFF && img[1] == (byte)0xD8) return "image/jpeg";
-        // PNG
-        if (img.length >= 8 &&
-                img[0] == (byte)0x89 && img[1] == 0x50 && img[2] == 0x4E && img[3] == 0x47) return "image/png";
-        // WEBP: "RIFF....WEBP"
-        if (img.length >= 12 &&
-                img[0] == 'R' && img[1] == 'I' && img[2] == 'F' && img[3] == 'F' &&
-                img[8] == 'W' && img[9] == 'E' && img[10] == 'B' && img[11] == 'P') return "image/webp";
-        // GIF: "GIF87a"/"GIF89a"
-        if (img.length >= 6 &&
-                img[0] == 'G' && img[1] == 'I' && img[2] == 'F' && img[3] == '8' &&
-                (img[4] == '7' || img[4] == '9') && img[5] == 'a') return "image/gif";
-
-        return "application/octet-stream";
     }
 }

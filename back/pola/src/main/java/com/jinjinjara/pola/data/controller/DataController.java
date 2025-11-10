@@ -221,5 +221,16 @@ public class DataController {
         return ApiResponse.ok(updated, "파일 설명이 수정되었습니다.");
     }
 
-
+    @Operation(
+            summary = "파일 후처리 (OCR + 임베딩 + 카테고리 분석)",
+            description = "S3에 업로드된 파일을 분석하여 OCR, 임베딩, 카테고리 및 태그 정보를 자동으로 갱신합니다."
+    )
+    @PostMapping("/{fileId}/post-process")
+    public ApiResponse<File> postProcessingFile(
+            @AuthenticationPrincipal Users user,
+            @PathVariable Long fileId
+    ) throws Exception {
+        File updated = dataService.postProcessingFile(user, fileId);
+        return ApiResponse.ok(updated, "파일 후처리가 완료되었습니다.");
+    }
 }

@@ -20,8 +20,13 @@ import com.jinjinjara.pola.s3.service.S3Service;
 import com.jinjinjara.pola.search.model.FileSearch;
 import com.jinjinjara.pola.search.service.FileSearchService;
 import com.jinjinjara.pola.user.entity.Users;
+import com.jinjinjara.pola.vision.dto.common.Embedding;
 import com.jinjinjara.pola.vision.dto.response.AnalyzeResponse;
+import com.jinjinjara.pola.vision.entity.FileEmbeddings;
+import com.jinjinjara.pola.vision.repository.FileEmbeddingsRepository;
 import com.jinjinjara.pola.vision.service.AnalyzeFacadeService;
+import com.jinjinjara.pola.vision.service.EmbeddingService;
+import com.jinjinjara.pola.vision.service.VisionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -51,6 +56,9 @@ public class DataService {
     private final TagRepository tagRepository;
     private final AnalyzeFacadeService analyzeFacadeService;
     private final FileTagService fileTagService;
+    private final VisionService visionService;
+    private final EmbeddingService embeddingService;
+    private final FileEmbeddingsRepository fileEmbeddingsRepository;
     private final CategoryTagRepository categoryTagRepository;
     private final FileTagRepository fileTagRepository;
     private final FileSearchService fileSearchService;
@@ -234,24 +242,7 @@ public class DataService {
                 .views(0)
                 .build();
 
-        URL downUrl = s3Service.generateDownloadUrl(file.getSrc());
-
-        // 1. AI 분석 (태그 + 설명 + 카테고리)
-        AnalyzeResponse analyzeResponse = analyzeFacadeService.analyze(user.getId(), downUrl.toString());
-        file.setCategoryId(analyzeResponse.getCategoryId());
-        file.setContext(analyzeResponse.getDescription());
-
-        // 2. DB 저장
-        File saveFile = fileRepository.save(file);
-        fileTagService.addTagsToFile(saveFile.getId(),analyzeResponse.getTags());
-
-        // 3. OpenSearch에 색인 (비동기)
-        String categoryName = categoryRepository.findById(saveFile.getCategoryId())
-                .map(Category::getCategoryName)
-                .orElse("미분류");
-        indexToOpenSearchAsync(saveFile, categoryName);
-
-        return saveFile;
+        return fileRepository.save(file);
     }
 
     /**
@@ -416,6 +407,68 @@ public class DataService {
                 .build();
     }
 
+    @Transactional
+    public File postProcessingFile(Users user, Long fileId) throws Exception {
+        log.info("[PostProcess] Start post-processing fileId={}, userId={}", fileId, user.getId());
+
+        File file = fileRepository.findById(fileId)
+                .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
+        log.info("[PostProcess] File entity loaded: src={}", file.getSrc());
+
+        URL downUrl = s3Service.generateDownloadUrl(file.getSrc());
+        log.info("[PostProcess] S3 download URL generated: {}", downUrl);
+
+        String ocrText = visionService.extractTextFromS3Url(downUrl.toString());
+        log.info("[PostProcess] OCR extraction completed: textLength={}",
+                ocrText != null ? ocrText.length() : 0);
+
+        AnalyzeResponse analyzeResponse = analyzeFacadeService.analyze(user.getId(), downUrl.toString());
+        log.info("[PostProcess] Analyze completed: categoryId={}, tagsCount={}",
+                analyzeResponse.getCategoryId(),
+                analyzeResponse.getTags() != null ? analyzeResponse.getTags().size() : 0);
+
+        fileTagService.addTagsToFile(fileId, analyzeResponse.getTags());
+        log.info("[PostProcess] Tags saved for fileId={}", fileId);
+
+        float[] embedding = embeddingService.embedOcrAndContext(file.getOcrText(), file.getContext());
+        log.info("[PostProcess] Embedding generated: dimension={}",
+                embedding != null ? embedding.length : 0);
+
+        FileEmbeddings fileEmbeddings = FileEmbeddings.builder()
+                .userId(user.getId())
+                .file(file)
+                .ocrText(ocrText)
+                .context(analyzeResponse.getDescription())
+                .embedding(embeddingService.embedOcrAndContext(ocrText, analyzeResponse.getDescription()))
+                .build();
+
+        log.info("[PostProcess] FileEmbeddings entity created (pre-save)");
+
+        file.setVectorId(fileEmbeddings.getId());
+        fileEmbeddings = fileEmbeddingsRepository.save(fileEmbeddings);
+        log.info("[PostProcess] FileEmbeddings saved: embeddingId={}", fileEmbeddings.getId());
+
+        fileRepository.updatePostProcessing(
+                file.getId(),
+                user.getId(),
+                analyzeResponse.getCategoryId(),
+                analyzeResponse.getDescription(),
+                ocrText,
+                fileEmbeddings.getId()
+        );
+        log.info("[PostProcess] File repository updated with new OCR/context/category");
+
+        file.setCategoryId(analyzeResponse.getCategoryId());
+        file.setContext(fileEmbeddings.getContext());
+        file.setOcrText(ocrText);
+        file.setVectorId(fileEmbeddings.getId());
+
+        log.info("[PostProcess] File entity updated (in-memory): fileId={}, vectorId={}",
+                file.getId(), file.getVectorId());
+
+        log.info("[PostProcess] Post-processing completed successfully for fileId={}", fileId);
+        return file;
+    }
     /**
      * OpenSearch 색인 (비동기 처리)
      * 파일 저장/수정 시 자동으로 검색 인덱스 업데이트

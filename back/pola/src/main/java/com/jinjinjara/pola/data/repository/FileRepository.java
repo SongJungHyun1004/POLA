@@ -112,4 +112,23 @@ public interface FileRepository extends JpaRepository<File, Long> {
 
     // 특정 플랫폼별 파일 (e.g. "web", "app")
     Page<File> findAllByUserIdAndPlatform(Long userId, String platform, Pageable pageable);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true) //추가
+    @Query(""" 
+        UPDATE File f SET 
+            f.categoryId = :categoryId, 
+            f.context    = :context,    
+            f.ocrText    = :ocrText,    
+            f.vectorId   = :vectorId    
+        WHERE f.id = :fileId            
+          AND f.userId = :userId        
+        """)
+    int updatePostProcessing(
+                              @Param("fileId") Long fileId,
+                              @Param("userId") Long userId,
+                              @Param("categoryId") Long categoryId,
+                              @Param("context") String context,
+                              @Param("ocrText") String ocrText,
+                              @Param("vectorId") Long vectorId
+    );
 }
