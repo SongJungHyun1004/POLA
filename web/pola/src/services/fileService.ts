@@ -19,7 +19,7 @@ export async function getFileList(req: FileListRequest) {
     body: JSON.stringify(body),
   });
 
-  if (!res || !res.ok) {
+  if (!res?.ok) {
     throw new Error("파일 리스트 조회 실패");
   }
 
@@ -28,12 +28,33 @@ export async function getFileList(req: FileListRequest) {
 }
 
 export async function getFileDetail(fileId: number | string) {
-  const res = await apiClient(`/files/${fileId}`);
+  const id = typeof fileId === "string" ? Number(fileId) : fileId;
 
-  if (!res || !res.ok) {
+  if (!id || Number.isNaN(id)) {
+    throw new Error("잘못된 파일 ID");
+  }
+
+  const res = await apiClient(`/files/${id}`, {
+    method: "GET",
+  });
+
+  if (!res?.ok) {
     throw new Error("파일 단건 조회 실패");
   }
 
   const json = await res.json();
   return json.data;
+}
+
+export async function getRemindFiles() {
+  const res = await apiClient("/files/reminders", {
+    method: "GET",
+  });
+
+  if (!res?.ok) {
+    throw new Error("리마인드 파일 조회 실패");
+  }
+
+  const json = await res.json();
+  return json.data as any[];
 }
