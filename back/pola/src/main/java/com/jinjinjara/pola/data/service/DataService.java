@@ -308,7 +308,7 @@ public class DataService {
 
         file.setFavorite(false);
         file.setFavoriteSort(0);
-        file.setFavoritedAt(null);
+//        file.setFavoritedAt(null);
 
         return fileRepository.save(file);
     }

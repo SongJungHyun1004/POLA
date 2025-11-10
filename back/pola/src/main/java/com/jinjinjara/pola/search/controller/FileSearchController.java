@@ -133,7 +133,7 @@ public class FileSearchController {
                     - imageUrl은 실제 접근 가능한 Presigned URL로 반환됩니다.
                     - Presigned URL은 일정 시간 후 만료됩니다.
                     """,
-            security = @SecurityRequirement(name = "bearerAuth")
+            security = @SecurityRequirement(name = "JWT")
     )
     @GetMapping("/tags")
     public ApiResponse<List<FileSearch>> searchByTag(
@@ -188,7 +188,7 @@ public class FileSearchController {
                     }
                     ```
                     """,
-            security = @SecurityRequirement(name = "bearerAuth")
+            security = @SecurityRequirement(name = "JWT")
     )
     @GetMapping("/category")
     public ApiResponse<List<FileSearch>> searchByCategory(
@@ -247,7 +247,7 @@ public class FileSearchController {
                     - OCR 텍스트가 없는 파일은 검색 결과에 포함되지 않습니다.
                     - 현재 OCR 기능은 사용되지 않으며, ocrText는 빈 값입니다.
                     """,
-            security = @SecurityRequirement(name = "bearerAuth")
+            security = @SecurityRequirement(name = "JWT")
     )
     @GetMapping("/ocr")
     public ApiResponse<List<FileSearch>> searchByOcrText(
@@ -307,7 +307,7 @@ public class FileSearchController {
                     }
                     ```
                     """,
-            security = @SecurityRequirement(name = "bearerAuth")
+            security = @SecurityRequirement(name = "JWT")
     )
     @GetMapping("/context")
     public ApiResponse<List<FileSearch>> searchByContext(
@@ -388,7 +388,7 @@ public class FileSearchController {
                     - 설명만 검색: `/context`
                     - OCR만 검색: `/ocr`
                     """,
-            security = @SecurityRequirement(name = "bearerAuth")
+            security = @SecurityRequirement(name = "JWT")
     )
     @GetMapping("/all")
     public ApiResponse<List<FileSearch>> searchAll(

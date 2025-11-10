@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 interface User {
   id: number | null;
@@ -13,10 +14,34 @@ interface AuthStore {
   clearUser: () => void;
 }
 
-const useAuthStore = create<AuthStore>((set) => ({
-  user: null,
-  setUser: (user: User) => set(() => ({ user })),
-  clearUser: () => set(() => ({ user: null })),
-}));
+const useAuthStore = create<AuthStore>()(
+  persist(
+    (set) => ({
+      user: null,
+      setUser: (user: User) => set({ user }),
+      clearUser: () => set({ user: null }),
+    }),
+    {
+      name: "pola-auth",
+      storage:
+        typeof window !== "undefined" ? localStorageStorage() : undefined,
+    }
+  )
+);
+
+function localStorageStorage() {
+  return {
+    getItem: (name: string) => {
+      const value = localStorage.getItem(name);
+      return value ? JSON.parse(value) : null;
+    },
+    setItem: (name: string, value: unknown) => {
+      localStorage.setItem(name, JSON.stringify(value));
+    },
+    removeItem: (name: string) => {
+      localStorage.removeItem(name);
+    },
+  };
+}
 
 export default useAuthStore;
