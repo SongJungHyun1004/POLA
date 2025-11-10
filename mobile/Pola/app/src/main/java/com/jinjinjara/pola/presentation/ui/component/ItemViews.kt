@@ -44,6 +44,7 @@ interface DisplayItem {
     val tags: List<String>
     val description: String
     val isFavorite: Boolean
+    val type: String
 }
 
 /** 태그가 잘리면 전체 숨김 처리하는 태그 Row */
@@ -263,6 +264,7 @@ fun <T : DisplayItem> ItemGrid3View(
                         start = 4.dp,
                         end = 4.dp
                     ),
+                    type = item.type,
                     imageResId = if (item.imageRes != 0) item.imageRes else null,
                     imageUrl = if (item.imageRes == 0) item.imageUrl else null,
                     textList = item.tags.map { it.removePrefix("#") },
@@ -335,6 +337,7 @@ fun <T : DisplayItem> ItemGrid2View(
                         start = 8.dp,
                         end = 8.dp
                     ),
+                    type = item.type,
                     imageResId = if (item.imageRes != 0) item.imageRes else null,
                     imageUrl = if (item.imageRes == 0) item.imageUrl else null,
                     textList = item.tags.map { it.removePrefix("#") },

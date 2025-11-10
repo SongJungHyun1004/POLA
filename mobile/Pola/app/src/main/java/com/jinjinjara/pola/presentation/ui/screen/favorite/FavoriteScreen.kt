@@ -33,6 +33,7 @@ import com.jinjinjara.pola.presentation.ui.component.ItemListView
 
 data class FavoriteItem(
     override val id: String,
+    override val type: String,
     override val imageRes: Int,
     override val imageUrl: String,
     override val tags: List<String>,

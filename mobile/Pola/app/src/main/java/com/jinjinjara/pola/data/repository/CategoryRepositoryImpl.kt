@@ -5,8 +5,10 @@ import com.jinjinjara.pola.data.remote.api.CategoryApi
 import com.jinjinjara.pola.data.remote.dto.request.CategoryTagInitRequest
 import com.jinjinjara.pola.data.remote.dto.request.CategoryWithTags
 import com.jinjinjara.pola.data.mapper.toDomain
+import com.jinjinjara.pola.data.remote.dto.request.FilesListRequest
 import com.jinjinjara.pola.di.IoDispatcher
 import com.jinjinjara.pola.domain.model.CategoryRecommendation
+import com.jinjinjara.pola.domain.model.FilesPage
 import com.jinjinjara.pola.domain.repository.CategoryRepository
 import com.jinjinjara.pola.util.Result
 import kotlinx.coroutines.CoroutineDispatcher
@@ -117,4 +119,47 @@ class CategoryRepositoryImpl @Inject constructor(
             }
         }
     }
+
+    override suspend fun getFilesByCategory(
+        categoryId: Long,
+        page: Int,
+        size: Int
+    ): Result<FilesPage> {
+        return withContext(ioDispatcher) {
+            try {
+                Log.d("Category:Repo", "Fetching files for category: $categoryId")
+                val request = FilesListRequest(
+                    page = page,
+                    size = size,
+                    sortBy = "createdAt",
+                    direction = "DESC",
+                    filterType = "category",
+                    filterId = categoryId
+                )
+
+                val response = categoryApi.getFilesList(request)
+
+                if (response.isSuccessful && response.body() != null) {
+                    val filesPage = response.body()!!.data.toDomain()
+                    Log.d("Category:Repo", "Successfully fetched ${filesPage.content.size} files")
+                    Result.Success(filesPage)
+                } else {
+                    val errorBody = response.errorBody()?.string()
+                    Log.e("Category:Repo", "Failed to fetch files: $errorBody")
+                    Result.Error(
+                        exception = Exception(response.message()),
+                        message = "파일 목록을 가져올 수 없습니다."
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("Category:Repo", "Exception while fetching files", e)
+                Result.Error(
+                    exception = e,
+                    message = e.message ?: "네트워크 오류가 발생했습니다."
+                )
+            }
+        }
+    }
+
+
 }

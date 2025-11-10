@@ -44,20 +44,11 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlin.math.roundToInt
 import androidx.compose.ui.zIndex
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.jinjinjara.pola.presentation.ui.component.DisplayItem
 import com.jinjinjara.pola.presentation.ui.component.ItemGrid2View
 import com.jinjinjara.pola.presentation.ui.component.ItemGrid3View
 
-
-data class CategoryItem(
-    override val id: String,
-    val name: String,
-    override val imageRes: Int = R.drawable.temp_image,
-    override val imageUrl: String = "",
-    override val tags: List<String> = listOf(name),
-    override val description: String = "",
-    override val isFavorite: Boolean = false
-) : DisplayItem
 
 enum class ViewMode {
     GRID_3, GRID_2
@@ -67,39 +58,17 @@ enum class ViewMode {
 fun CategoryScreen(
     categoryId: Long = -1L,
     onBackClick: () -> Unit = {},
-    onNavigateToContents : (String) -> Unit = {}
+    onNavigateToContents : (String) -> Unit = {},
+    viewModel: CategoryViewModel = hiltViewModel()
 ) {
+    val uiState by viewModel.uiState.collectAsState()
+
     var selectedTab by remember { mutableStateOf("전체") }
     var isMenuExpanded by remember { mutableStateOf(false) }
     var selectedSort by remember { mutableStateOf("최신순") }
     var viewMode by remember { mutableStateOf(ViewMode.GRID_3) }
 
-    val categories = listOf(
-        CategoryItem("1", "말차"),
-        CategoryItem("2", "초코"),
-        CategoryItem("3", "딸기"),
-        CategoryItem("1", "말차"),
-        CategoryItem("2", "초코"),
-        CategoryItem("3", "딸기"),
-        CategoryItem("1", "말차"),
-        CategoryItem("2", "초코"),
-        CategoryItem("3", "딸기"),
-        CategoryItem("1", "말차"),
-        CategoryItem("2", "초코"),
-        CategoryItem("3", "딸기"),
-        CategoryItem("1", "말차"),
-        CategoryItem("2", "초코"),
-        CategoryItem("3", "딸기"),
-        CategoryItem("1", "말차"),
-        CategoryItem("2", "초코"),
-        CategoryItem("3", "딸기"),
-        CategoryItem("1", "말차"),
-        CategoryItem("2", "초코"),
-        CategoryItem("3", "딸기"),
-        CategoryItem("1", "말차"),
-        CategoryItem("2", "초코"),
-        CategoryItem("3", "딸기"),
-    )
+    val categories = uiState.files
 
     var searchText by remember { mutableStateOf("") }
 
