@@ -1,37 +1,49 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface EditModalProps {
   defaultTags: string[];
   defaultContext: string;
+  defaultCategoryId: number;
+  categories: { id: number; categoryName: string }[];
   onClose: () => void;
-  onSave: (tags: string[], context: string) => void;
+  onSave: (tags: string[], context: string, categoryId: number) => void;
 }
 
 export default function EditModal({
   defaultTags,
   defaultContext,
+  defaultCategoryId,
+  categories,
   onClose,
   onSave,
 }: EditModalProps) {
   const [tags, setTags] = useState(defaultTags.join(" "));
   const [context, setContext] = useState(defaultContext);
 
+  // ✅ 기본 카테고리를 정확히 select에 반영
+  const [selectedCategory, setSelectedCategory] = useState(defaultCategoryId);
+
+  useEffect(() => {
+    setSelectedCategory(defaultCategoryId);
+  }, [defaultCategoryId]);
+
   const handleSave = () => {
     const newTags = tags.split(" ").filter((t) => t.trim() !== "");
-    onSave(newTags, context);
+    onSave(newTags, context, selectedCategory);
     onClose();
   };
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center overflow-visible"
       onClick={onClose}
     >
       <div
-        className="bg-white w-[420px] max-w-[90%] rounded-xl shadow-lg p-5"
+        className="bg-white w-[420px] max-w-[90%] rounded-xl shadow-lg p-5 overflow-visible"
+        style={{ zIndex: 1000 }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -40,6 +52,22 @@ export default function EditModal({
           <button onClick={onClose}>
             <X className="w-5 h-5 text-[#4C3D25]" />
           </button>
+        </div>
+
+        {/* ✅ Category Select */}
+        <label className="text-sm text-[#4C3D25] font-medium">카테고리</label>
+        <div className="relative mb-4 z-[3000]">
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(Number(e.target.value))}
+            className="w-full px-3 py-2 text-sm bg-[#FFFEF8] text-[#4C3D25] border rounded-md focus:outline-none appearance-none"
+          >
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.categoryName}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Tag Input */}
