@@ -50,79 +50,13 @@ public class OpenSearchIndexService {
                     // JSON을 문자열로 읽기
                     String mappingJson = new String(mappingStream.readAllBytes(), StandardCharsets.UTF_8);
 
-                    // JSON을 Map으로 파싱
-                    @SuppressWarnings("unchecked")
-                    java.util.Map<String, Object> mappingMap = objectMapper.readValue(mappingJson, java.util.Map.class);
-
-                    // 인덱스 생성
-                    client.indices().create(c -> c
+                    // Raw JSON을 직접 OpenSearch에 전송 (가장 확실한 방법)
+                    CreateIndexRequest request = CreateIndexRequest.of(b -> b
                             .index(INDEX_NAME)
-                            .settings(s -> {
-                                @SuppressWarnings("unchecked")
-                                java.util.Map<String, Object> settings = (java.util.Map<String, Object>) mappingMap.get("settings");
-                                if (settings != null) {
-                                    if (settings.containsKey("number_of_shards")) {
-                                        s.numberOfShards(String.valueOf(settings.get("number_of_shards")));
-                                    }
-                                    if (settings.containsKey("number_of_replicas")) {
-                                        s.numberOfReplicas(String.valueOf(settings.get("number_of_replicas")));
-                                    }
-                                }
-                                return s;
-                            })
-                            .mappings(m -> {
-                                @SuppressWarnings("unchecked")
-                                java.util.Map<String, Object> mappings = (java.util.Map<String, Object>) mappingMap.get("mappings");
-                                if (mappings != null && mappings.containsKey("properties")) {
-                                    @SuppressWarnings("unchecked")
-                                    java.util.Map<String, Object> properties = (java.util.Map<String, Object>) mappings.get("properties");
-
-                                    properties.forEach((fieldName, fieldProps) -> {
-                                        m.properties(fieldName, p -> {
-                                            @SuppressWarnings("unchecked")
-                                            java.util.Map<String, Object> props = (java.util.Map<String, Object>) fieldProps;
-                                            String type = (String) props.get("type");
-
-                                            switch (type) {
-                                                case "long":
-                                                    return p.long_(l -> l);
-                                                case "keyword":
-                                                    return p.keyword(k -> k);
-                                                case "text":
-                                                    return p.text(t -> {
-                                                        if (props.containsKey("analyzer")) {
-                                                            t.analyzer((String) props.get("analyzer"));
-                                                        }
-                                                        @SuppressWarnings("unchecked")
-                                                        java.util.Map<String, Object> fields = (java.util.Map<String, Object>) props.get("fields");
-                                                        if (fields != null) {
-                                                            fields.forEach((subFieldName, subFieldProps) -> {
-                                                                @SuppressWarnings("unchecked")
-                                                                java.util.Map<String, Object> subProps = (java.util.Map<String, Object>) subFieldProps;
-                                                                String subType = (String) subProps.get("type");
-                                                                if ("keyword".equals(subType)) {
-                                                                    t.fields(subFieldName, f -> f.keyword(k -> k));
-                                                                }
-                                                            });
-                                                        }
-                                                        return t;
-                                                    });
-                                                case "date":
-                                                    return p.date(d -> {
-                                                        if (props.containsKey("format")) {
-                                                            d.format((String) props.get("format"));
-                                                        }
-                                                        return d;
-                                                    });
-                                                default:
-                                                    return p.keyword(k -> k);
-                                            }
-                                        });
-                                    });
-                                }
-                                return m;
-                            })
+                            .withJson(new java.io.StringReader(mappingJson))
                     );
+
+                    client.indices().create(request);
                 }
 
                 log.info("✅ OpenSearch 인덱스 '{}' 생성 완료", INDEX_NAME);
