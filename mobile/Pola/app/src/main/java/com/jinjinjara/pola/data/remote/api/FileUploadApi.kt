@@ -2,6 +2,7 @@ package com.jinjinjara.pola.data.remote.api
 
 import com.jinjinjara.pola.data.remote.dto.request.FileCompleteRequest
 import com.jinjinjara.pola.data.remote.dto.response.FileCompleteResponse
+import com.jinjinjara.pola.data.remote.dto.response.FilePostProcessResponse
 import com.jinjinjara.pola.data.remote.dto.response.PresignedUrlResponse
 import okhttp3.RequestBody
 import retrofit2.Response
@@ -25,4 +26,9 @@ interface FileUploadApi {
     suspend fun completeUpload(
         @Body request: FileCompleteRequest
     ): Response<FileCompleteResponse>
+
+    @POST("files/{fileId}/post-process")
+    suspend fun postProcessFile(
+        @Path("fileId") fileId: Long
+    ): Response<FilePostProcessResponse>
 }

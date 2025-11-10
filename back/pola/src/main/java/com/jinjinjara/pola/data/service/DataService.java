@@ -3,10 +3,12 @@ package com.jinjinjara.pola.data.service;
 import com.jinjinjara.pola.common.CustomException;
 import com.jinjinjara.pola.common.ErrorCode;
 import com.jinjinjara.pola.common.dto.PageRequestDto;
+import com.jinjinjara.pola.data.dto.request.FileShareRequest;
 import com.jinjinjara.pola.data.dto.request.FileUpdateRequest;
 import com.jinjinjara.pola.data.dto.request.FileUploadCompleteRequest;
 import com.jinjinjara.pola.data.dto.response.DataResponse;
 import com.jinjinjara.pola.data.dto.response.FileDetailResponse;
+import com.jinjinjara.pola.data.dto.response.FileShareResponse;
 import com.jinjinjara.pola.data.dto.response.TagResponse;
 import com.jinjinjara.pola.data.entity.Category;
 import com.jinjinjara.pola.data.entity.File;
@@ -43,6 +45,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -365,7 +369,43 @@ public class DataService {
         target.setFavoriteSort(newSort);
         return fileRepository.save(target);
     }
+    public FileShareResponse createShareLink(Long userId, Long fileId, FileShareRequest request) {
+        File file = fileRepository.findByIdAndUserId(fileId, userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
 
+        // 이미 공유 중이면 기존 토큰 재활용 or 덮어쓰기
+        if (Boolean.TRUE.equals(file.getShareStatus()) && file.getShareToken() != null) {
+            return FileShareResponse.builder()
+                    .shareUrl(buildShareUrl(file.getShareToken()))
+                    .expiredAt(String.valueOf(file.getShareExpiredAt()))
+                    .build();
+        }
+
+        String token = UUID.randomUUID().toString();
+        LocalDateTime expiredAt = LocalDateTime.now().plusHours(
+                Optional.ofNullable(request.getExpireHours()).orElse(24)
+        );
+
+        file.setShareStatus(true);
+        file.setShareToken(token);
+        file.setShareExpiredAt(expiredAt);
+
+        fileRepository.save(file);
+
+        return FileShareResponse.builder()
+                .shareUrl(buildShareUrl(token))
+                .expiredAt(expiredAt.toString())
+                .build();
+    }
+//링크수정
+    private String buildShareUrl(String token) {
+        return String.format("%s", token);
+    }
+
+    public File findByShareToken(String token) {
+        return fileRepository.findByShareToken(token)
+                .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
+    }
 
     @Transactional
     public FileDetailResponse updateFileContext(Users user, Long fileId, FileUpdateRequest request) {

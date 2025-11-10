@@ -4,6 +4,7 @@ import com.jinjinjara.pola.common.ApiResponse;
 import com.jinjinjara.pola.common.dto.FileResponseDto;
 import com.jinjinjara.pola.common.dto.PageRequestDto;
 import com.jinjinjara.pola.common.dto.PagedResponseDto;
+import com.jinjinjara.pola.data.dto.request.FileShareRequest;
 import com.jinjinjara.pola.data.dto.request.FileUpdateRequest;
 import com.jinjinjara.pola.data.dto.request.FileUploadCompleteRequest;
 import com.jinjinjara.pola.data.dto.response.*;
@@ -159,6 +160,28 @@ public class DataController {
         return ApiResponse.okMessage("파일이 성공적으로 삭제되었습니다.");
     }
 
+    @Operation(
+            summary = "파일 공유 링크 생성",
+            description = """
+    지정된 파일에 대해 공유 링크를 생성합니다.  
+    - 기본 만료 시간은 24시간입니다.  
+    - 이미 공유 중인 파일은 기존 링크를 재사용합니다.  
+    - 로그인된 사용자만 호출할 수 있습니다.
+    """
+    )
+    @PostMapping("/{fileId}/share")
+    public ApiResponse<FileShareResponse> createShareLink(
+            @AuthenticationPrincipal Users user,
+            @Parameter(description = "파일 ID", example = "15") @PathVariable Long fileId,
+            @RequestBody(required = false) FileShareRequest request
+    ) {
+        FileShareResponse response = dataService.createShareLink(
+                user.getId(),
+                fileId,
+                request != null ? request : new FileShareRequest(24) // 기본 24시간
+        );
+        return ApiResponse.ok(response, "공유 링크가 생성되었습니다.");
+    }
 
     @Operation(
             summary = "파일 목록(타임라인) 조회",

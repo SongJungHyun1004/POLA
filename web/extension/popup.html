@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <h2>📸 Pola 캡처</h2>
+    
+    <!-- 로그인 전 화면 -->
+    <div id="login-section" class="section">
+      <div class="login-prompt">
+        <p>Pola에 로그인하여 캡처 기능을 사용하세요</p>
+        <button id="loginBtn" class="button button-primary">
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style="width: 18px; height: 18px; margin-right: 8px;">
+          Google로 로그인
+        </button>
+      </div>
+    </div>
+    
+    <!-- 로그인 후 화면 -->
+    <div id="authenticated-section" style="display: none;">
+      <!-- 사용자 정보 -->
+      <div class="section user-info">
+        <div class="user-profile">
+          <img id="userAvatar" src="" alt="프로필" class="avatar">
+          <div class="user-details">
+            <div id="userName" class="user-name">사용자</div>
+            <div id="userEmail" class="user-email">user@email.com</div>
+          </div>
+        </div>
+        <button id="logoutBtn" class="button-text">로그아웃</button>
+      </div>
+      
+      <!-- 사용 방법 -->
+      <div class="section">
+        <h3>사용 방법</h3>
+        <ul>
+          <li>페이지에서 우클릭 → "영역 선택하여 캡처하기"</li>
+          <li>텍스트 드래그 → 우클릭 → "선택한 텍스트 가져오기"</li>
+        </ul>
+      </div>
+      
+      <!-- 상태 -->
+      <div class="section">
+        <h3>상태</h3>
+        <div class="status">
+          <span class="status-dot"></span>
+          <span>Pola와 연결됨</span>
+        </div>
+      </div>
+      
+      <!-- 통계 (선택사항) -->
+      <div class="section stats">
+        <h3>캡처 통계</h3>
+        <div class="stat-grid">
+          <div class="stat-item">
+            <div class="stat-value" id="captureCount">0</div>
+            <div class="stat-label">이미지 캡처</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="textCount">0</div>
+            <div class="stat-label">텍스트 저장</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 로딩 인디케이터 -->
+    <div id="loading" style="display: none;">
+      <div class="loading-spinner"></div>
+      <p class="loading-text">로그인 중...</p>
+    </div>
+    
+    <div class="footer">
+      <small>개발자 콘솔에서 로그를 확인하세요</small>
+    </div>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>

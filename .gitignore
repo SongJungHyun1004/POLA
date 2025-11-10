@@ -1,6 +1,10 @@
 # Created by https://www.toptal.com/developers/gitignore/api/python,venv,android,react,web,intellij,androidstudio,java,maven,gradle,nextjs
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,venv,android,react,web,intellij,androidstudio,java,maven,gradle,nextjs
 
+### Chrome Extension ###
+config.js
+manifest.json
+
 ### Android ###
 google-services.json
 
@@ -625,3 +629,5 @@ secrets/
 # 💾 데이터베이스 덤프
 *.sql
 *.dump
+web/extension/config.js
+web/extension/manifest.json

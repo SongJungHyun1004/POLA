@@ -352,4 +352,149 @@ class AuthRepositoryImpl @Inject constructor(
             }
         }
     }
+
+    // Access Token 유효성 검증
+    override suspend fun verifyAccessToken(): Result<Boolean> {
+        return withContext(ioDispatcher) {
+            try {
+                Log.d("Auth:Verify", "=== Access Token Verification Started ===")
+                val response = authApi.oauthVerify()
+
+                if (response.isSuccessful && response.body()?.data != null) {
+                    val verifyData = response.body()!!.data!!
+                    Log.d("Auth:Verify", "Token is valid for user: ${verifyData.email}")
+                    Result.Success(verifyData.valid)
+                } else {
+                    val statusCode = response.code()
+                    Log.e("Auth:Verify", "Token verification failed with status: $statusCode")
+                    Result.Error(
+                        exception = Exception("Token verification failed"),
+                        message = "토큰 검증에 실패했습니다.",
+                        errorType = if (statusCode == 401) ErrorType.UNAUTHORIZED else ErrorType.UNKNOWN
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("Auth:Verify", "Token verification error", e)
+                Result.Error(
+                    exception = e,
+                    message = "토큰 검증 중 오류가 발생했습니다.",
+                    errorType = ErrorType.UNKNOWN
+                )
+            }
+        }
+    }
+
+    // Access Token 재발급
+    override suspend fun reissueAccessToken(): Result<User> {
+        return withContext(ioDispatcher) {
+            try {
+                Log.d("Auth:Reissue", "=== Access Token Reissue Started ===")
+
+                // Step 1: Refresh Token 가져오기
+                val refreshToken = preferencesManager.getRefreshToken()
+                if (refreshToken.isNullOrEmpty()) {
+                    Log.e("Auth:Reissue", "No refresh token available")
+                    return@withContext Result.Error(
+                        exception = Exception("No refresh token"),
+                        message = "저장된 Refresh Token이 없습니다.",
+                        errorType = ErrorType.UNAUTHORIZED
+                    )
+                }
+
+                Log.d("Auth:Reissue", "Refresh Token: ${refreshToken.take(20)}...")
+
+                // Step 2: 토큰 재발급 요청
+                val response = authApi.oauthReissue("Bearer $refreshToken")
+
+                if (!response.isSuccessful || response.body()?.data == null) {
+                    val statusCode = response.code()
+                    val errorBody = response.errorBody()?.string()
+                    Log.e("Auth:Reissue", "Token reissue failed")
+                    Log.e("Auth:Reissue", "Status Code: $statusCode")
+                    Log.e("Auth:Reissue", "Error: ${response.message()}")
+                    Log.e("Auth:Reissue", "Body: $errorBody")
+
+                    // Refresh Token도 만료된 경우 토큰 삭제
+                    if (statusCode == 401) {
+                        Log.d("Auth:Reissue", "Refresh token expired, clearing tokens")
+                        clearTokens()
+                    }
+
+                    return@withContext when (statusCode) {
+                        401 -> Result.Error(
+                            message = "다시 로그인해주세요.",
+                            errorType = ErrorType.UNAUTHORIZED
+                        )
+                        in 400..499 -> Result.Error(
+                            message = "잘못된 요청입니다.",
+                            errorType = ErrorType.BAD_REQUEST
+                        )
+                        in 500..599 -> Result.Error(
+                            message = "서버에 문제가 발생했습니다.",
+                            errorType = ErrorType.SERVER
+                        )
+                        else -> Result.Error(
+                            message = "토큰 재발급에 실패했습니다.",
+                            errorType = ErrorType.UNKNOWN
+                        )
+                    }
+                }
+
+                val tokenData = response.body()!!.data!!
+                Log.d("Auth:Reissue", "New tokens received")
+
+                // Step 3: 새 토큰 저장
+                saveTokens(
+                    accessToken = tokenData.accessToken,
+                    refreshToken = tokenData.refreshToken
+                )
+                Log.d("Auth:Reissue", "New tokens saved")
+
+                // Step 4: 사용자 정보 가져오기
+                Log.d("Auth:Reissue", "Getting user info with new token")
+                val userInfoResponse = authApi.getUser()
+
+                if (!userInfoResponse.isSuccessful || userInfoResponse.body()?.data == null) {
+                    Log.e("Auth:Reissue", "Failed to get user info after reissue")
+                    return@withContext Result.Error(
+                        exception = Exception(userInfoResponse.message()),
+                        message = "사용자 정보를 가져올 수 없습니다."
+                    )
+                }
+
+                val userResponse = userInfoResponse.body()!!.data!!
+                Log.d("Auth:Reissue", "User info retrieved: ${userResponse.email}")
+
+                // Step 5: 카테고리 확인으로 온보딩 상태 판단
+                val categoriesResponse = authApi.getUserCategories()
+                val onboardingCompleted = categoriesResponse.isSuccessful && categoriesResponse.body()?.data != null
+
+                val user = userResponse.toUser(onboardingCompleted = onboardingCompleted)
+                Log.d("Auth:Reissue", "=== Token Reissue SUCCESS === User: ${user.email}")
+                Result.Success(user)
+
+            } catch (e: SocketTimeoutException) {
+                Log.e("Auth:Reissue", "Timeout error", e)
+                Result.Error(
+                    exception = e,
+                    message = "요청 시간이 초과되었습니다.",
+                    errorType = ErrorType.TIMEOUT
+                )
+            } catch (e: IOException) {
+                Log.e("Auth:Reissue", "Network error", e)
+                Result.Error(
+                    exception = e,
+                    message = "인터넷 연결을 확인해주세요.",
+                    errorType = ErrorType.NETWORK
+                )
+            } catch (e: Exception) {
+                Log.e("Auth:Reissue", "Unknown error", e)
+                Result.Error(
+                    exception = e,
+                    message = e.message ?: "토큰 재발급 중 오류가 발생했습니다.",
+                    errorType = ErrorType.UNKNOWN
+                )
+            }
+        }
+    }
 }

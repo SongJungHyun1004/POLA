@@ -1,0 +1,57 @@
+{
+  "manifest_version": 3,
+  "name": "Pola 캡처 확장 프로그램",
+  "version": "1.0.0",
+  "description": "화면 캡처와 Pola 연동",
+  
+  "permissions": [
+    "contextMenus",
+    "activeTab",
+    "tabs",
+    "scripting",
+    "notifications",
+    "identity",
+    "storage"
+  ],
+  
+  "oauth2": {
+    "client_id": "YOUR_GOOGLE_CLIENT_ID_HERE",
+    "scopes": [
+      "https://www.googleapis.com/auth/userinfo.email",
+      "https://www.googleapis.com/auth/userinfo.profile"
+    ]
+  },
+  
+  "host_permissions": [
+    "https://www.googleapis.com/*",
+    "https://accounts.google.com/*",
+    "YOUR_API_BASE_URL_HERE/*"
+  ],
+  
+  "background": {
+    "service_worker": "background.js"
+  },
+  
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

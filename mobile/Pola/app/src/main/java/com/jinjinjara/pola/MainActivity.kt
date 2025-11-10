@@ -35,6 +35,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.jinjinjara.pola.domain.repository.AuthRepository
+import com.jinjinjara.pola.domain.usecase.auth.AutoLoginUseCase
 import com.jinjinjara.pola.navigation.PolaNavHost
 import com.jinjinjara.pola.presentation.ui.theme.PolaTheme
 import com.jinjinjara.pola.util.parcelable
@@ -49,9 +50,11 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var authRepository: AuthRepository
 
-
     @Inject
     lateinit var preferencesDataStore: PreferencesDataStore
+
+    @Inject
+    lateinit var autoLoginUseCase: AutoLoginUseCase
 
     private val shareUploadViewModel: ShareUploadViewModel by viewModels()
 
@@ -63,10 +66,19 @@ class MainActivity : ComponentActivity() {
     private var sharedText: String? = null
     private var sharedContentType: String? = null
 
+    private var hasStartedUpload = false
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d("MainActivity", "onCreate started")
+
+        // 자동 로그인 시도 (백그라운드에서 토큰 검증 및 재발급)
+        lifecycleScope.launch {
+            Log.d("MainActivity", "Starting auto login")
+            val result = autoLoginUseCase()
+            Log.d("MainActivity", "Auto login completed: ${if (result is com.jinjinjara.pola.util.Result.Success) "success" else "failed"}")
+        }
 
         // 공유 인텐트인지 확인 및 데이터 추출
         if (intent?.action == Intent.ACTION_SEND) {
@@ -138,8 +150,11 @@ class MainActivity : ComponentActivity() {
 
                             // 로그인 되어있으면 바로 업로드 시작
                             LaunchedEffect(Unit) {
-                                Log.d("MainActivity", "Logged in, starting upload")
-                                startUpload()
+                                if (!hasStartedUpload) {  // 플래그 체크
+                                    Log.d("MainActivity", "Logged in, starting upload")
+                                    hasStartedUpload = true
+                                    startUpload()
+                                }
                             }
 
                             Box(
@@ -300,11 +315,12 @@ class MainActivity : ComponentActivity() {
         super.onResume()
 
         // 로그인 화면에서 돌아왔을 때 업로드 시작
-        if (isSharedContent) {
+        if (isSharedContent && !hasStartedUpload) {
             lifecycleScope.launch {
                 val isLoggedIn = authRepository.observeLoginState().first()
                 if (isLoggedIn == true) {
                     Log.d("MainActivity", "Logged in after resume, starting upload")
+                    hasStartedUpload = true
                     startUpload()
                 }
             }

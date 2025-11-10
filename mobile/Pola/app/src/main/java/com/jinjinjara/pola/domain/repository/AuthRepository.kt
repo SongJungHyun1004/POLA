@@ -78,4 +78,16 @@ interface AuthRepository {
      * 사용자 정보 가져오기
      */
     suspend fun getUser(): Result<User>
+
+    /**
+     * Access Token 유효성 검증
+     * @return 검증 성공 시 true, 실패 시 false
+     */
+    suspend fun verifyAccessToken(): Result<Boolean>
+
+    /**
+     * Access Token 재발급
+     * @return 재발급된 사용자 정보
+     */
+    suspend fun reissueAccessToken(): Result<User>
 }

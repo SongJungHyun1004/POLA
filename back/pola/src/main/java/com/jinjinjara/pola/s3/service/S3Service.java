@@ -148,6 +148,33 @@ public class S3Service {
         if (type.startsWith("text/")) return "text/plain; charset=utf-8";
         return type;
     }
+    /**
+     * 🔹 공유 링크 접근 시 사용하는 Presigned URL 생성
+     * - allowDownload=true  → 다운로드용 (Content-Disposition: attachment)
+     * - allowDownload=false → 미리보기용 (Content-Disposition: inline)
+     */
+    public String generateGetUrl(String key, boolean allowDownload) {
+        try {
+            String fileName = extractFileName(key);
+            String dispositionType = allowDownload ? "attachment" : "inline";
+
+            GetObjectRequest getRequest = GetObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(key)
+                    .responseContentDisposition(dispositionType + "; filename=\"" + fileName + "\"")
+                    .build();
+
+            PresignedGetObjectRequest presignedRequest = s3Presigner.presignGetObject(builder ->
+                    builder.signatureDuration(Duration.ofMinutes(10))  // URL 유효기간 10분
+                            .getObjectRequest(getRequest));
+
+            URL url = presignedRequest.url();
+            return url.toString();
+
+        } catch (Exception e) {
+            throw new CustomException(ErrorCode.FILE_NOT_FOUND, e.getMessage());
+        }
+    }
 
     public record FileMeta(String key, String contentType) {}
 }
