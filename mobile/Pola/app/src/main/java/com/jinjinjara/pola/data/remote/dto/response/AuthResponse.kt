@@ -65,5 +65,18 @@ data class OAuthTokenData(
     val refreshToken: String
 )
 
-// OAuth reissue 응답은 data가 String 타입
-typealias OAuthReissueResponse = OAuthApiResponse<String>
+// OAuth verify 응답 데이터
+@JsonClass(generateAdapter = true)
+data class OAuthVerifyData(
+    @Json(name = "valid")
+    val valid: Boolean,
+
+    @Json(name = "userId")
+    val userId: Long,
+
+    @Json(name = "email")
+    val email: String
+)
+
+// OAuth reissue 응답은 OAuthTokenData 타입
+typealias OAuthReissueResponse = OAuthApiResponse<OAuthTokenData>

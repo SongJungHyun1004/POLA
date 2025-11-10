@@ -11,11 +11,14 @@ import com.jinjinjara.pola.data.remote.dto.response.AuthResponse
 import com.jinjinjara.pola.data.remote.dto.response.OAuthApiResponse
 import com.jinjinjara.pola.data.remote.dto.response.OAuthReissueResponse
 import com.jinjinjara.pola.data.remote.dto.response.OAuthTokenData
+import com.jinjinjara.pola.data.remote.dto.response.OAuthVerifyData
 import com.jinjinjara.pola.data.remote.dto.response.RefreshTokenResponse
 import com.jinjinjara.pola.data.remote.dto.response.UserResponse
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.Header
+import retrofit2.http.Headers
 import retrofit2.http.POST
 
 /**
@@ -69,6 +72,13 @@ interface AuthApi {
         @Body request: OAuthSigninRequest
     ): Response<OAuthApiResponse<OAuthTokenData>>
 
+    @GET("oauth/verify")
+    @Headers("X-Client-Type: APP")
+    suspend fun oauthVerify(): Response<OAuthApiResponse<OAuthVerifyData>>
+
     @POST("oauth/reissue")
-    suspend fun oauthReissue(): Response<OAuthReissueResponse>
+    @Headers("X-Client-Type: APP")
+    suspend fun oauthReissue(
+        @Header("Authorization") refreshToken: String
+    ): Response<OAuthReissueResponse>
 }
