@@ -38,8 +38,8 @@ public class File {
     @Column(name = "ocr_text", columnDefinition = "TEXT")
     private String ocrText; // OCR 결과
 
-    @Column(name = "vector_id", length = 255)
-    private String vectorId; // OpenSearch 벡터 ID 등
+    @Column(name = "vector_id")
+    private Long vectorId; // 벡터 ID
 
     @Column(name = "file_size", nullable = false)
     private Long fileSize;

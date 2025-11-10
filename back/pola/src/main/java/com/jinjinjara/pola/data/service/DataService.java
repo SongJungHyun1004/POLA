@@ -17,8 +17,13 @@ import com.jinjinjara.pola.data.repository.FileRepository;
 import com.jinjinjara.pola.data.repository.TagRepository;
 import com.jinjinjara.pola.s3.service.S3Service;
 import com.jinjinjara.pola.user.entity.Users;
+import com.jinjinjara.pola.vision.dto.common.Embedding;
 import com.jinjinjara.pola.vision.dto.response.AnalyzeResponse;
+import com.jinjinjara.pola.vision.entity.FileEmbeddings;
+import com.jinjinjara.pola.vision.repository.FileEmbeddingsRepository;
 import com.jinjinjara.pola.vision.service.AnalyzeFacadeService;
+import com.jinjinjara.pola.vision.service.EmbeddingService;
+import com.jinjinjara.pola.vision.service.VisionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -44,6 +49,9 @@ public class DataService {
     private final TagRepository tagRepository;
     private final AnalyzeFacadeService analyzeFacadeService;
     private final FileTagService fileTagService;
+    private final VisionService visionService;
+    private final EmbeddingService embeddingService;
+    private final FileEmbeddingsRepository fileEmbeddingsRepository;
 
     public List<DataResponse> getRemindFiles(Long userId) {
         LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
@@ -183,14 +191,7 @@ public class DataService {
                 .views(0)
                 .build();
 
-        URL downUrl = s3Service.generateDownloadUrl(file.getSrc());
-        AnalyzeResponse analyzeResponse = analyzeFacadeService.analyze(user.getId(), downUrl.toString());
-        file.setCategoryId(analyzeResponse.getCategoryId());
-        file.setContext(analyzeResponse.getDescription());
-
-        File saveFile = fileRepository.save(file);
-        fileTagService.addTagsToFile(saveFile.getId(),analyzeResponse.getTags());
-        return saveFile;
+        return fileRepository.save(file);
     }
 
     /**
@@ -341,4 +342,31 @@ public class DataService {
                 .build();
     }
 
+    @Transactional
+    public File postProcessingFile (Users user, Long fileId) throws Exception {
+        File file = fileRepository.findById(fileId)
+                .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
+
+        URL downUrl = s3Service.generateDownloadUrl(file.getSrc());
+
+        AnalyzeResponse analyzeResponse = analyzeFacadeService.analyze(user.getId(), downUrl.toString());
+        file.setCategoryId(analyzeResponse.getCategoryId());
+        file.setContext(analyzeResponse.getDescription());
+        fileTagService.addTagsToFile(fileId,analyzeResponse.getTags());
+
+        file.setOcrText(visionService.extractTextFromS3Url(downUrl.toString()));
+        FileEmbeddings fileEmbeddings = new FileEmbeddings(
+                0L,
+                user.getId(),
+                file,
+                file.getOcrText(),
+                file.getContext(),
+                embeddingService.embedOcrAndContext(file.getOcrText(),file.getContext()),
+                null
+        );
+
+        file.setVectorId(fileEmbeddings.getId());
+
+        return file;
+    }
 }
