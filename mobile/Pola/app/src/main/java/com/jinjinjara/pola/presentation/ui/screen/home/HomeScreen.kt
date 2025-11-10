@@ -41,6 +41,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -52,6 +53,9 @@ import com.jinjinjara.pola.domain.model.HomeScreenData
 import com.jinjinjara.pola.presentation.ui.component.PolaCard
 import com.jinjinjara.pola.presentation.ui.component.PolaSearchBar
 import com.jinjinjara.pola.presentation.ui.component.SearchBar
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.net.URL
 
 data class Category(
     val name: String,
@@ -282,18 +286,70 @@ private fun HomeContent(
                             )
                             // 실제 데이터가 있을 때만 이미지 표시
                             fileInfo?.let {
+
                                 Box(
                                     modifier = Modifier
                                         .size(88.dp)
                                         .clip(RoundedCornerShape(5.dp))
                                         .align(Alignment.Center)
                                 ) {
-                                    AsyncImage(
-                                        model = it.imageUrl,
-                                        contentDescription = "Content",
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentScale = ContentScale.Crop
-                                    )
+                                    when {
+                                        it.type.startsWith("image") == true -> {
+                                            AsyncImage(
+                                                model = it.imageUrl,
+                                                contentDescription = "Content",
+                                                modifier = Modifier.fillMaxSize(),
+                                                contentScale = ContentScale.Crop
+                                            )
+                                        }
+
+                                        it.type.startsWith("text") == true -> {
+                                            var textContent by remember { mutableStateOf<String?>(null) }
+
+                                            LaunchedEffect(it.imageUrl) {
+                                                try {
+                                                    textContent = withContext(Dispatchers.IO) {
+                                                        URL(it.imageUrl).readText(Charsets.UTF_8)
+                                                    }
+                                                } catch (e: Exception) {
+                                                    e.printStackTrace()
+                                                    textContent = "(텍스트 로드 실패)"
+                                                }
+                                            }
+
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .background(Color(0xFFF5F5F5))
+                                                    .padding(6.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    text = textContent ?: "로딩 중...",
+                                                    color = Color.DarkGray,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    maxLines = 4,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+                                        }
+
+                                        else -> {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .background(Color(0xFFE0E0E0)),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    painter = painterResource(R.drawable.empty),
+                                                    contentDescription = "Unknown file",
+                                                    tint = Color.DarkGray,
+                                                    modifier = Modifier.size(28.dp)
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
