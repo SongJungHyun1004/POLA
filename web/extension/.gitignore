@@ -1,0 +1,17 @@
+config.js
+manifest.json
+
+# 노드 모듈
+node_modules/
+
+# 빌드 결과물
+dist/
+build/
+
+# IDE 설정
+.vscode/
+.idea/
+
+# 기타
+.DS_Store
+*.log
