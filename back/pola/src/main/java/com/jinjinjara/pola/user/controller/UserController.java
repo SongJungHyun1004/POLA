@@ -54,7 +54,7 @@ public class UserController {
                     - Access Token이 없거나 유효하지 않은 경우
                     - Access Token이 만료된 경우 → `/api/v1/oauth/reissue` 엔드포인트로 토큰 재발급 필요
                     """,
-            security = @SecurityRequirement(name = "bearerAuth")
+            security = @SecurityRequirement(name = "JWT")
     )
     @GetMapping("/me")
     public ApiResponse<UserInfoResponse> getUserInfo(
