@@ -27,12 +27,13 @@ WHERE ct.category.id = :categoryId
 
 
     @Query("""
-    SELECT ct 
+    SELECT DISTINCT ct 
     FROM CategoryTag ct
     JOIN FETCH ct.category c
     JOIN FETCH ct.tag t
     WHERE c.user.id = :userId
 """)
     List<CategoryTag> findAllByUserId(@Param("userId") Long userId);
+
 
 }

@@ -79,6 +79,16 @@ public interface FileRepository extends JpaRepository<File, Long> {
 
     Optional<File> findByIdAndUserId(Long id, Long userId);
 
+
+    @Query("SELECT f FROM FileTag ft JOIN ft.file f " +
+            "WHERE f.categoryId = :categoryId AND ft.tag.id = :tagId " +
+            "ORDER BY f.createdAt DESC")
+    Optional<File> findTopByCategoryIdAndTagIdOrderByCreatedAtDesc(
+            @Param("categoryId") Long categoryId,
+            @Param("tagId") Long tagId
+    );
+
+
     // 유저 전체 파일 (페이징)
     Page<File> findAllByUserId(Long userId, Pageable pageable);
 

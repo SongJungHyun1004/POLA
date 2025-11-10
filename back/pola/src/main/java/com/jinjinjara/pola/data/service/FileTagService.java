@@ -2,16 +2,10 @@ package com.jinjinjara.pola.data.service;
 
 import com.jinjinjara.pola.common.CustomException;
 import com.jinjinjara.pola.common.ErrorCode;
-import com.jinjinjara.pola.data.dto.response.FileTagResponse;
-import com.jinjinjara.pola.data.dto.response.TagResponse;
-import com.jinjinjara.pola.data.entity.Category;
-import com.jinjinjara.pola.data.entity.File;
-import com.jinjinjara.pola.data.entity.Tag;
-import com.jinjinjara.pola.data.entity.FileTag;
-import com.jinjinjara.pola.data.repository.CategoryRepository;
-import com.jinjinjara.pola.data.repository.FileRepository;
-import com.jinjinjara.pola.data.repository.TagRepository;
-import com.jinjinjara.pola.data.repository.FileTagRepository;
+import com.jinjinjara.pola.data.dto.response.*;
+import com.jinjinjara.pola.data.entity.*;
+import com.jinjinjara.pola.data.repository.*;
+import com.jinjinjara.pola.s3.service.S3Service;
 import com.jinjinjara.pola.search.model.FileSearch;
 import com.jinjinjara.pola.search.service.FileSearchService;
 import lombok.RequiredArgsConstructor;
@@ -20,8 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -33,12 +26,10 @@ public class FileTagService {
     private final FileRepository fileRepository;
     private final TagRepository tagRepository;
     private final FileTagRepository fileTagRepository;
-    private final CategoryRepository categoryRepository; // ← 추가
-    private final FileSearchService fileSearchService;   // ← 추가
+    private final CategoryRepository categoryRepository;
+    private final FileSearchService fileSearchService;
+    private final S3Service s3Service;
 
-    /**
-     * 파일에 태그 추가
-     */
     public FileTagResponse addTagToFile(Long fileId, Long tagId) {
         File file = fileRepository.findById(fileId)
                 .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
@@ -46,9 +37,7 @@ public class FileTagService {
                 .orElseThrow(() -> new CustomException(ErrorCode.TAG_NOT_FOUND));
 
         fileTagRepository.findByFileAndTag(file, tag)
-                .ifPresent(ft -> {
-                    throw new CustomException(ErrorCode.TAG_LINK_DUPLICATE);
-                });
+                .ifPresent(ft -> { throw new CustomException(ErrorCode.TAG_LINK_DUPLICATE); });
 
         try {
             FileTag fileTag = FileTag.builder()
@@ -63,9 +52,6 @@ public class FileTagService {
         }
     }
 
-    /**
-     * 파일에서 태그 제거 + OpenSearch 업데이트
-     */
     public void removeTagFromFile(Long fileId, Long tagId) {
         File file = fileRepository.findById(fileId)
                 .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
@@ -74,24 +60,17 @@ public class FileTagService {
 
         try {
             fileTagRepository.deleteByFileAndTag(file, tag);
-
-            // ✅ OpenSearch 업데이트
             updateOpenSearchTags(fileId);
         } catch (Exception e) {
             throw new CustomException(ErrorCode.DATA_DELETE_FAIL, e.getMessage());
         }
     }
 
-    /**
-     * OpenSearch 문서의 tags 필드 업데이트
-     * (태그 추가/제거 시 자동 호출)
-     */
     private void updateOpenSearchTags(Long fileId) {
         try {
             File file = fileRepository.findById(fileId)
                     .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
 
-            // 현재 모든 태그 조회 (수동 + AI 추가 태그 모두)
             List<String> tagNames = tagRepository.findAllByFileId(fileId)
                     .stream()
                     .map(Tag::getTagName)
@@ -101,7 +80,6 @@ public class FileTagService {
                     .map(Category::getCategoryName)
                     .orElse("미분류");
 
-            // OpenSearch 문서 업데이트 (save()는 upsert 역할)
             FileSearch fileSearch = FileSearch.builder()
                     .fileId(file.getId())
                     .userId(file.getUserId())
@@ -114,35 +92,24 @@ public class FileTagService {
                     .build();
 
             fileSearchService.save(fileSearch);
-            log.info("✅ OpenSearch 태그 업데이트 완료: fileId={}, tags={}", fileId, tagNames);
+            log.info("OpenSearch 태그 업데이트 완료: fileId={}, tags={}", fileId, tagNames);
 
         } catch (Exception e) {
-            log.error("❌ OpenSearch 태그 업데이트 실패: fileId={}", fileId, e);
-            // OpenSearch 실패는 무시 (검색만 일시적으로 불가)
+            log.error("OpenSearch 태그 업데이트 실패: fileId={}", fileId, e);
         }
     }
 
-    /**
-     * 파일에 연결된 모든 태그 조회
-     */
     @Transactional(readOnly = true)
     public List<TagResponse> getTagsByFile(Long fileId) {
         File file = fileRepository.findById(fileId)
                 .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
 
-        List<TagResponse> tags = fileTagRepository.findByFile(file)
+        return fileTagRepository.findByFile(file)
                 .stream()
                 .map(FileTag::getTag)
                 .map(TagResponse::fromEntity)
                 .toList();
-
-//        if (tags.isEmpty()) {
-//            throw new CustomException(ErrorCode.TAG_NOT_FOUND);
-//        }
-
-        return tags;
     }
-
 
     @Transactional
     public List<FileTagResponse> addTagsToFile(Long fileId, List<String> tagNames) {
@@ -152,19 +119,13 @@ public class FileTagService {
         List<FileTagResponse> results = new ArrayList<>();
 
         for (String tagName : tagNames) {
-            // 태그가 이미 존재하면 가져오고, 없으면 생성
             Tag tag = tagRepository.findByTagName(tagName)
-                    .orElseGet(() -> tagRepository.save(Tag.builder()
-                            .tagName(tagName)
-                            .build()));
+                    .orElseGet(() -> tagRepository.save(Tag.builder().tagName(tagName).build()));
 
-            // 파일-태그 연결이 이미 존재하는지 확인
-            boolean exists = fileTagRepository.existsByFileAndTag(file, tag);
-            if (exists) {
-                continue; // 이미 연결되어 있으면 건너뜀
+            if (fileTagRepository.existsByFileAndTag(file, tag)) {
+                continue;
             }
 
-            // 연결 생성 및 저장
             FileTag fileTag = FileTag.builder()
                     .file(file)
                     .tag(tag)
@@ -174,10 +135,53 @@ public class FileTagService {
             results.add(FileTagResponse.fromEntity(saved));
         }
 
-        // ✅ OpenSearch 업데이트
         updateOpenSearchTags(fileId);
-
         return results;
     }
 
+    @Transactional(readOnly = true)
+    public List<TagLatestFileResponse> getTagsWithLatestFiles(Long categoryId) {
+        List<TagWithLatestFileDto> tagStats = fileTagRepository.findTagStatsByCategory(categoryId);
+        if (tagStats.isEmpty()) {
+            return List.of();
+        }
+
+        Map<Long, File> latestFiles = tagStats.stream()
+                .collect(Collectors.toMap(
+                        TagWithLatestFileDto::getTagId,
+                        stat -> fileTagRepository.findFirstByFile_CategoryIdAndTag_IdOrderByFile_CreatedAtDescFile_IdDesc(categoryId, stat.getTagId())
+                                .map(FileTag::getFile)
+                                .orElse(null)
+
+                ));
+
+
+        Map<Long, String> presignedUrls = latestFiles.values().stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toMap(
+                        File::getId,
+                        f -> s3Service.generatePreviewUrl(new S3Service.FileMeta(f.getSrc(), f.getType())),
+                        (existing, replacement) -> existing
+                ));
+
+
+        return tagStats.stream()
+                .map(stat -> {
+                    File file = latestFiles.get(stat.getTagId());
+                    return TagLatestFileResponse.builder()
+                            .tagId(stat.getTagId())
+                            .tagName(stat.getTagName())
+                            .fileCount(stat.getFileCount())
+                            .latestFile(file == null ? null :
+                                    DataResponse.builder()
+                                            .id(file.getId())
+                                            .src(presignedUrls.get(file.getId()))
+                                            .type(file.getType())
+                                            .context(file.getContext())
+                                            .favorite(file.getFavorite())
+                                            .build())
+                            .build();
+                })
+                .toList();
+    }
 }

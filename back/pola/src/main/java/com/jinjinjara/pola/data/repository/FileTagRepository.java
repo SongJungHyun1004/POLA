@@ -3,29 +3,48 @@ package com.jinjinjara.pola.data.repository;
 import com.jinjinjara.pola.data.entity.FileTag;
 import com.jinjinjara.pola.data.entity.File;
 import com.jinjinjara.pola.data.entity.Tag;
-import io.lettuce.core.dynamic.annotation.Param;
+import com.jinjinjara.pola.data.dto.response.TagWithLatestFileDto;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
 
 public interface FileTagRepository extends JpaRepository<FileTag, Long> {
 
-    // 특정 파일에 연결된 모든 태그 조회
     List<FileTag> findByFile(File file);
 
-    // 파일과 태그 조합으로 조회 (중복 여부 확인 등)
     Optional<FileTag> findByFileAndTag(File file, Tag tag);
-    @Query("""
-SELECT ft
-FROM FileTag ft
-JOIN FETCH ft.tag
-WHERE ft.file.id IN :fileIds
-""")
+
+    @Query("SELECT ft FROM FileTag ft JOIN FETCH ft.tag WHERE ft.file.id IN :fileIds")
     List<FileTag> findAllByFileIds(@Param("fileIds") List<Long> fileIds);
+
     void deleteByFileAndTag(File file, Tag tag);
 
     boolean existsByFileAndTag(File file, Tag tag);
 
+    @Query("SELECT new com.jinjinjara.pola.data.dto.response.TagWithLatestFileDto(" +
+            "t.id, t.tagName, COUNT(ft.file.id), MAX(f.createdAt)) " +
+            "FROM FileTag ft " +
+            "JOIN ft.tag t " +
+            "JOIN ft.file f " +
+            "WHERE f.categoryId = :categoryId " +
+            "GROUP BY t.id, t.tagName " +
+            "ORDER BY COUNT(ft.file.id) DESC, MAX(f.createdAt) DESC")
+    List<TagWithLatestFileDto> findTagStatsByCategory(@Param("categoryId") Long categoryId);
+
+    Optional<FileTag> findFirstByFile_CategoryIdAndTag_IdOrderByFile_CreatedAtDescFile_IdDesc(Long categoryId, Long tagId);
+
+
+    @Query("""
+    SELECT ft.file
+    FROM FileTag ft
+    JOIN ft.file f
+    WHERE f.categoryId = :categoryId
+      AND ft.tag.id = :tagId
+    ORDER BY f.createdAt DESC, f.id DESC
+    """)
+    Optional<File> findLatestFileByCategoryAndTag(@Param("categoryId") Long categoryId,
+                                                  @Param("tagId") Long tagId);
 }
