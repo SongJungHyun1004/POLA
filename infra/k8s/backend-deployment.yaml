@@ -1,0 +1,111 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: pola
+  labels:
+    app: backend
+    component: api-server
+spec:
+  # 무중단 배포를 위해 최소 2개 이상의 replica 필요
+  replicas: 2
+
+  # RollingUpdate 전략으로 무중단 배포 구현
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1        # 기존 replicas + 1개까지 추가 Pod 허용 (최대 3개)
+      maxUnavailable: 0  # 항상 모든 Pod가 가용 상태 유지 (무중단 배포)
+
+  selector:
+    matchLabels:
+      app: backend
+
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: pola-backend:latest
+        imagePullPolicy: IfNotPresent  # K3s 로컬 이미지 사용
+
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+
+        # Secret에서 환경변수 로드 (DB, JWT, AWS 등)
+        envFrom:
+        - secretRef:
+            name: backend-env
+
+        # Readiness Probe: Pod가 트래픽을 받을 준비가 되었는지 확인
+        # 준비되지 않은 Pod는 Service에서 제외되어 트래픽을 받지 않음
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 30  # 첫 체크까지 30초 대기 (Spring Boot 초기화)
+          periodSeconds: 10        # 10초마다 체크
+          timeoutSeconds: 5        # 5초 타임아웃
+          successThreshold: 1      # 1회 성공 시 Ready
+          failureThreshold: 3      # 3회 실패 시 NotReady
+
+        # Liveness Probe: Pod가 정상 작동 중인지 확인
+        # 실패 시 Pod 재시작
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 60  # 첫 체크까지 60초 대기
+          periodSeconds: 20        # 20초마다 체크
+          timeoutSeconds: 5        # 5초 타임아웃
+          failureThreshold: 3      # 3회 연속 실패 시 재시작
+
+        # 리소스 제한 설정 (현재 서버 설정과 동일)
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+
+        # Google Vision API 인증 파일 마운트
+        volumeMounts:
+        - name: google-vision-sa
+          mountPath: /app/config
+          readOnly: true
+
+      # Graceful Shutdown: Pod 종료 시 최대 30초 대기
+      # application.yml의 timeout-per-shutdown-phase와 일치
+      terminationGracePeriodSeconds: 30
+
+      # Google Vision API Service Account Secret
+      volumes:
+      - name: google-vision-sa
+        secret:
+          secretName: google-vision-sa
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: pola
+  labels:
+    app: backend
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  selector:
+    app: backend
+  sessionAffinity: None
