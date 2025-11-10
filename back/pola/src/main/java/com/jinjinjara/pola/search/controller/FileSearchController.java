@@ -5,6 +5,7 @@ import com.jinjinjara.pola.common.CustomException;
 import com.jinjinjara.pola.common.ErrorCode;
 import com.jinjinjara.pola.s3.service.S3Service;
 import com.jinjinjara.pola.search.model.FileSearch;
+import com.jinjinjara.pola.search.model.SearchResponse;
 import com.jinjinjara.pola.search.service.FileSearchService;
 import com.jinjinjara.pola.user.entity.Users;
 import io.swagger.v3.oas.annotations.Operation;
@@ -114,18 +115,21 @@ public class FileSearchController {
                     {
                       "status": "success",
                       "message": "태그 검색 완료",
-                      "data": [
-                        {
-                          "fileId": 123,
-                          "userId": 1,
-                          "categoryName": "사진",
-                          "tags": "여행, 제주도, 바다",
-                          "context": "제주도 여행 사진",
-                          "ocrText": "",
-                          "imageUrl": "https://presigned-url.s3.amazonaws.com/...",
-                          "createdAt": "2025-01-15T10:30:00"
-                        }
-                      ]
+                      "data": {
+                        "totalCount": 1,
+                        "results": [
+                          {
+                            "fileId": 123,
+                            "userId": 1,
+                            "categoryName": "사진",
+                            "tags": "여행, 제주도, 바다",
+                            "context": "제주도 여행 사진",
+                            "ocrText": "",
+                            "imageUrl": "https://presigned-url.s3.amazonaws.com/...",
+                            "createdAt": "2025-01-15T10:30:00"
+                          }
+                        ]
+                      }
                     }
                     ```
 
@@ -136,7 +140,7 @@ public class FileSearchController {
             security = @SecurityRequirement(name = "JWT")
     )
     @GetMapping("/tags")
-    public ApiResponse<List<FileSearch>> searchByTag(
+    public ApiResponse<SearchResponse> searchByTag(
             @Parameter(hidden = true) @AuthenticationPrincipal Users user,
             @Parameter(description = "검색할 태그", example = "여행", required = true)
             @RequestParam String tag
@@ -144,7 +148,8 @@ public class FileSearchController {
         try {
             List<FileSearch> results = service.searchByTag(user.getId(), tag);
             List<FileSearch> withPresignedUrls = addPresignedUrls(results);
-            return ApiResponse.ok(withPresignedUrls, "태그 검색 완료");
+            SearchResponse response = SearchResponse.from(withPresignedUrls);
+            return ApiResponse.ok(response, "태그 검색 완료");
         } catch (IOException e) {
             throw new CustomException(ErrorCode.SEARCH_FAIL, e.getMessage());
         }
@@ -191,14 +196,16 @@ public class FileSearchController {
             security = @SecurityRequirement(name = "JWT")
     )
     @GetMapping("/category")
-    public ApiResponse<List<FileSearch>> searchByCategory(
+    public ApiResponse<SearchResponse> searchByCategory(
             @Parameter(hidden = true) @AuthenticationPrincipal Users user,
             @Parameter(description = "검색할 카테고리명", example = "개발", required = true)
             @RequestParam String categoryName
     ) {
         try {
             List<FileSearch> results = service.searchByCategoryName(user.getId(), categoryName);
-            return ApiResponse.ok(results, "카테고리 검색 완료");
+            List<FileSearch> withPresignedUrls = addPresignedUrls(results);
+            SearchResponse response = SearchResponse.from(withPresignedUrls);
+            return ApiResponse.ok(response, "카테고리 검색 완료");
         } catch (IOException e) {
             throw new CustomException(ErrorCode.SEARCH_FAIL, e.getMessage());
         }
@@ -250,7 +257,7 @@ public class FileSearchController {
             security = @SecurityRequirement(name = "JWT")
     )
     @GetMapping("/ocr")
-    public ApiResponse<List<FileSearch>> searchByOcrText(
+    public ApiResponse<SearchResponse> searchByOcrText(
             @Parameter(hidden = true) @AuthenticationPrincipal Users user,
             @Parameter(description = "검색할 키워드", example = "API 키", required = true)
             @RequestParam String keyword
@@ -258,7 +265,8 @@ public class FileSearchController {
         try {
             List<FileSearch> results = service.searchByOcrText(user.getId(), keyword);
             List<FileSearch> withPresignedUrls = addPresignedUrls(results);
-            return ApiResponse.ok(withPresignedUrls, "OCR 텍스트 검색 완료");
+            SearchResponse response = SearchResponse.from(withPresignedUrls);
+            return ApiResponse.ok(response, "OCR 텍스트 검색 완료");
         } catch (IOException e) {
             throw new CustomException(ErrorCode.SEARCH_FAIL, e.getMessage());
         }
@@ -310,7 +318,7 @@ public class FileSearchController {
             security = @SecurityRequirement(name = "JWT")
     )
     @GetMapping("/context")
-    public ApiResponse<List<FileSearch>> searchByContext(
+    public ApiResponse<SearchResponse> searchByContext(
             @Parameter(hidden = true) @AuthenticationPrincipal Users user,
             @Parameter(description = "검색할 키워드", example = "파란색 버튼", required = true)
             @RequestParam String keyword
@@ -318,7 +326,8 @@ public class FileSearchController {
         try {
             List<FileSearch> results = service.searchByContext(user.getId(), keyword);
             List<FileSearch> withPresignedUrls = addPresignedUrls(results);
-            return ApiResponse.ok(withPresignedUrls, "설명 검색 완료");
+            SearchResponse response = SearchResponse.from(withPresignedUrls);
+            return ApiResponse.ok(response, "설명 검색 완료");
         } catch (IOException e) {
             throw new CustomException(ErrorCode.SEARCH_FAIL, e.getMessage());
         }
@@ -391,7 +400,7 @@ public class FileSearchController {
             security = @SecurityRequirement(name = "JWT")
     )
     @GetMapping("/all")
-    public ApiResponse<List<FileSearch>> searchAll(
+    public ApiResponse<SearchResponse> searchAll(
             @Parameter(hidden = true) @AuthenticationPrincipal Users user,
             @Parameter(description = "검색할 키워드", example = "개발", required = true)
             @RequestParam String keyword
@@ -399,7 +408,8 @@ public class FileSearchController {
         try {
             List<FileSearch> results = service.searchAll(user.getId(), keyword);
             List<FileSearch> withPresignedUrls = addPresignedUrls(results);
-            return ApiResponse.ok(withPresignedUrls, "통합 검색 완료");
+            SearchResponse response = SearchResponse.from(withPresignedUrls);
+            return ApiResponse.ok(response, "통합 검색 완료");
         } catch (IOException e) {
             throw new CustomException(ErrorCode.SEARCH_FAIL, e.getMessage());
         }

@@ -3,9 +3,23 @@
     "number_of_shards": 1,
     "number_of_replicas": 1,
     "analysis": {
+      "tokenizer": {
+        "nori_mixed": {
+          "type": "nori_tokenizer",
+          "decompound_mode": "mixed"
+        }
+      },
       "analyzer": {
-        "korean": {
-          "type": "standard"
+        "nori_analyzer": {
+          "type": "custom",
+          "tokenizer": "nori_mixed",
+          "filter": ["nori_posfilter", "lowercase"]
+        }
+      },
+      "filter": {
+        "nori_posfilter": {
+          "type": "nori_part_of_speech",
+          "stoptags": ["E", "J", "SC", "SE", "SF", "VCN", "VCP", "VX"]
         }
       }
     }
@@ -23,7 +37,8 @@
       },
       "tags": {
         "type": "text",
-        "analyzer": "korean",
+        "analyzer": "nori_analyzer",
+        "search_analyzer": "nori_analyzer",
         "fields": {
           "keyword": {
             "type": "keyword"
@@ -32,11 +47,13 @@
       },
       "context": {
         "type": "text",
-        "analyzer": "korean"
+        "analyzer": "nori_analyzer",
+        "search_analyzer": "nori_analyzer"
       },
       "ocrText": {
         "type": "text",
-        "analyzer": "korean"
+        "analyzer": "nori_analyzer",
+        "search_analyzer": "nori_analyzer"
       },
       "imageUrl": {
         "type": "keyword"
