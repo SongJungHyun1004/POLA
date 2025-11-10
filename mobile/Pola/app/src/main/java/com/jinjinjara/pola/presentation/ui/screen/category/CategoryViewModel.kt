@@ -48,11 +48,16 @@ class CategoryViewModel @Inject constructor(
         viewModelScope.launch {
             when (val result = getUserCategoriesUseCase()) {
                 is Result.Success -> {
+                    val currentCategory = result.data.find { it.id == categoryId }
                     _uiState.update {
-                        it.copy(userCategories = result.data)
+                        it.copy(
+                            userCategories = result.data,
+                            categoryName = currentCategory?.categoryName ?: ""
+                        )
                     }
                     Log.d("Category:VM", "Loaded ${result.data.size} categories")
                 }
+
                 is Result.Error -> {
                     _uiState.update {
                         it.copy(
@@ -62,6 +67,7 @@ class CategoryViewModel @Inject constructor(
                     }
                     Log.e("Category:VM", "Failed to load categories: ${result.message}")
                 }
+
                 is Result.Loading -> {
                     _uiState.update { it.copy(isLoading = true) }
                 }
@@ -85,6 +91,7 @@ class CategoryViewModel @Inject constructor(
                         )
                     }
                 }
+
                 is Result.Error -> {
                     _uiState.update {
                         it.copy(
@@ -93,6 +100,7 @@ class CategoryViewModel @Inject constructor(
                         )
                     }
                 }
+
                 is Result.Loading -> {
                     _uiState.update { it.copy(isLoading = true) }
                 }

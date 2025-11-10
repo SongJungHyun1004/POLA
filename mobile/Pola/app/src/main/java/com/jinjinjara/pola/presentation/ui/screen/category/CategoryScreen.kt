@@ -64,6 +64,21 @@ fun CategoryScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     var selectedTab by remember { mutableStateOf("전체") }
+
+    // 디버깅 로그 추가
+    LaunchedEffect(uiState.categoryName, uiState.userCategories) {
+        android.util.Log.d("CategoryScreen", "categoryName: ${uiState.categoryName}")
+        android.util.Log.d("CategoryScreen", "userCategories: ${uiState.userCategories.map { it.categoryName }}")
+        android.util.Log.d("CategoryScreen", "selectedTab: $selectedTab")
+    }
+
+    // uiState.categoryName이 로드되면 selectedTab 업데이트
+    LaunchedEffect(uiState.categoryName) {
+        if (uiState.categoryName.isNotEmpty()) {
+            android.util.Log.d("CategoryScreen", "Updating selectedTab to: ${uiState.categoryName}")
+            selectedTab = uiState.categoryName
+        }
+    }
     var isMenuExpanded by remember { mutableStateOf(false) }
     var selectedSort by remember { mutableStateOf("최신순") }
     var viewMode by remember { mutableStateOf(ViewMode.GRID_3) }
