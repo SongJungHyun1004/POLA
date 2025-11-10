@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_POLA_API_BASE_URL: process.env.NEXT_PUBLIC_POLA_API_BASE_URL,
   },
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: "https",
