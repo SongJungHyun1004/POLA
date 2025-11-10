@@ -159,4 +159,14 @@ public class EmbeddingService {
         }
         return out;
     }
+
+    public float[] embedQuery(String query) {
+        if (query == null || query.isBlank())
+            throw new IllegalArgumentException("Empty query for embedding");
+
+        List<float[]> vs = embedTexts(List.of(query.strip()));
+        if (vs.isEmpty()) throw new RuntimeException("Empty embedding result");
+
+        return vs.get(0);
+    }
 }
