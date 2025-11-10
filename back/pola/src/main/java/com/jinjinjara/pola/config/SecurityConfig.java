@@ -84,6 +84,7 @@ public class SecurityConfig {
         config.setAllowCredentials(true);
         config.setAllowedOrigins(List.of(allowedOrigins));
 
+        config.setAllowedOriginPatterns(List.of("https://k13d204.p.ssafy.io//*"));
         // Chrome Extension 패턴 추가 허용 해둠, 나중에 정확한 id로 사용
         config.setAllowedOriginPatterns(List.of("chrome-extension://*"));
 
