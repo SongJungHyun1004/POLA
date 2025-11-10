@@ -53,13 +53,6 @@ import com.jinjinjara.pola.presentation.ui.component.PolaCard
 import com.jinjinjara.pola.presentation.ui.component.PolaSearchBar
 import com.jinjinjara.pola.presentation.ui.component.SearchBar
 
-data class RecentItem(
-    val type: String,
-    val title: String,
-    val subtitle: String,
-    val imageRes: Int? = null
-)
-
 data class Category(
     val name: String,
     val imageRes: Int

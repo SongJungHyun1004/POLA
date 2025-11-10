@@ -26,23 +26,18 @@ class HomeViewModel @Inject constructor(
 
     fun loadHomeData() {
         viewModelScope.launch {
-            _uiState.value = HomeUiState.Loading
-
-            when (val result = getHomeDataUseCase()) {
-                is Result.Success -> {
-                    _uiState.value = HomeUiState.Success(result.data)
-                }
-                is Result.Error -> {
-                    _uiState.value = HomeUiState.Error(
+            getHomeDataUseCase().collect { result ->
+                _uiState.value = when (result) {
+                    is Result.Success -> HomeUiState.Success(result.data)
+                    is Result.Error -> HomeUiState.Error(
                         result.message ?: "데이터를 불러올 수 없습니다"
                     )
-                }
-                is Result.Loading -> {
-                    _uiState.value = HomeUiState.Loading
+                    is Result.Loading -> HomeUiState.Loading
                 }
             }
         }
     }
+
 }
 
 sealed class HomeUiState {
