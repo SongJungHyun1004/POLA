@@ -41,7 +41,7 @@ public class AnalyzeFacadeService {
 
     private final ObjectMapper om = new ObjectMapper();
 
-    public AnalyzeResponse analyze(Long userId, String s3Url) {
+    public AnalyzeResponse analyze(Long userId, String s3Url) throws Exception {
 
         // (1) Vertex
         String vertexBody = vertexService.analyzeImageFromUrl(s3Url);
@@ -94,7 +94,7 @@ public class AnalyzeFacadeService {
                 .build();
     }
 
-    public AnalyzeTestResponse testAnalyze(Long userId, String s3Url) {
+    public AnalyzeTestResponse testAnalyze(Long userId, String s3Url) throws Exception {
 
         int k = 3;
 

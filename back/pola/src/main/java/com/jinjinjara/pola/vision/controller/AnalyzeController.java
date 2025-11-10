@@ -32,7 +32,7 @@ public class AnalyzeController {
     public ApiResponse<AnalyzeResponse> analyzeByUrlMain(
             @AuthenticationPrincipal @Parameter(hidden = true) Users user,
             @RequestBody AnalyzeRequest request
-    ) {
+    ) throws Exception {
         if (user == null || user.getId() == null) {
             throw new CustomException(ErrorCode.USER_UNAUTHORIZED, "로그인이 필요합니다.");
         }
@@ -52,7 +52,7 @@ public class AnalyzeController {
     public ApiResponse<AnalyzeTestResponse> analyzeByUrl(
             @AuthenticationPrincipal @Parameter(hidden = true) Users user,
             @RequestBody AnalyzeRequest request
-    ) {
+    ) throws Exception {
         if (user == null || user.getId() == null) {
             throw new CustomException(ErrorCode.USER_UNAUTHORIZED, "로그인이 필요합니다.");
         }
