@@ -38,8 +38,8 @@ public class File {
     @Column(name = "ocr_text", columnDefinition = "TEXT")
     private String ocrText; // OCR 결과
 
-    @Column(name = "vector_id", length = 255)
-    private String vectorId; // OpenSearch 벡터 ID 등
+    @Column(name = "vector_id")
+    private Long vectorId; // 벡터 ID
 
     @Column(name = "file_size", nullable = false)
     private Long fileSize;
@@ -66,7 +66,7 @@ public class File {
     private String originUrl; // 원본 URL (선택)
 
     @Column(name = "last_viewed_at")
-    private LocalDateTime lastViewedAt; // ✅ 마지막 열람 시각
+    private LocalDateTime lastViewedAt; //  마지막 열람 시각
 
     /* --- 콜백 영역 --- */
     @PrePersist

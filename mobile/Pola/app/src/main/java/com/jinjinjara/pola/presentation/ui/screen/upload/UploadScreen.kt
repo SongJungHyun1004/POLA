@@ -3,6 +3,7 @@ package com.jinjinjara.pola.presentation.ui.screen.upload
 import android.Manifest
 import android.content.Context
 import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -45,16 +46,11 @@ fun UploadScreen(
     onClipboardClick: () -> Unit = {},
     onCameraClick: () -> Unit = {},
     onImagesSelected: (List<GalleryImage>) -> Unit = {},
-    viewModel: UploadViewModel = viewModel()
+    onUploadSuccess: () -> Unit = {},
+    viewModel: UploadViewModel = androidx.hilt.navigation.compose.hiltViewModel()
 ) {
-    LaunchedEffect(Unit) {
-        println("UploadScreen 실행됨")
-    }
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
-
-    println("uiState.images 개수: ${uiState.images.size}")
-    println("isLoading: ${uiState.isLoading}")
 
     // 권한 요청
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -73,6 +69,31 @@ fun UploadScreen(
             Manifest.permission.READ_EXTERNAL_STORAGE
         }
         permissionLauncher.launch(permission)
+    }
+
+    // 업로드 상태 처리
+    LaunchedEffect(uiState.uploadState) {
+        when (val state = uiState.uploadState) {
+            is UploadScreenState.Success -> {
+                Toast.makeText(
+                    context,
+                    state.message,
+                    Toast.LENGTH_SHORT
+                ).show()
+                viewModel.resetUploadState()
+                viewModel.clearSelection()
+                onUploadSuccess()
+            }
+            is UploadScreenState.Error -> {
+                Toast.makeText(
+                    context,
+                    state.message,
+                    Toast.LENGTH_SHORT
+                ).show()
+                viewModel.resetUploadState()
+            }
+            else -> {}
+        }
     }
 
     Column(
@@ -117,17 +138,21 @@ fun UploadScreen(
                 )
 
                 // 선택된 이미지가 있을 때만 완료 버튼 표시
-                if (uiState.selectedImages.isNotEmpty()) {
+                if (uiState.selectedImage != null) {
                     TextButton(
                         onClick = {
-                            onImagesSelected(uiState.selectedImages)
+                            viewModel.uploadSelectedImage(context)
                         },
-                        modifier = Modifier.align(Alignment.CenterEnd)
+                        modifier = Modifier.align(Alignment.CenterEnd),
+                        enabled = uiState.uploadState !is UploadScreenState.Uploading
                     ) {
                         Text(
-                            text = "완료 (${uiState.selectedImages.size})",
+                            text = if (uiState.uploadState is UploadScreenState.Uploading) "업로드 중..." else "업로드",
                             fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = if (uiState.uploadState is UploadScreenState.Uploading)
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                            else
+                                MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -178,7 +203,35 @@ fun UploadScreen(
                 ) { image ->
                     PhotoCell(
                         image = image,
-                        onImageClick = { viewModel.toggleImageSelection(image) }
+                        onImageClick = {
+                            viewModel.selectImage(image)
+                        }
+                    )
+                }
+            }
+        }
+
+        // 업로드 중 오버레이
+        if (uiState.uploadState is UploadScreenState.Uploading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.5f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(48.dp),
+                        color = Color.White,
+                        strokeWidth = 4.dp
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "업로드 중...",
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleMedium
                     )
                 }
             }

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -34,7 +35,7 @@ public class FileDetailResponse {
     private String ocrText;
 
     @JsonProperty("vector_id")
-    private String vectorId;
+    private Long vectorId;
 
     @JsonProperty("file_size")
     private Long fileSize;
@@ -65,4 +66,7 @@ public class FileDetailResponse {
 
     @JsonProperty("last_viewed_at")
     private LocalDateTime lastViewedAt;
+
+    @JsonProperty("tags")
+    private List<TagResponse> tags;
 }

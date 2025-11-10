@@ -83,6 +83,11 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(true);
         config.setAllowedOrigins(List.of(allowedOrigins));
+
+        config.setAllowedOriginPatterns(List.of("https://k13d204.p.ssafy.io//*"));
+        // Chrome Extension 패턴 추가 허용 해둠, 나중에 정확한 id로 사용
+        config.setAllowedOriginPatterns(List.of("chrome-extension://*"));
+
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setExposedHeaders(List.of("Authorization"));

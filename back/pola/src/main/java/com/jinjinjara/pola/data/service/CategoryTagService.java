@@ -4,10 +4,7 @@ import com.jinjinjara.pola.common.CustomException;
 import com.jinjinjara.pola.common.ErrorCode;
 import com.jinjinjara.pola.data.dto.request.CategoryWithTags;
 import com.jinjinjara.pola.data.dto.request.InitCategoryTagRequest;
-import com.jinjinjara.pola.data.dto.response.CategoryTagResponse;
-import com.jinjinjara.pola.data.dto.response.RecommendedCategory;
-import com.jinjinjara.pola.data.dto.response.RecommendedCategoryList;
-import com.jinjinjara.pola.data.dto.response.TagResponse;
+import com.jinjinjara.pola.data.dto.response.*;
 import com.jinjinjara.pola.data.entity.Category;
 import com.jinjinjara.pola.data.entity.Tag;
 import com.jinjinjara.pola.data.entity.CategoryTag;
@@ -20,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -137,6 +135,7 @@ public class CategoryTagService {
                 .collect(Collectors.toSet());
         categoryNames.add("미분류");
 
+        // 카테고리 등록
         categoryNames.forEach(name -> {
             if (!categoryRepository.existsByUserAndCategoryName(user, name)) {
                 categoryRepository.save(Category.builder()
@@ -146,6 +145,7 @@ public class CategoryTagService {
             }
         });
 
+        // 카테고리-태그 등록
         request.getCategories().forEach(c -> {
             c.getTags().forEach(tagName -> {
                 Tag tag = tagRepository.findByTagName(tagName)
@@ -157,22 +157,58 @@ public class CategoryTagService {
                         .findByUserAndCategoryName(user, c.getCategoryName())
                         .orElseThrow(() -> new IllegalArgumentException("카테고리 없음: " + c.getCategoryName()));
 
-                categoryTagRepository.save(CategoryTag.builder()
-                        .category(category)
-                        .tag(tag)
-                        .build());
+                //중복 연결 체크 추가
+                boolean exists = categoryTagRepository.existsByCategoryAndTag(category, tag);
+                if (!exists) {
+                    categoryTagRepository.save(CategoryTag.builder()
+                            .category(category)
+                            .tag(tag)
+                            .build());
+                }
             });
         });
     }
 
+
     @Transactional(readOnly = true)
     public RecommendedCategoryList getRecommendedCategoriesAndTags() {
         List<RecommendedCategory> recommended = List.of(
-                new RecommendedCategory("여행", List.of("유럽", "가족", "사진")),
-                new RecommendedCategory("음식", List.of("한식", "야식", "디저트")),
-                new RecommendedCategory("취미", List.of("그림", "음악", "운동"))
+                new RecommendedCategory("여행", List.of("유럽", "가족", "사진","동남아","비행기","기차","맛집","여행비")),
+                new RecommendedCategory("음식", List.of("한식", "야식", "디저트","양식","중식","일식","분식","배달음식")),
+                new RecommendedCategory("취미", List.of("그림", "음악", "운동","게임","운동","마라톤","러닝","조깅"))
         );
         return new RecommendedCategoryList(recommended);
+    }
+    @Transactional(readOnly = true)
+    public List<CategoryWithTagsResponse> getUserCategoriesWithTags(Users user) {
+        List<CategoryTag> categoryTags = categoryTagRepository.findAllByUserId(user.getId());
+
+        // Category별로 묶기
+        Map<Long, List<TagResponse>> categoryToTags = categoryTags.stream()
+                .collect(Collectors.groupingBy(
+                        ct -> ct.getCategory().getId(),
+                        Collectors.mapping(ct -> TagResponse.builder()
+                                .id(ct.getTag().getId())
+                                .tagName(ct.getTag().getTagName())
+                                .build(), Collectors.toList())
+                ));
+
+        // 카테고리별 응답 리스트 구성
+        return categoryToTags.entrySet().stream()
+                .map(entry -> {
+                    Category category = categoryTags.stream()
+                            .filter(ct -> ct.getCategory().getId().equals(entry.getKey()))
+                            .findFirst()
+                            .get()
+                            .getCategory();
+
+                    return CategoryWithTagsResponse.builder()
+                            .categoryId(category.getId())
+                            .categoryName(category.getCategoryName())
+                            .tags(entry.getValue())
+                            .build();
+                })
+                .toList();
     }
 
 

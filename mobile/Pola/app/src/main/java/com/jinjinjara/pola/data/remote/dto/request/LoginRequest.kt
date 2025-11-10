@@ -62,3 +62,19 @@ data class OAuthSigninRequest(
     @Json(name = "username")
     val username: String
 )
+
+// Category
+@JsonClass(generateAdapter = true)
+data class CategoryTagInitRequest(
+    @Json(name = "categories")
+    val categories: List<CategoryWithTags>
+)
+
+@JsonClass(generateAdapter = true)
+data class CategoryWithTags(
+    @Json(name = "categoryName")
+    val categoryName: String,
+
+    @Json(name = "tags")
+    val tags: List<String>
+)
