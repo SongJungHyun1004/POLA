@@ -1,22 +1,16 @@
 package com.jinjinjara.pola.search.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.opensearch.client.opensearch.OpenSearchClient;
-import org.opensearch.client.opensearch.indices.CreateIndexRequest;
 import org.opensearch.client.opensearch.indices.ExistsRequest;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
-
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 
 /**
  * OpenSearch 인덱스 초기화 서비스
- * 애플리케이션 시작 시 자동으로 files 인덱스를 생성합니다.
+ * 애플리케이션 시작 시 files 인덱스 존재 여부를 확인합니다.
  */
 @Slf4j
 @Service
@@ -24,11 +18,13 @@ import java.nio.charset.StandardCharsets;
 public class OpenSearchIndexService {
 
     private final OpenSearchClient client;
-    private final ObjectMapper objectMapper;
     private static final String INDEX_NAME = "files";
 
     /**
-     * 애플리케이션 시작 시 인덱스 생성 (존재하지 않는 경우)
+     * 애플리케이션 시작 시 인덱스 확인
+     *
+     * 참고: 인덱스는 OpenSearch Dashboard에서 Nori 매핑으로 수동 생성되어야 합니다.
+     * opensearch-mapping.json 파일 참고
      */
     @EventListener(ApplicationReadyEvent.class)
     public void initializeIndex() {
@@ -39,32 +35,14 @@ public class OpenSearchIndexService {
                     .value();
 
             if (!exists) {
-                log.info("========================================");
-                log.info("OpenSearch 인덱스 '{}' 생성 중...", INDEX_NAME);
-                log.info("========================================");
-
-                // opensearch-mapping.json 파일 로드
-                try (InputStream mappingStream = new ClassPathResource("opensearch-mapping.json")
-                        .getInputStream()) {
-
-                    // JSON을 문자열로 읽기
-                    String mappingJson = new String(mappingStream.readAllBytes(), StandardCharsets.UTF_8);
-
-                    // Raw JSON을 직접 OpenSearch에 전송 (가장 확실한 방법)
-                    CreateIndexRequest request = CreateIndexRequest.of(b -> b
-                            .index(INDEX_NAME)
-                            .withJson(new java.io.StringReader(mappingJson))
-                    );
-
-                    client.indices().create(request);
-                }
-
-                log.info("✅ OpenSearch 인덱스 '{}' 생성 완료", INDEX_NAME);
+                log.warn("⚠️ OpenSearch 인덱스 '{}' 가 존재하지 않습니다.", INDEX_NAME);
+                log.warn("⚠️ OpenSearch Dashboard에서 Nori 매핑으로 인덱스를 생성해주세요.");
+                log.warn("⚠️ 참고: opensearch-mapping.json");
             } else {
-                log.info("✅ OpenSearch 인덱스 '{}' 이미 존재함", INDEX_NAME);
+                log.info("✅ OpenSearch 인덱스 '{}' 확인 완료", INDEX_NAME);
             }
         } catch (Exception e) {
-            log.error("❌ OpenSearch 인덱스 초기화 실패", e);
+            log.error("❌ OpenSearch 연결 실패", e);
             // 실패해도 애플리케이션은 계속 실행 (OpenSearch 장애 시에도 서비스 가능)
         }
     }
