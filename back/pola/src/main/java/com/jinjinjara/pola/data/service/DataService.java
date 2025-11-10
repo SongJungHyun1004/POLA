@@ -55,38 +55,46 @@ public class DataService {
     private final FileTagRepository fileTagRepository;
     private final FileSearchService fileSearchService;
 
+    @Transactional(readOnly = true)
     public List<DataResponse> getRemindFiles(Long userId) {
         LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
 
-        // 최근 7일 내 보지 않은 파일 30개 조회
+        //  최근 7일 이내에 보지 않은 파일 30개 조회
         List<File> files = fileRepository.findRemindFiles(userId, sevenDaysAgo, PageRequest.of(0, 30));
+        if (files.isEmpty()) return List.of();
 
-        //  각 파일에 대해 태그 리스트 추가
+        // presigned URL 생성 (파일 ID → S3 key 매핑)
+        Map<Long, S3Service.FileMeta> metaMap = files.stream()
+                .collect(Collectors.toMap(
+                        File::getId,
+                        f -> new S3Service.FileMeta(f.getSrc(), f.getType())
+                ));
+
+        Map<Long, String> previewUrls = s3Service.generatePreviewUrls(metaMap);
+
+        // 파일별 태그 조회 (file_tags 기준)
+        List<Long> fileIds = files.stream().map(File::getId).toList();
+
+        List<FileTag> fileTags = fileTagRepository.findAllByFileIds(fileIds);
+        Map<Long, List<String>> tagMap = fileTags.stream()
+                .collect(Collectors.groupingBy(
+                        ft -> ft.getFile().getId(),
+                        Collectors.mapping(ft -> ft.getTag().getTagName(), Collectors.toList())
+                ));
+
+        // DataResponse 변환
         return files.stream()
-                .map(file -> {
-                    Long categoryId = file.getCategoryId();
-                    List<String> tags = List.of();
-
-                    // 카테고리 ID가 존재하면 해당 카테고리의 태그 조회
-                    if (categoryId != null) {
-                        tags = categoryTagRepository.findTagsByCategoryId(categoryId)
-                                .stream()
-                                .map(Tag::getTagName)
-                                .toList();
-                    }
-
-                    // DataResponse 생성
-                    return DataResponse.builder()
-                            .id(file.getId())
-                            .src(file.getSrc())
-                            .type(file.getType())
-                            .context(file.getContext())
-                            .favorite(file.getFavorite())
-                            .tags(tags)   // 태그 리스트 추가
-                            .build();
-                })
+                .map(file -> DataResponse.builder()
+                        .id(file.getId())
+                        .src(previewUrls.get(file.getId())) // presigned URL 반환
+                        .type(file.getType())
+                        .context(file.getContext())
+                        .favorite(file.getFavorite())
+                        .tags(tagMap.getOrDefault(file.getId(), List.of())) // 파일별 태그 리스트
+                        .build())
                 .toList();
     }
+
 
     @Transactional
     public FileDetailResponse getFileDetail(Long userId, Long fileId) {
