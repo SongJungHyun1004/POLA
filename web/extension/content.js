@@ -3,13 +3,13 @@ console.log('Content script 로드됨');
 // Background script로부터 메시지 수신
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('Content script 메시지 수신:', request);
-  
+
   // Ping 응답 (content script 로드 확인용)
   if (request.action === "ping") {
     sendResponse({ pong: true });
     return true;
   }
-  
+
   if (request.action === "startAreaSelection") {
     startAreaSelection();
     sendResponse({ success: true });
@@ -26,20 +26,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       });
     return true; // 비동기 응답을 위해 필요
   }
-  
+
   return true;
 });
 
 // 영역 선택 UI
 function startAreaSelection() {
   console.log('영역 선택 모드 시작');
-  
+
   // 기존 오버레이가 있으면 제거
   const existingOverlay = document.getElementById('capture-overlay');
   if (existingOverlay) {
     existingOverlay.remove();
   }
-  
+
   // 반투명 오버레이 생성
   const overlay = document.createElement('div');
   overlay.id = 'capture-overlay';
@@ -53,7 +53,7 @@ function startAreaSelection() {
     cursor: crosshair;
     z-index: 2147483647;
   `;
-  
+
   // 선택 박스
   const selectionBox = document.createElement('div');
   selectionBox.id = 'selection-box';
@@ -65,7 +65,7 @@ function startAreaSelection() {
     display: none;
     box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.3);
   `;
-  
+
   // 안내 텍스트 (초기)
   const guideText = document.createElement('div');
   guideText.style.cssText = `
@@ -83,7 +83,7 @@ function startAreaSelection() {
     pointer-events: none;
   `;
   guideText.textContent = '마우스를 드래그하여 캡처할 영역을 선택하세요';
-  
+
   // ESC 안내 (상단 고정)
   const escGuide = document.createElement('div');
   escGuide.id = 'esc-guide';
@@ -109,81 +109,82 @@ function startAreaSelection() {
     <span style="background: rgba(255, 255, 255, 0.2); padding: 4px 8px; border-radius: 4px; font-weight: 600;">ESC</span>
     <span>취소</span>
   `;
-  
+
   document.body.appendChild(overlay);
   document.body.appendChild(selectionBox);
   document.body.appendChild(guideText);
   document.body.appendChild(escGuide);
-  
+
   // 2초 후 중앙 안내 텍스트만 제거 (ESC 안내는 유지)
   setTimeout(() => {
     if (guideText.parentNode) {
       guideText.remove();
     }
   }, 2000);
-  
+
   let startX, startY, isSelecting = false;
-  
+
   // 마우스 다운
   overlay.addEventListener('mousedown', (e) => {
     isSelecting = true;
     startX = e.clientX;
     startY = e.clientY;
-    
+
     selectionBox.style.left = startX + 'px';
     selectionBox.style.top = startY + 'px';
     selectionBox.style.width = '0px';
     selectionBox.style.height = '0px';
     selectionBox.style.display = 'block';
-    
+
     // 중앙 안내 텍스트만 제거 (ESC 안내는 유지)
     if (guideText.parentNode) {
       guideText.remove();
     }
   });
-  
+
   // 마우스 이동
-  overlay.addEventListener('mousemove', (e) => {
+  const handleMouseMove = (e) => {
     if (!isSelecting) return;
-    
+
     const currentX = e.clientX;
     const currentY = e.clientY;
-    
+
     const width = Math.abs(currentX - startX);
     const height = Math.abs(currentY - startY);
     const left = Math.min(startX, currentX);
     const top = Math.min(startY, currentY);
-    
+
     selectionBox.style.left = left + 'px';
     selectionBox.style.top = top + 'px';
     selectionBox.style.width = width + 'px';
     selectionBox.style.height = height + 'px';
-  });
-  
+  };
+
+  // overlay 대신 document에 등록
+  document.addEventListener('mousemove', handleMouseMove);
+
   // 마우스 업
-  overlay.addEventListener('mouseup', async (e) => {
+  const handleMouseUp = async (e) => {
     if (!isSelecting) return;
-    
+
     const rect = selectionBox.getBoundingClientRect();
-    
+
     // 너무 작은 영역은 무시
     if (rect.width < 10 || rect.height < 10) {
       console.log('선택 영역이 너무 작습니다');
       cleanup();
       return;
     }
-    
+
     console.log('선택 영역:', {
       x: rect.left,
       y: rect.top,
       width: rect.width,
       height: rect.height
     });
-    
-    // devicePixelRatio 고려 (레티나 디스플레이 등)
+
     const dpr = window.devicePixelRatio || 1;
-    
-    // Background에 메시지 전송
+
     chrome.runtime.sendMessage({
       action: 'captureArea',
       area: {
@@ -194,11 +195,13 @@ function startAreaSelection() {
         dpr: dpr
       }
     });
-    
-    // UI 정리
+
     cleanup();
-  });
-  
+  };
+
+  overlay.addEventListener('mouseup', handleMouseUp);
+  document.addEventListener('mouseup', handleMouseUp);
+
   // ESC 키로 취소
   const handleEscape = (e) => {
     if (e.key === 'Escape') {
@@ -206,15 +209,17 @@ function startAreaSelection() {
       cleanup();
     }
   };
-  
+
   document.addEventListener('keydown', handleEscape);
-  
+
   function cleanup() {
     if (overlay.parentNode) overlay.remove();
     if (selectionBox.parentNode) selectionBox.remove();
     if (guideText.parentNode) guideText.remove();
     if (escGuide.parentNode) escGuide.remove();
     document.removeEventListener('keydown', handleEscape);
+    document.removeEventListener('mousemove', handleMouseMove);
+    document.removeEventListener('mouseup', handleMouseUp);
     isSelecting = false;
   }
 }
@@ -223,17 +228,17 @@ function startAreaSelection() {
 async function cropImage(imageDataUrl, area) {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    
+
     img.onload = () => {
       try {
         // Canvas 생성
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
-        
+
         // 크롭할 영역 크기로 캔버스 설정
         canvas.width = area.width;
         canvas.height = area.height;
-        
+
         // 이미지의 선택 영역만 그리기
         ctx.drawImage(
           img,
@@ -242,25 +247,25 @@ async function cropImage(imageDataUrl, area) {
           0, 0,                     // 대상 x, y
           area.width, area.height   // 대상 width, height
         );
-        
+
         // Canvas를 Base64로 변환
         const croppedImageData = canvas.toDataURL('image/png');
-        
+
         console.log('이미지 크롭 완료');
         console.log('원본 크기:', img.width, 'x', img.height);
         console.log('크롭 영역:', area.width, 'x', area.height);
-        
+
         resolve(croppedImageData);
-        
+
       } catch (error) {
         reject(error);
       }
     };
-    
+
     img.onerror = () => {
       reject(new Error('이미지 로드 실패'));
     };
-    
+
     img.src = imageDataUrl;
   });
 }
