@@ -49,7 +49,7 @@ function startAreaSelection() {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.4);
+    background: transparent;
     cursor: crosshair;
     z-index: 2147483647;
   `;
@@ -59,8 +59,8 @@ function startAreaSelection() {
   selectionBox.id = 'selection-box';
   selectionBox.style.cssText = `
     position: fixed;
-    border: 2px solid #4285f4;
-    background: rgba(66, 133, 244, 0.1);
+    border: 2px solid #B0804C;
+    background: transparent;
     z-index: 2147483648;
     display: none;
     box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.3);
@@ -236,16 +236,22 @@ async function cropImage(imageDataUrl, area) {
         const ctx = canvas.getContext('2d');
 
         // 크롭할 영역 크기로 캔버스 설정
-        canvas.width = area.width;
-        canvas.height = area.height;
+        const borderWidth = 2; // 테두리 두께
+        const adjustedX = area.x + borderWidth;
+        const adjustedY = area.y + borderWidth;
+        const adjustedWidth = area.width - (borderWidth * 2);
+        const adjustedHeight = area.height - (borderWidth * 2);
 
-        // 이미지의 선택 영역만 그리기
+        // Canvas 크기도 테두리 제외한 크기로
+        canvas.width = adjustedWidth;
+        canvas.height = adjustedHeight;
+
         ctx.drawImage(
           img,
-          area.x, area.y,           // 소스 x, y
-          area.width, area.height,  // 소스 width, height
-          0, 0,                     // 대상 x, y
-          area.width, area.height   // 대상 width, height
+          adjustedX, adjustedY,           // 소스 x, y (테두리 제외)
+          adjustedWidth, adjustedHeight,  // 소스 width, height (테두리 제외)
+          0, 0,                           // 대상 x, y
+          adjustedWidth, adjustedHeight   // 대상 width, height
         );
 
         // Canvas를 Base64로 변환
