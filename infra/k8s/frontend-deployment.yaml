@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: pola
+  labels:
+    app: frontend
+    component: web-ui
+spec:
+  # 무중단 배포를 위해 최소 2개 이상의 replica 필요
+  replicas: 2
+
+  # RollingUpdate 전략으로 무중단 배포 구현
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1        # 기존 replicas + 1개까지 추가 Pod 허용 (최대 3개)
+      maxUnavailable: 0  # 항상 모든 Pod가 가용 상태 유지 (무중단 배포)
+
+  selector:
+    matchLabels:
+      app: frontend
+
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: pola-frontend:latest
+        imagePullPolicy: IfNotPresent  # K3s 로컬 이미지 사용
+
+        ports:
+        - name: http
+          containerPort: 3000
+          protocol: TCP
+
+        # 환경변수는 빌드 시 Dockerfile ARG로 주입됨 (Jenkinsfile 자동 스크립트)
+        # 런타임 환경변수는 필요 시에만 추가
+        # 참고: C:\Users\SSAFY\Desktop\infra\AUTO_ENV_GUIDE.md
+
+        # Readiness Probe: Pod가 트래픽을 받을 준비가 되었는지 확인
+        # Next.js는 기본 health endpoint가 없으므로 루트 경로 사용
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 3000
+            scheme: HTTP
+          initialDelaySeconds: 20  # Next.js 초기화 대기
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+
+        # Liveness Probe: Pod가 정상 작동 중인지 확인
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 3000
+            scheme: HTTP
+          initialDelaySeconds: 40
+          periodSeconds: 20
+          timeoutSeconds: 5
+          failureThreshold: 3
+
+        # 리소스 제한 설정
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+
+      # Graceful Shutdown
+      terminationGracePeriodSeconds: 30

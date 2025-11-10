@@ -17,7 +17,7 @@ java {
 repositories {
     mavenCentral()
     // 필요 시 추가 (AWS SDK snapshot이나 Opensearch 내부 lib용)
-    maven { url "https://opensearch-project.jfrog.io/artifactory/maven/" }
+    maven { url = "https://opensearch-project.jfrog.io/artifactory/maven/" }
 }
 
 dependencies {
@@ -71,6 +71,10 @@ dependencies {
     implementation 'com.google.cloud:google-cloud-vision'
     implementation "com.google.cloud:google-cloud-translate"
     implementation "com.google.genai:google-genai:1.25.0"
+    implementation 'com.google.auth:google-auth-library-oauth2-http'
+
+    //pg vector
+    implementation "org.hibernate.orm:hibernate-vector:6.5.2.Final"
 }
 
 tasks.named('test') {

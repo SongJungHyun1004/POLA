@@ -1,0 +1,50 @@
+{
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 1,
+    "analysis": {
+      "analyzer": {
+        "korean": {
+          "type": "standard"
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "fileId": {
+        "type": "long"
+      },
+      "userId": {
+        "type": "long"
+      },
+      "categoryName": {
+        "type": "keyword"
+      },
+      "tags": {
+        "type": "text",
+        "analyzer": "korean",
+        "fields": {
+          "keyword": {
+            "type": "keyword"
+          }
+        }
+      },
+      "context": {
+        "type": "text",
+        "analyzer": "korean"
+      },
+      "ocrText": {
+        "type": "text",
+        "analyzer": "korean"
+      },
+      "imageUrl": {
+        "type": "keyword"
+      },
+      "createdAt": {
+        "type": "date",
+        "format": "yyyy-MM-dd'T'HH:mm:ss"
+      }
+    }
+  }
+}

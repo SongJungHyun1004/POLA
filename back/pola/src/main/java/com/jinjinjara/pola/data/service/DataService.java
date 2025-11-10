@@ -1,6 +1,5 @@
 package com.jinjinjara.pola.data.service;
 
-import com.jinjinjara.pola.auth.repository.UserRepository;
 import com.jinjinjara.pola.common.CustomException;
 import com.jinjinjara.pola.common.ErrorCode;
 import com.jinjinjara.pola.common.dto.PageRequestDto;
@@ -8,28 +7,45 @@ import com.jinjinjara.pola.data.dto.request.FileUpdateRequest;
 import com.jinjinjara.pola.data.dto.request.FileUploadCompleteRequest;
 import com.jinjinjara.pola.data.dto.response.DataResponse;
 import com.jinjinjara.pola.data.dto.response.FileDetailResponse;
-import com.jinjinjara.pola.data.dto.response.InsertDataResponse;
 import com.jinjinjara.pola.data.dto.response.TagResponse;
 import com.jinjinjara.pola.data.entity.Category;
 import com.jinjinjara.pola.data.entity.File;
+import com.jinjinjara.pola.data.entity.FileTag;
+import com.jinjinjara.pola.data.entity.Tag;
+import com.jinjinjara.pola.data.repository.*;
 import com.jinjinjara.pola.data.repository.CategoryRepository;
 import com.jinjinjara.pola.data.repository.FileRepository;
 import com.jinjinjara.pola.data.repository.TagRepository;
 import com.jinjinjara.pola.s3.service.S3Service;
+import com.jinjinjara.pola.search.model.FileSearch;
+import com.jinjinjara.pola.search.service.FileSearchService;
 import com.jinjinjara.pola.user.entity.Users;
+import com.jinjinjara.pola.vision.dto.common.Embedding;
+import com.jinjinjara.pola.vision.dto.response.AnalyzeResponse;
+import com.jinjinjara.pola.vision.entity.FileEmbeddings;
+import com.jinjinjara.pola.vision.repository.FileEmbeddingsRepository;
+import com.jinjinjara.pola.vision.service.AnalyzeFacadeService;
+import com.jinjinjara.pola.vision.service.EmbeddingService;
+import com.jinjinjara.pola.vision.service.VisionService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.net.URL;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DataService {
@@ -38,22 +54,56 @@ public class DataService {
     private final CategoryRepository categoryRepository;
     private final S3Service s3Service;
     private final TagRepository tagRepository;
+    private final AnalyzeFacadeService analyzeFacadeService;
+    private final FileTagService fileTagService;
+    private final VisionService visionService;
+    private final EmbeddingService embeddingService;
+    private final FileEmbeddingsRepository fileEmbeddingsRepository;
+    private final CategoryTagRepository categoryTagRepository;
+    private final FileTagRepository fileTagRepository;
+    private final FileSearchService fileSearchService;
 
+    @Transactional(readOnly = true)
     public List<DataResponse> getRemindFiles(Long userId) {
         LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
 
+        //  최근 7일 이내에 보지 않은 파일 30개 조회
         List<File> files = fileRepository.findRemindFiles(userId, sevenDaysAgo, PageRequest.of(0, 30));
+        if (files.isEmpty()) return List.of();
 
+        // presigned URL 생성 (파일 ID → S3 key 매핑)
+        Map<Long, S3Service.FileMeta> metaMap = files.stream()
+                .collect(Collectors.toMap(
+                        File::getId,
+                        f -> new S3Service.FileMeta(f.getSrc(), f.getType())
+                ));
+
+        Map<Long, String> previewUrls = s3Service.generatePreviewUrls(metaMap);
+
+        // 파일별 태그 조회 (file_tags 기준)
+        List<Long> fileIds = files.stream().map(File::getId).toList();
+
+        List<FileTag> fileTags = fileTagRepository.findAllByFileIds(fileIds);
+        Map<Long, List<String>> tagMap = fileTags.stream()
+                .collect(Collectors.groupingBy(
+                        ft -> ft.getFile().getId(),
+                        Collectors.mapping(ft -> ft.getTag().getTagName(), Collectors.toList())
+                ));
+
+        // DataResponse 변환
         return files.stream()
                 .map(file -> DataResponse.builder()
                         .id(file.getId())
-                        .src(file.getSrc())
+                        .src(previewUrls.get(file.getId())) // presigned URL 반환
                         .type(file.getType())
                         .context(file.getContext())
                         .favorite(file.getFavorite())
+                        .tags(tagMap.getOrDefault(file.getId(), List.of())) // 파일별 태그 리스트
                         .build())
                 .toList();
     }
+
+
     @Transactional
     public FileDetailResponse getFileDetail(Long userId, Long fileId) {
         File file = fileRepository.findByIdAndUserId(fileId, userId)
@@ -103,9 +153,7 @@ public class DataService {
 
 
 
-    /**
-     * 파일 목록 조회 (페이징 + 정렬 + 필터 + Presigned URL)
-     */
+    @Transactional(readOnly = true)
     public Page<DataResponse> getFiles(Users user, PageRequestDto request) {
         if (user == null) {
             throw new CustomException(ErrorCode.USER_UNAUTHORIZED);
@@ -113,7 +161,6 @@ public class DataService {
 
         Pageable pageable = request.toPageable();
 
-        // 필터 타입 분기
         Page<File> files = switch (request.getFilterType() == null ? "" : request.getFilterType()) {
             case "category" -> {
                 if (request.getFilterId() == null)
@@ -121,28 +168,46 @@ public class DataService {
                 yield fileRepository.findAllByUserIdAndCategoryId(user.getId(), request.getFilterId(), pageable);
             }
             case "favorite" -> fileRepository.findAllByUserIdAndFavoriteTrue(user.getId(), pageable);
+            case "tag" -> {
+                if (request.getFilterId() == null)
+                    throw new CustomException(ErrorCode.INVALID_REQUEST, "태그 ID가 필요합니다.");
+                yield fileRepository.findAllByUserIdAndTagId(user.getId(), request.getFilterId(), pageable);
+            }
             default -> fileRepository.findAllByUserId(user.getId(), pageable);
         };
 
-        // presigned URL 매핑 (id → key, type)
         Map<Long, S3Service.FileMeta> metaMap = files.stream()
                 .collect(Collectors.toMap(
                         File::getId,
                         f -> new S3Service.FileMeta(f.getSrc(), f.getType())
                 ));
 
-
         Map<Long, String> previewUrls = s3Service.generatePreviewUrls(metaMap);
 
-        // 변환: File → DataResponse
+        List<Long> fileIds = files.stream().map(File::getId).toList();
+
+        List<FileTag> fileTags = fileTagRepository.findAllByFileIds(fileIds);
+        Map<Long, List<String>> tagMap = fileTags.stream()
+                .collect(Collectors.groupingBy(
+                        ft -> ft.getFile().getId(),
+                        Collectors.mapping(ft -> ft.getTag().getTagName(), Collectors.toList())
+                ));
+
         return files.map(file -> DataResponse.builder()
                 .id(file.getId())
-                .src(previewUrls.get(file.getId()))  // 미리보기용 presigned URL
+                .src(previewUrls.get(file.getId()))
                 .type(file.getType())
                 .context(file.getContext())
                 .favorite(file.getFavorite())
+                .tags(tagMap.getOrDefault(file.getId(), List.of()))
+                .createdAt(file.getCreatedAt())
                 .build());
     }
+
+
+
+
+
 
     /**
      * Presigned URL 업로드 완료 후 DB 메타데이터 저장
@@ -195,7 +260,15 @@ public class DataService {
         // category 엔티티 대신 categoryId(Long)만 설정
         file.setCategoryId(categoryId);
 
-        return fileRepository.save(file);
+        File savedFile = fileRepository.save(file);
+
+        // ✅ OpenSearch 업데이트
+        String categoryName = categoryRepository.findById(categoryId)
+                .map(Category::getCategoryName)
+                .orElse("미분류");
+        indexToOpenSearchAsync(savedFile, categoryName);
+
+        return savedFile;
     }
 
     /* =======================================================
@@ -235,7 +308,7 @@ public class DataService {
 
         file.setFavorite(false);
         file.setFavoriteSort(0);
-        file.setFavoritedAt(null);
+//        file.setFavoritedAt(null);
 
         return fileRepository.save(file);
     }
@@ -306,6 +379,12 @@ public class DataService {
 
         File saved = fileRepository.save(file);
 
+        // ✅ OpenSearch 업데이트
+        String categoryName = categoryRepository.findById(saved.getCategoryId())
+                .map(Category::getCategoryName)
+                .orElse("미분류");
+        indexToOpenSearchAsync(saved, categoryName);
+
         return FileDetailResponse.builder()
                 .id(saved.getId())
                 .userId(saved.getUserId())
@@ -326,6 +405,101 @@ public class DataService {
                 .createdAt(saved.getCreatedAt())
                 .lastViewedAt(saved.getLastViewedAt())
                 .build();
+    }
+
+    @Transactional
+    public File postProcessingFile(Users user, Long fileId) throws Exception {
+        log.info("[PostProcess] Start post-processing fileId={}, userId={}", fileId, user.getId());
+
+        File file = fileRepository.findById(fileId)
+                .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
+        log.info("[PostProcess] File entity loaded: src={}", file.getSrc());
+
+        URL downUrl = s3Service.generateDownloadUrl(file.getSrc());
+        log.info("[PostProcess] S3 download URL generated: {}", downUrl);
+
+        String ocrText = visionService.extractTextFromS3Url(downUrl.toString());
+        log.info("[PostProcess] OCR extraction completed: textLength={}",
+                ocrText != null ? ocrText.length() : 0);
+
+        AnalyzeResponse analyzeResponse = analyzeFacadeService.analyze(user.getId(), downUrl.toString());
+        log.info("[PostProcess] Analyze completed: categoryId={}, tagsCount={}",
+                analyzeResponse.getCategoryId(),
+                analyzeResponse.getTags() != null ? analyzeResponse.getTags().size() : 0);
+
+        fileTagService.addTagsToFile(fileId, analyzeResponse.getTags());
+        log.info("[PostProcess] Tags saved for fileId={}", fileId);
+
+        float[] embedding = embeddingService.embedOcrAndContext(file.getOcrText(), file.getContext());
+        log.info("[PostProcess] Embedding generated: dimension={}",
+                embedding != null ? embedding.length : 0);
+
+        FileEmbeddings fileEmbeddings = FileEmbeddings.builder()
+                .userId(user.getId())
+                .file(file)
+                .ocrText(ocrText)
+                .context(analyzeResponse.getDescription())
+                .embedding(embeddingService.embedOcrAndContext(ocrText, analyzeResponse.getDescription()))
+                .build();
+
+        log.info("[PostProcess] FileEmbeddings entity created (pre-save)");
+
+        file.setVectorId(fileEmbeddings.getId());
+        fileEmbeddings = fileEmbeddingsRepository.save(fileEmbeddings);
+        log.info("[PostProcess] FileEmbeddings saved: embeddingId={}", fileEmbeddings.getId());
+
+        fileRepository.updatePostProcessing(
+                file.getId(),
+                user.getId(),
+                analyzeResponse.getCategoryId(),
+                analyzeResponse.getDescription(),
+                ocrText,
+                fileEmbeddings.getId()
+        );
+        log.info("[PostProcess] File repository updated with new OCR/context/category");
+
+        file.setCategoryId(analyzeResponse.getCategoryId());
+        file.setContext(fileEmbeddings.getContext());
+        file.setOcrText(ocrText);
+        file.setVectorId(fileEmbeddings.getId());
+
+        log.info("[PostProcess] File entity updated (in-memory): fileId={}, vectorId={}",
+                file.getId(), file.getVectorId());
+
+        log.info("[PostProcess] Post-processing completed successfully for fileId={}", fileId);
+        return file;
+    }
+    /**
+     * OpenSearch 색인 (비동기 처리)
+     * 파일 저장/수정 시 자동으로 검색 인덱스 업데이트
+     */
+    @Async
+    public void indexToOpenSearchAsync(File file, String categoryName) {
+        try {
+            // 현재 저장된 태그 조회
+            List<String> tagNames = tagRepository.findAllByFileId(file.getId())
+                    .stream()
+                    .map(Tag::getTagName)
+                    .collect(Collectors.toList());
+
+            FileSearch fileSearch = FileSearch.builder()
+                    .fileId(file.getId())
+                    .userId(file.getUserId())
+                    .categoryName(categoryName)
+                    .tags(String.join(", ", tagNames))
+                    .context(file.getContext() != null ? file.getContext() : "")
+                    .ocrText(file.getOcrText() != null ? file.getOcrText() : "")
+                    .imageUrl(file.getSrc())
+                    .createdAt(file.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
+                    .build();
+
+            fileSearchService.save(fileSearch);
+            log.info("✅ OpenSearch 색인 완료: fileId={}", file.getId());
+
+        } catch (Exception e) {
+            log.error("❌ OpenSearch 색인 실패: fileId={}", file.getId(), e);
+            // 실패해도 파일은 PostgreSQL에 저장되어 있음
+        }
     }
 
 }

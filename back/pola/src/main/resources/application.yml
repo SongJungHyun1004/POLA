@@ -163,7 +163,7 @@ google:
 app:
   # CORS 허용 출처 (allowCredentials: true 일 때 구체적으로 지정 필요)
   cors:
-    allowed-origins: https://k13d204.p.ssafy.io,http://localhost:3000,http://localhost:5173
+    allowed-origins: https://k13d204.p.ssafy.io,http://localhost:3000,http://localhost:5173,chrome-extension://chfbfoeeijlohgjonmaoejjgfbdoiefj
 
   oauth2:
     redirect-uri:
@@ -173,3 +173,27 @@ app:
 gcp:
   vision:
     credentials-path: ${GOOGLE_APPLICATION_CREDENTIALS}
+
+
+vertex:
+  location: us-central1
+  model:
+    text: gemini-2.5-flash-lite
+    vision: gemini-2.5-flash-lite
+
+nlp:
+  paths:
+    synonyms: classpath:nlp/synonyms.yml
+    generic:  classpath:nlp/generic.yml
+    split:    classpath:nlp/split.yml
+
+classifier:
+  alpha: 0.7
+  generic:
+    downscale: 0.7
+  input:
+    min-sim: 0.08
+
+embedding:
+  cache:
+    centroids-ttl-ms: 86400000

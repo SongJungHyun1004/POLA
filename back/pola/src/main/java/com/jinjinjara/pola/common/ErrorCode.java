@@ -48,7 +48,8 @@ public enum ErrorCode {
     DATA_DELETE_FAIL("DATA-003", "데이터 삭제 중 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
     /* ------------------------- [검색 / OpenSearch 관련] ------------------------- */
     SEARCH_FAIL("SEARCH-001", "검색 처리 중 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
-
+    SEARCH_INDEX_FAIL("SEARCH-002", "검색 인덱스 생성에 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
+    SEARCH_UPDATE_FAIL("SEARCH-003", "검색 문서 업데이트에 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
     /* ------------------------- [유효성 / 요청 관련] ------------------------- */
     INVALID_REQUEST("COMMON-001", "잘못된 요청입니다.", HttpStatus.BAD_REQUEST),
     VALIDATION_ERROR("COMMON-002", "요청 데이터가 유효하지 않습니다.", HttpStatus.BAD_REQUEST),

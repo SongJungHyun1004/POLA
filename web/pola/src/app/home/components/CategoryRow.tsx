@@ -1,24 +1,26 @@
+import { useEffect, useState } from "react";
 import PolaroidCard from "./PolaroidCard";
 
-export default function CategoryRow({ imgSrc }: { imgSrc: string }) {
-  const rotations = Array.from({ length: 6 }, () => {
-    const deg = Math.random() * 12 - 6;
-    return `rotate(${deg}deg)`;
-  });
+interface CategoryRowProps {
+  files: any[];
+}
+
+export default function CategoryRow({ files }: CategoryRowProps) {
+  const [rotations, setRotations] = useState<string[]>([]);
+
+  useEffect(() => {
+    const newRotations = Array.from({ length: files.length }, () => {
+      const deg = Math.random() * 12 - 6;
+      return `rotate(${deg}deg)`;
+    });
+    setRotations(newRotations);
+  }, [files.length]);
+  if (rotations.length === 0) return null;
 
   return (
     <div className="flex flex-col mb-4 w-full overflow-visible">
-      <div
-        className="
-          grid 
-          grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-5 
-          gap-3
-          px-10
-          overflow-visible
-          justify-items-center
-        "
-      >
-        {[...Array(5)].map((_, i) => (
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-5 gap-3 px-10 overflow-visible justify-items-center">
+        {files.slice(0, 5).map((file, i) => (
           <div
             key={i}
             style={{
@@ -29,7 +31,8 @@ export default function CategoryRow({ imgSrc }: { imgSrc: string }) {
             className="w-fit"
           >
             <div className="hover:scale-[1.08] transition-transform">
-              <PolaroidCard src={imgSrc} />
+              <PolaroidCard src={file.src || "/images/dummy_image_1.png"} />{" "}
+              {/* file.src로 이미지 경로 전달 */}
             </div>
           </div>
         ))}

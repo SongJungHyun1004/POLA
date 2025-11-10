@@ -3,7 +3,9 @@ package com.jinjinjara.pola.vision.service;
 import com.google.cloud.vision.v1.*;
 import com.google.protobuf.ByteString;
 import com.jinjinjara.pola.vision.dto.response.LabelResponse;
+import com.jinjinjara.pola.vision.util.AIUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -13,10 +15,58 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class VisionService {
 
     private final ImageAnnotatorClient client;
     private final TranslationService translationService;
+
+    private static final long MAX_IMAGE_BYTES = 20L * 1024 * 1024; // 20MB
+    private static final long MAX_TEXT_BYTES  = 2L  * 1024 * 1024; // 2MB
+
+    public String extractTextFromS3Url(String url) {
+        try {
+            byte[] data = AIUtil.directDownloadBytes(url, MAX_IMAGE_BYTES);
+            if (data == null || data.length == 0) {
+                throw new RuntimeException("Empty content from S3");
+            }
+
+            String mime = AIUtil.sniffMime(data);
+            if (mime.startsWith("image/")) {
+                return documentOcr(data);
+            }
+
+            if (data.length > MAX_TEXT_BYTES) {
+                throw new RuntimeException("Text file too large: " + data.length);
+            }
+
+            String text = new String(data, java.nio.charset.StandardCharsets.UTF_8).trim();
+            if (text.isBlank()) {
+                throw new RuntimeException("Text content empty");
+            }
+            return text;
+
+        } catch (Exception e) {
+            log.error("[VisionService] extractTextFromS3Url failed: {}", e.toString());
+            throw new RuntimeException("Failed to extract text from S3 URL", e);
+        }
+    }
+
+    public String documentOcr(byte[] bytes) throws Exception {
+        Image img = Image.newBuilder()
+                .setContent(ByteString.copyFrom(bytes))
+                .build();
+        Feature feature = Feature.newBuilder()
+                .setType(Feature.Type.DOCUMENT_TEXT_DETECTION)
+                .build();
+        AnnotateImageRequest req = AnnotateImageRequest.newBuilder()
+                .setImage(img)
+                .addFeatures(feature)
+                .build();
+        AnnotateImageResponse r = client.batchAnnotateImages(List.of(req)).getResponses(0);
+        if (r.hasError()) throw new RuntimeException(r.getError().getMessage());
+        return r.getFullTextAnnotation().getText();
+    }
 
     // -----------------------------
     // 라벨 인식 (파일)
