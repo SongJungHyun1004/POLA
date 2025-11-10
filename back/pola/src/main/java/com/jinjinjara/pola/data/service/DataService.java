@@ -160,6 +160,11 @@ public class DataService {
                 yield fileRepository.findAllByUserIdAndCategoryId(user.getId(), request.getFilterId(), pageable);
             }
             case "favorite" -> fileRepository.findAllByUserIdAndFavoriteTrue(user.getId(), pageable);
+            case "tag" -> {
+                if (request.getFilterId() == null)
+                    throw new CustomException(ErrorCode.INVALID_REQUEST, "태그 ID가 필요합니다.");
+                yield fileRepository.findAllByUserIdAndTagId(user.getId(), request.getFilterId(), pageable);
+            }
             default -> fileRepository.findAllByUserId(user.getId(), pageable);
         };
 
@@ -190,6 +195,7 @@ public class DataService {
                 .createdAt(file.getCreatedAt())
                 .build());
     }
+
 
 
 

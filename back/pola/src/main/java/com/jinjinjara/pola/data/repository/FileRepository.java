@@ -21,18 +21,19 @@ public interface FileRepository extends JpaRepository<File, Long> {
 
     // 즐겨찾기 페이지 조회 (페이징)
     Page<File> findAllByUserIdAndFavoriteTrueOrderByFavoriteSortAscFavoritedAtDesc(Long userId, Pageable pageable);
+
     Page<File> findAllByUserIdAndFavoriteTrue(Long userId, Pageable pageable);
 
     // 즐겨찾기 정렬 순서 밀기 (+1)
     @Modifying
     @Query("""
-        UPDATE File f 
-           SET f.favoriteSort = f.favoriteSort + 1
-         WHERE f.userId = :userId 
-           AND f.favorite = true
-           AND f.favoriteSort >= :start 
-           AND f.favoriteSort < :end
-        """)
+            UPDATE File f 
+               SET f.favoriteSort = f.favoriteSort + 1
+             WHERE f.userId = :userId 
+               AND f.favorite = true
+               AND f.favoriteSort >= :start 
+               AND f.favoriteSort < :end
+            """)
     void incrementSortRange(@Param("userId") Long userId,
                             @Param("start") int start,
                             @Param("end") int end);
@@ -40,23 +41,23 @@ public interface FileRepository extends JpaRepository<File, Long> {
     // 즐겨찾기 정렬 순서 당기기 (-1)
     @Modifying
     @Query("""
-        UPDATE File f 
-           SET f.favoriteSort = f.favoriteSort - 1
-         WHERE f.userId = :userId 
-           AND f.favorite = true
-           AND f.favoriteSort > :start 
-           AND f.favoriteSort <= :end
-        """)
+            UPDATE File f 
+               SET f.favoriteSort = f.favoriteSort - 1
+             WHERE f.userId = :userId 
+               AND f.favorite = true
+               AND f.favoriteSort > :start 
+               AND f.favoriteSort <= :end
+            """)
     void decrementSortRange(@Param("userId") Long userId,
                             @Param("start") int start,
                             @Param("end") int end);
 
     @Query("""
-    SELECT f FROM File f
-    WHERE f.userId = :userId
-      AND (f.lastViewedAt IS NULL OR f.lastViewedAt < :sevenDaysAgo)
-    ORDER BY f.views ASC, f.lastViewedAt ASC NULLS FIRST, f.createdAt ASC
-    """)
+            SELECT f FROM File f
+            WHERE f.userId = :userId
+              AND (f.lastViewedAt IS NULL OR f.lastViewedAt < :sevenDaysAgo)
+            ORDER BY f.views ASC, f.lastViewedAt ASC NULLS FIRST, f.createdAt ASC
+            """)
     List<File> findRemindFiles(@Param("userId") Long userId,
                                @Param("sevenDaysAgo") LocalDateTime sevenDaysAgo,
                                Pageable pageable);
@@ -68,11 +69,11 @@ public interface FileRepository extends JpaRepository<File, Long> {
     List<File> findTop10ByUserIdOrderByCreatedAtDesc(Long userId);
 
     @Query("""
-        SELECT f FROM File f
-        WHERE f.userId = :userId
-          AND (f.lastViewedAt IS NULL OR f.lastViewedAt < :sevenDaysAgo)
-        ORDER BY f.views ASC, f.createdAt DESC
-        """)
+            SELECT f FROM File f
+            WHERE f.userId = :userId
+              AND (f.lastViewedAt IS NULL OR f.lastViewedAt < :sevenDaysAgo)
+            ORDER BY f.views ASC, f.createdAt DESC
+            """)
     List<File> findRemindPreview(@Param("userId") Long userId,
                                  @Param("sevenDaysAgo") LocalDateTime sevenDaysAgo,
                                  Pageable pageable);
@@ -88,6 +89,17 @@ public interface FileRepository extends JpaRepository<File, Long> {
             @Param("tagId") Long tagId
     );
 
+    @Query("""
+            SELECT f
+            FROM File f
+            JOIN FileTag ft ON f.id = ft.file.id
+            WHERE f.userId = :userId
+              AND ft.tag.id = :tagId
+            ORDER BY f.createdAt DESC
+            """)
+    Page<File> findAllByUserIdAndTagId(@Param("userId") Long userId,
+                                       @Param("tagId") Long tagId,
+                                       Pageable pageable);
 
     // 유저 전체 파일 (페이징)
     Page<File> findAllByUserId(Long userId, Pageable pageable);
