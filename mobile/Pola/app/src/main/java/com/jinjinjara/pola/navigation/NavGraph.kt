@@ -160,8 +160,8 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
     ) {
         composable(Screen.Home.route) {
             HomeScreen(
-                onNavigateToCategory = { categoryName ->
-                    navController.navigate(Screen.Category.createRoute(categoryName))
+                onNavigateToCategory = { categoryId ->
+                    navController.navigate(Screen.Category.createRoute(categoryId))
                 },
                 onNavigateToFavorite = {
                     navController.navigate(Screen.Favorite.route)
@@ -210,12 +210,12 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
         composable(
             route = Screen.Category.route,
             arguments = listOf(
-                navArgument("categoryName") { type = NavType.StringType }
+                navArgument("categoryId") { type = NavType.LongType }
             )
         ) { backStackEntry ->
-            val categoryName = backStackEntry.arguments?.getString("categoryName") ?: ""
+            val categoryId = backStackEntry.arguments?.getLong("categoryId") ?: -1L
             CategoryScreen(
-                categoryName = categoryName,
+                categoryId = categoryId,
                 onBackClick = { navController.popBackStack() },
                 onNavigateToContents = { contentId ->
                     navController.navigate(Screen.Contents.createRoute(contentId))

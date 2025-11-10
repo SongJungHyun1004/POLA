@@ -65,7 +65,7 @@ enum class ViewMode {
 
 @Composable
 fun CategoryScreen(
-    categoryName: String = "카테고리",
+    categoryId: Long = -1L,
     onBackClick: () -> Unit = {},
     onNavigateToContents : (String) -> Unit = {}
 ) {
@@ -200,33 +200,6 @@ fun CategoryScreen(
                 )
             }
         }
-        // Category Grid
-//        LazyVerticalGrid(
-//            state = gridState,
-//            columns = GridCells.Fixed(3),
-//            contentPadding = PaddingValues(
-//                top = headerHeightDp + 8.dp,
-//                start = 16.dp,
-//                end = 16.dp,
-//                bottom = 16.dp
-//            ),
-//            horizontalArrangement = Arrangement.spacedBy(12.dp),
-//            verticalArrangement = Arrangement.spacedBy(24.dp),
-//            modifier = Modifier.fillMaxSize()
-//        ) {
-//            items(categories) { category ->
-//                PolaCard(
-//                    modifier = Modifier.shadow(elevation = 8.dp),
-//                    ratio = 0.7661f,
-//                    imageRatio = 0.9062f,
-//                    paddingValues = PaddingValues(top = 4.dp, start = 4.dp, end = 4.dp),
-//                    imageResId = R.drawable.temp_image,
-//                    textList = listOf(category.name),
-//                    textSize = 12.sp,
-//                    textSpacing = 8.dp,
-//                )
-//            }
-//        }
 
         Box(
             modifier = Modifier
@@ -270,7 +243,7 @@ fun CategoryScreen(
                     )
 
                     Text(
-                        text = categoryName,
+                        text = categoryId.toString(), // id로 name 알아내기
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.tertiary

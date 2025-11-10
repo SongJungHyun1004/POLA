@@ -148,7 +148,7 @@ fun PolaCard(
                 contentAlignment = Alignment.TopCenter
             ) {
                 when {
-                    // ✅ 이미지 파일
+                    // 이미지 파일
                     type?.startsWith("image") == true && imageUrl != null -> {
                         AsyncImage(
                             model = imageUrl,
@@ -158,7 +158,7 @@ fun PolaCard(
                         )
                     }
 
-                    // ✅ 텍스트 파일
+                    // 텍스트 파일
                     type?.startsWith("text") == true && imageUrl != null -> {
                         var textContent by remember { mutableStateOf<String?>(null) }
 
@@ -190,7 +190,7 @@ fun PolaCard(
                         }
                     }
 
-                    // ✅ 기본 이미지 (빈 경우)
+                    // 기본 이미지 (빈 경우)
                     else -> {
                         val painter = painterResource(
                             id = imageResId ?: R.drawable.temp_image

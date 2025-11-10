@@ -65,7 +65,7 @@ data class Category(
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
-    onNavigateToCategory: (String) -> Unit = {},
+    onNavigateToCategory: (Long) -> Unit = {},
     onNavigateToFavorite: () -> Unit = {},
     onNavigateToSearch: () -> Unit = {},
     onNavigateToChatbot: () -> Unit = {}
@@ -112,7 +112,7 @@ fun HomeScreen(
 @Composable
 private fun HomeContent(
     homeData: HomeScreenData,
-    onNavigateToCategory: (String) -> Unit,
+    onNavigateToCategory: (Long) -> Unit,
     onNavigateToFavorite: () -> Unit,
     onNavigateToSearch: () -> Unit,
     onNavigateToChatbot: () -> Unit
@@ -383,7 +383,7 @@ private fun HomeContent(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
                             ) {
-                                onNavigateToCategory("전체")
+                                onNavigateToCategory(-1L) // 전체 보기 임시 id
                             },
                         text = "전체보기",
                         color = MaterialTheme.colorScheme.tertiary,
@@ -410,7 +410,7 @@ private fun HomeContent(
                         CategoryCard(
                             category = item,
                             Modifier.weight(1f),
-                            onClick = { onNavigateToCategory(item.name) }
+                            onClick = { onNavigateToCategory(item.id) }
                         )
                     }
 
