@@ -31,12 +31,17 @@ class AuthInterceptor @Inject constructor(
             "/auth/signup",
             "/oauth/token",
             "/oauth/signup",
-            "/oauth/signin"
+            "/oauth/signin",
+            "/oauth/reissue"  // reissue는 Authorization 헤더에 Refresh Token을 직접 전달
         )
 
         if (skipTokenPaths.any { path.contains(it) }) {
             Log.d("AuthInterceptor", "Public endpoint, skip token: $path")
-            return chain.proceed(originalRequest)
+            // X-Client-Type 헤더는 추가
+            val requestWithClientType = originalRequest.newBuilder()
+                .addHeader("X-Client-Type", "APP")
+                .build()
+            return chain.proceed(requestWithClientType)
         }
 
         // DataStore에서 Access Token 가져오기
@@ -45,15 +50,18 @@ class AuthInterceptor @Inject constructor(
         }
         Log.d("AuthInterceptor", "Token retrieved: ${if (token.isNullOrEmpty()) "null/empty" else "exists"}")
 
-        // 토큰이 있으면 헤더에 추가
+        // 토큰과 X-Client-Type 헤더 추가
         val newRequest = if (!token.isNullOrEmpty()) {
-            Log.d("AuthInterceptor", "Adding Authorization header to: $path")
+            Log.d("AuthInterceptor", "Adding Authorization and X-Client-Type headers to: $path")
             originalRequest.newBuilder()
                 .addHeader("Authorization", "Bearer $token")
+                .addHeader("X-Client-Type", "APP")
                 .build()
         } else {
             Log.w("AuthInterceptor", "No token for request: $path")
-            originalRequest
+            originalRequest.newBuilder()
+                .addHeader("X-Client-Type", "APP")
+                .build()
         }
 
         return chain.proceed(newRequest)

@@ -98,13 +98,9 @@ fun StartScreen(
         Image(
             painter = painterResource(id = R.drawable.pola_start_title),
             contentDescription = "Pola Logo",
-            Modifier
+            modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 60.dp)
-                .clickable {
-                    onLoginSuccess(false)
-                }
-
         )
 
 
