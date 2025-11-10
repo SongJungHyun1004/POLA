@@ -347,7 +347,7 @@ public class AuthController {
                     }
                     ```
                     """,
-            security = @SecurityRequirement(name = "bearerAuth")
+            security = @SecurityRequirement(name = "JWT")
     )
     @GetMapping("/verify")
     public ResponseEntity<ApiResponse<TokenVerifyResponse>> verifyToken(
