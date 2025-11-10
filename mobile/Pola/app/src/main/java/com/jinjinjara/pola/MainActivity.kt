@@ -35,6 +35,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.jinjinjara.pola.domain.repository.AuthRepository
+import com.jinjinjara.pola.domain.usecase.auth.AutoLoginUseCase
 import com.jinjinjara.pola.navigation.PolaNavHost
 import com.jinjinjara.pola.presentation.ui.theme.PolaTheme
 import com.jinjinjara.pola.util.parcelable
@@ -49,9 +50,11 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var authRepository: AuthRepository
 
-
     @Inject
     lateinit var preferencesDataStore: PreferencesDataStore
+
+    @Inject
+    lateinit var autoLoginUseCase: AutoLoginUseCase
 
     private val shareUploadViewModel: ShareUploadViewModel by viewModels()
 
@@ -69,6 +72,13 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d("MainActivity", "onCreate started")
+
+        // 자동 로그인 시도 (백그라운드에서 토큰 검증 및 재발급)
+        lifecycleScope.launch {
+            Log.d("MainActivity", "Starting auto login")
+            val result = autoLoginUseCase()
+            Log.d("MainActivity", "Auto login completed: ${if (result is com.jinjinjara.pola.util.Result.Success) "success" else "failed"}")
+        }
 
         // 공유 인텐트인지 확인 및 데이터 추출
         if (intent?.action == Intent.ACTION_SEND) {
