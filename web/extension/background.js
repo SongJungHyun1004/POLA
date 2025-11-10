@@ -418,10 +418,118 @@ async function handleTextCapture(info, tab) {
       timestamp: new Date().toISOString()
     });
 
-    showNotification(
-      '텍스트 복사 완료!',
-      `"${selectedText.substring(0, 30)}${selectedText.length > 30 ? '...' : ''}"`
-    );
+    try {
+            showNotification('저장 중...', '텍스트를 Pola에 저장하고 있습니다.');
+            
+            // 텍스트를 Blob으로 변환
+            const textBlob = new Blob([selectedText], { type: 'text/plain; charset=utf-8' });
+            const fileSize = textBlob.size;
+            
+            console.log('텍스트 Blob 생성 완료, 크기:', fileSize, 'bytes');
+            
+            // 토큰 가져오기
+            const { accessToken } = await chrome.storage.local.get(['accessToken']);
+            
+            if (!accessToken) {
+                throw new Error('로그인이 필요합니다.');
+            }
+            
+            // 1단계: S3 Presigned URL 생성
+            console.log('1단계: S3 업로드 URL 생성 중...');
+            const timestamp = Date.now();
+            const fileName = `text_${timestamp}.txt`;
+            
+            const presignedResponse = await fetch(
+                `${API_BASE_URL}files/s3/presigned/upload?fileName=${encodeURIComponent(fileName)}`,
+                {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                }
+            );
+            
+            if (!presignedResponse.ok) {
+                const errorText = await presignedResponse.text();
+                console.error('Presigned URL 생성 실패:', errorText);
+                throw new Error('업로드 URL 생성 실패');
+            }
+            
+            const presignedData = await presignedResponse.json();
+            const uploadUrl = presignedData.data.url;
+            const fileKey = presignedData.data.key;
+            
+            console.log('✅ 1단계 완료 - Upload URL:', uploadUrl.substring(0, 100) + '...');
+            console.log('✅ File Key:', fileKey);
+            
+            // 2단계: S3에 직접 업로드
+            console.log('2단계: S3에 텍스트 업로드 중...');
+            
+            const s3UploadResponse = await fetch(uploadUrl, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'text/plain; charset=utf-8'
+                },
+                body: textBlob
+            });
+            
+            if (!s3UploadResponse.ok) {
+                console.error('S3 업로드 실패:', s3UploadResponse.status, s3UploadResponse.statusText);
+                throw new Error('S3 업로드 실패');
+            }
+            
+            console.log('✅ 2단계 완료 - S3 업로드 성공');
+            
+            // 3단계: DB에 파일 메타데이터 저장
+            console.log('3단계: 파일 정보 저장 중...');
+            
+            // originUrl 추출 (? 앞부분까지)
+            const originUrl = uploadUrl.split('?')[0];
+            
+            const completeResponse = await fetch(`${API_BASE_URL}files/complete`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    key: fileKey,
+                    type: 'text/plain',
+                    fileSize: fileSize,
+                    originUrl: originUrl
+                })
+            });
+            
+            if (!completeResponse.ok) {
+                const errorText = await completeResponse.text();
+                console.error('파일 등록 실패:', errorText);
+                throw new Error('파일 등록 실패');
+            }
+            
+            const completeData = await completeResponse.json();
+            console.log('✅ 3단계 완료 - 파일 등록 성공:', completeData);
+            
+            // 업로드 성공!
+            const preview = selectedText.length > 30 
+                ? selectedText.substring(0, 30) + '...'
+                : selectedText;
+                
+            showNotification(
+                '✨ 저장 완료!',
+                `"${preview}" 가 Pola에 저장되었습니다.`
+            );
+            
+            console.log('🎉 전체 업로드 플로우 완료!');
+            console.log('파일 ID:', completeData.data.id);
+            console.log('저장 URL:', completeData.data.originUrl);
+            
+        } catch (uploadError) {
+            console.error('❌ 저장 실패:', uploadError);
+            showNotification(
+                '저장 실패',
+                uploadError.message || '텍스트 저장 중 오류가 발생했습니다.'
+            );
+        }
 
   } catch (error) {
     console.error('텍스트 저장 실패:', error);
