@@ -12,10 +12,7 @@ data class FilePostProcessResponse(
     val message: String,
 
     @Json(name = "status")
-    val status: String,
-
-    @Json(name = "code")
-    val code: String
+    val status: String
 )
 
 @JsonClass(generateAdapter = true)
