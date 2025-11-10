@@ -1,7 +1,31 @@
 import { apiClient } from "@/api/apiClient";
-import { getFileList } from "./fileService"; // ✅ FileList 함수는 별도 서비스로 분리 권장
+import { getFileList } from "./fileService";
 
-// 1) 카테고리 기본 정보 조회
+export interface RecommendedCategory {
+  categoryName: string;
+  tags: string[];
+}
+
+export async function getRecommendedCategories(): Promise<
+  RecommendedCategory[]
+> {
+  const res = await apiClient(`/categories/tags/recommendations`, {
+    method: "GET",
+  });
+
+  if (!res || !res.ok) {
+    throw new Error("추천 카테고리 조회 실패");
+  }
+
+  const json = await res.json();
+  const arr = json?.data?.recommendations ?? [];
+
+  return arr.map((item: any) => ({
+    categoryName: item.categoryName,
+    tags: item.tags ?? [],
+  }));
+}
+
 export async function getCategoryInfo(categoryId: string | number) {
   const res = await apiClient(`/users/me/categories/${categoryId}`);
 
@@ -13,26 +37,23 @@ export async function getCategoryInfo(categoryId: string | number) {
   return json.data;
 }
 
-// ✅ 2) 카테고리 태그 조회
 export async function getCategoryTags(categoryId: string | number) {
   const res = await apiClient(`/categories/${categoryId}/tags`);
 
-  // ✅ 태그가 없을 경우 서버가 404를 반환한다면 → 빈 리스트 처리
+  // 태그가 없을 경우 서버가 404를 줄 가능성 → 빈 리스트로 처리
   if (res && res.status === 404) {
     return [];
   }
 
-  // ✅ 기타 실패는 오류 처리
   if (!res || !res.ok) {
-    console.error("Tag API Response:", res);
-    return []; // ← 태그 없음을 오류로 처리하지 않음
+    console.error("Tag API Failed / fallback to [] : ", res);
+    return [];
   }
 
   const json = await res.json();
   return json.data ?? [];
 }
 
-// 3) 카테고리 파일 리스트 조회 → ✅ 파일 리스트 API(/files/list) 기반으로 맞춤
 export async function getCategoryFiles(
   categoryId: string | number,
   page: number
@@ -46,12 +67,10 @@ export async function getCategoryFiles(
     filterId: Number(categoryId),
   });
 
-  // fileListResponse.content 가 실제 파일 배열
   return fileListResponse.content;
 }
 
-// 4) 파일 상세 조회
-export async function getFileDetail(fileId: number) {
+export async function getFileDetail(fileId: number | string) {
   const res = await apiClient(`/files/${fileId}`);
 
   if (!res || !res.ok) {
@@ -78,7 +97,10 @@ export async function updateFileCategory(fileId: number, categoryId: number) {
 
 export async function getMyCategories() {
   const res = await apiClient(`/users/me/categories`);
-  if (!res.ok) throw new Error("카테고리 목록 조회 실패");
+
+  if (!res.ok) {
+    throw new Error("카테고리 목록 조회 실패");
+  }
 
   const json = await res.json();
   return json.data;
