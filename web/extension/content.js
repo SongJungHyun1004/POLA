@@ -4,9 +4,16 @@ console.log('Content script 로드됨');
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('Content script 메시지 수신:', request);
   
+  // Ping 응답 (content script 로드 확인용)
+  if (request.action === "ping") {
+    sendResponse({ pong: true });
+    return true;
+  }
+  
   if (request.action === "startAreaSelection") {
     startAreaSelection();
     sendResponse({ success: true });
+    return true;
   } else if (request.action === "cropImage") {
     // 이미지 크롭 처리
     cropImage(request.imageData, request.area)
@@ -59,7 +66,7 @@ function startAreaSelection() {
     box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.3);
   `;
   
-  // 안내 텍스트
+  // 안내 텍스트 (초기)
   const guideText = document.createElement('div');
   guideText.style.cssText = `
     position: fixed;
@@ -75,15 +82,44 @@ function startAreaSelection() {
     z-index: 2147483649;
     pointer-events: none;
   `;
-  guideText.textContent = '마우스를 드래그하여 캡처할 영역을 선택하세요 (ESC로 취소)';
+  guideText.textContent = '마우스를 드래그하여 캡처할 영역을 선택하세요';
+  
+  // ESC 안내 (상단 고정)
+  const escGuide = document.createElement('div');
+  escGuide.id = 'esc-guide';
+  escGuide.style.cssText = `
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.85);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 6px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 13px;
+    z-index: 2147483649;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  `;
+  escGuide.innerHTML = `
+    <span style="background: rgba(255, 255, 255, 0.2); padding: 4px 8px; border-radius: 4px; font-weight: 600;">ESC</span>
+    <span>취소</span>
+  `;
   
   document.body.appendChild(overlay);
   document.body.appendChild(selectionBox);
   document.body.appendChild(guideText);
+  document.body.appendChild(escGuide);
   
-  // 2초 후 안내 텍스트 제거
+  // 2초 후 중앙 안내 텍스트만 제거 (ESC 안내는 유지)
   setTimeout(() => {
-    guideText.remove();
+    if (guideText.parentNode) {
+      guideText.remove();
+    }
   }, 2000);
   
   let startX, startY, isSelecting = false;
@@ -100,8 +136,10 @@ function startAreaSelection() {
     selectionBox.style.height = '0px';
     selectionBox.style.display = 'block';
     
-    // 안내 텍스트가 아직 있으면 제거
-    guideText.remove();
+    // 중앙 안내 텍스트만 제거 (ESC 안내는 유지)
+    if (guideText.parentNode) {
+      guideText.remove();
+    }
   });
   
   // 마우스 이동
@@ -172,9 +210,10 @@ function startAreaSelection() {
   document.addEventListener('keydown', handleEscape);
   
   function cleanup() {
-    overlay.remove();
-    selectionBox.remove();
-    guideText.remove();
+    if (overlay.parentNode) overlay.remove();
+    if (selectionBox.parentNode) selectionBox.remove();
+    if (guideText.parentNode) guideText.remove();
+    if (escGuide.parentNode) escGuide.remove();
     document.removeEventListener('keydown', handleEscape);
     isSelecting = false;
   }

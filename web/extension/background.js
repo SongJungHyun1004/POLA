@@ -355,12 +355,14 @@ async function startAreaCaptureWithInjection(tab) {
         // 2. Content script가 이미 로드되어 있는지 확인
         let isContentScriptLoaded = false;
         try {
-            const response = await chrome.tabs.sendMessage(tab.id, {
-                action: "ping"
-            });
+            const response = await Promise.race([
+                chrome.tabs.sendMessage(tab.id, { action: "ping" }),
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('timeout')), 300)
+                )
+            ]);
             isContentScriptLoaded = response?.pong === true;
         } catch (e) {
-            // Content script 없음
             isContentScriptLoaded = false;
         }
 
@@ -373,7 +375,7 @@ async function startAreaCaptureWithInjection(tab) {
             });
 
             // 주입 후 잠시 대기
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise(resolve => setTimeout(resolve, 50));
         }
 
         // 4. 영역 선택 시작 요청
