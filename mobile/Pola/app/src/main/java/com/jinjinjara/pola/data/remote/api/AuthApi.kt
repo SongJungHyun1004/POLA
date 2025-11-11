@@ -43,8 +43,11 @@ interface AuthApi {
         @Body request: SignUpRequest
     ): Response<AuthResponse>
 
-    @POST("auth/logout")
-    suspend fun logout(): Response<Unit>
+    @POST("oauth/logout")
+    @Headers("X-Client-Type: APP")
+    suspend fun logout(
+        @Header("Authorization") refreshToken: String
+    ): Response<Unit>
 
     @POST("auth/refresh")
     suspend fun refreshToken(
