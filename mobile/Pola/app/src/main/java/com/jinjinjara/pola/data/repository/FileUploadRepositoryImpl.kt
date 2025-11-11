@@ -85,11 +85,13 @@ class FileUploadRepositoryImpl @Inject constructor(
             val originUrl = presignedData.url.substringBefore("?")
             Log.d("FileUpload", "Origin URL: $originUrl")
 
+            val platform = "APP"
             val completeRequest = FileCompleteRequest(
                 key = presignedData.key,
                 type = contentType,
                 fileSize = fileSize,
-                originUrl = originUrl
+                originUrl = originUrl,
+                platform = platform,
             )
 
             val completeResponse = fileUploadApi.completeUpload(completeRequest)
@@ -191,12 +193,14 @@ class FileUploadRepositoryImpl @Inject constructor(
             Log.d("FileUpload", "S3 upload successful")
 
             // 4. 업로드 완료 처리
+            val platform = "APP"
             val originUrl = presignedData.url.substringBefore("?")
             val completeRequest = FileCompleteRequest(
                 key = presignedData.key,
                 type = "text/plain",
                 fileSize = fileSize,
-                originUrl = originUrl
+                originUrl = originUrl,
+                platform = platform,
             )
 
             val completeResponse = fileUploadApi.completeUpload(completeRequest)
