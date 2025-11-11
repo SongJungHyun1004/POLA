@@ -496,7 +496,8 @@ async function handleTextCapture(info, tab) {
                     key: fileKey,
                     type: 'text/plain',
                     fileSize: fileSize,
-                    originUrl: originUrl
+                    originUrl: originUrl,
+                    platform: 'WEB'
                 })
             });
             
@@ -665,7 +666,8 @@ async function handleAreaCapture(area, tab) {
             key: fileKey,
             type: 'image/png',
             fileSize: fileSize,
-            originUrl: originUrl
+            originUrl: originUrl,
+            platform: 'WEB'
           })
         });
 
