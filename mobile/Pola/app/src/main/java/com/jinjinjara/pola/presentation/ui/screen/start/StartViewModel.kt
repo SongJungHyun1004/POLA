@@ -60,6 +60,13 @@ class StartViewModel @Inject constructor(
             )
         }
     }
+
+    fun resetError() {
+        if (_uiState.value is StartUiState.Error) {
+            Log.d("Auth:UI", "Resetting error state to Idle")
+            _uiState.value = StartUiState.Idle
+        }
+    }
 }
 
 sealed interface StartUiState {
