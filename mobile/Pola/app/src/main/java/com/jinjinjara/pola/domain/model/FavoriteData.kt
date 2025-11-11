@@ -5,7 +5,7 @@ import com.jinjinjara.pola.presentation.ui.component.DisplayItem
 data class FavoriteData(
     val fileId: Long,
     override val imageUrl: String,
-    val type: String,
+    override val type: String,
     val context: String,
     override val isFavorite: Boolean,
     override val tags: List<String> = emptyList()
