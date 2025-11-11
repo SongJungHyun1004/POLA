@@ -58,7 +58,7 @@ enum class ViewMode {
 fun CategoryScreen(
     categoryId: Long = -1L,
     onBackClick: () -> Unit = {},
-    onNavigateToContents : (String) -> Unit = {},
+    onNavigateToContents : (Long) -> Unit = {},
     viewModel: CategoryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -151,7 +151,7 @@ fun CategoryScreen(
                 ItemGrid3View(
                     items = categories,
                     onItemClick = { item ->
-                        onNavigateToContents(item.id)
+                        onNavigateToContents(item.fileId)
                     },
                     onFavoriteToggle = { }, // 빈 람다 (기능 없음)
                     state = gridState,
@@ -169,7 +169,7 @@ fun CategoryScreen(
                 ItemGrid2View(
                     items = categories,
                     onItemClick = { item ->
-                        onNavigateToContents(item.id)
+                        onNavigateToContents(item.fileId)
                     },
                     onFavoriteToggle = { }, // 빈 람다 (기능 없음)
                     state = gridState,

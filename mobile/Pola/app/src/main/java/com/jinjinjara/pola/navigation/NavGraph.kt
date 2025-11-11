@@ -242,10 +242,10 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
         composable(
             route = Screen.Contents.route,
             arguments = listOf(
-                navArgument("contentId") { type = NavType.StringType }
+                navArgument("contentId") { type = NavType.LongType }
             )
         ) { backStackEntry ->
-            val contentId = backStackEntry.arguments?.getString("contentId") ?: ""
+            val contentId = backStackEntry.arguments?.getLong("contentId") ?: -1L
             ContentsScreen(
                 onBackClick = { navController.popBackStack() },
                 onShareClick = { /* TODO: 공유 기능 */ },
@@ -262,8 +262,9 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
                 navArgument("contentId") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val contentId = backStackEntry.arguments?.getString("contentId") ?: ""
+            val contentId = backStackEntry.arguments?.getLong("contentId") ?: -1L
             ContentsEditScreen(
+                contentId = contentId,
                 onBackClick = { navController.popBackStack() },
                 onSaveClick = {
                     // TODO: 저장 로직
