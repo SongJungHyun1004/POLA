@@ -40,6 +40,7 @@ public class AuthController {
 
     private final CustomUserDetailsService userService;
     private final GoogleAuthService googleAuthService;
+    private final com.jinjinjara.pola.auth.redis.RedisUtil redisUtil;
 
     @Value("${jwt.refresh-token-expire-time}")
     private long refreshTokenExpireTime;
@@ -361,6 +362,80 @@ public class AuthController {
         );
 
         return ResponseEntity.ok(ApiResponse.ok(response, "토큰이 유효합니다."));
+    }
+
+    @Operation(
+            summary = "로그아웃",
+            description = """
+                    현재 디바이스의 Refresh Token을 무효화하여 로그아웃합니다.
+
+                    **다중 디바이스 지원:**
+                    - 현재 디바이스의 Refresh Token만 삭제되므로, 다른 디바이스의 로그인은 유지됩니다.
+                    - 예: 웹에서 로그아웃해도 모바일/확장 프로그램의 로그인은 유지됩니다.
+
+                    **X-Client-Type 헤더에 따른 Refresh Token 전달 방식:**
+                    - `WEB`: 쿠키에서 자동으로 Refresh Token 추출 (refresh_token 쿠키 필수)
+                    - `APP`: Authorization 헤더로 Refresh Token 전달 (Bearer {refreshToken} 형식)
+
+                    **WEB 클라이언트 요청:**
+                    ```
+                    POST /api/v1/oauth/logout
+                    X-Client-Type: WEB
+                    Cookie: refresh_token=eyJhbGciOiJIUzI1NiIs...
+                    ```
+
+                    **APP 클라이언트 요청:**
+                    ```
+                    POST /api/v1/oauth/logout
+                    X-Client-Type: APP
+                    Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+                    ```
+
+                    **성공 응답 (200 OK):**
+                    ```json
+                    {
+                      "status": "success",
+                      "message": "로그아웃되었습니다."
+                    }
+                    ```
+
+                    **에러 응답 (401 Unauthorized):**
+                    - Refresh Token이 유효하지 않거나 이미 만료된 경우
+                    - WEB: refresh_token 쿠키가 없는 경우
+                    - APP: Authorization 헤더가 없거나 형식이 잘못된 경우
+                    """,
+            security = @SecurityRequirement(name = "JWT")
+    )
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<List<Object>>> logout(
+            @Parameter(description = "APP 클라이언트용: Refresh Token (Bearer {token} 형식)", example = "Bearer eyJhbGciOiJIUzI1NiIs...")
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @Parameter(description = "WEB 클라이언트용: Refresh Token 쿠키 (자동 전송)", hidden = true)
+            @CookieValue(value = "refresh_token", required = false) String refreshTokenFromCookie,
+            @Parameter(description = "클라이언트 타입 (WEB: 쿠키 사용, APP: Authorization 헤더)", example = "APP")
+            @RequestHeader(value = "X-Client-Type", defaultValue = "APP") String clientType) {
+
+        // 1. 클라이언트 타입에 따라 Refresh Token 추출
+        String refreshToken = resolveRefreshToken(clientType, refreshTokenFromCookie, authHeader);
+
+        // 2. Redis에서 Refresh Token 삭제 (로그아웃)
+        redisUtil.deleteRefreshToken(refreshToken);
+
+        // 3. WEB 클라이언트인 경우 쿠키도 삭제
+        if ("WEB".equalsIgnoreCase(clientType)) {
+            ResponseCookie cookie = ResponseCookie.from("refresh_token", "")
+                    .path("/")
+                    .httpOnly(true)
+                    .secure(true)
+                    .maxAge(0) // 즉시 만료
+                    .build();
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                    .body(ApiResponse.okMessage("로그아웃되었습니다."));
+        } else {
+            return ResponseEntity.ok(ApiResponse.okMessage("로그아웃되었습니다."));
+        }
     }
 
     // ==================== Private Helper Methods ====================

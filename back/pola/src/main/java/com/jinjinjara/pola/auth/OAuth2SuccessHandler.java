@@ -3,10 +3,12 @@ package com.jinjinjara.pola.auth;
 import com.jinjinjara.pola.auth.dto.common.Role;
 import com.jinjinjara.pola.auth.dto.common.TokenDto;
 import com.jinjinjara.pola.auth.jwt.TokenProvider;
+import com.jinjinjara.pola.auth.redis.RedisUtil;
 import com.jinjinjara.pola.auth.repository.UserRepository;
 import com.jinjinjara.pola.user.entity.Users;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
@@ -26,7 +28,11 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
     private final TokenProvider tokenProvider;
     private final UserRepository userRepository;
+    private final RedisUtil redisUtil;
     private final Environment env; // Environment 주입
+
+    @Value("${jwt.refresh-token-expire-time}")
+    private long refreshTokenExpireTime;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication)
@@ -58,6 +64,10 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         TokenDto tokenDto = tokenProvider.generateTokenDto(authentication, userId);
         String accessToken = tokenDto.getAccessToken();
         String refreshToken = tokenDto.getRefreshToken();
+
+        // Refresh Token을 Redis에 저장 (다중 디바이스 지원)
+        redisUtil.saveRefreshToken(refreshToken, email, refreshTokenExpireTime);
+        log.info("[REDIS] saved refresh token for OAuth2 user {}: {}...", email, refreshToken.substring(0, 16));
 
         // 클라이언트 등록 ID를 통해 웹/모바일 클라이언트 구분
         String clientRegistrationId = ((OAuth2AuthenticationToken) authentication).getAuthorizedClientRegistrationId();

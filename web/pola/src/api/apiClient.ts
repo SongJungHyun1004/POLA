@@ -1,57 +1,64 @@
 export async function apiClient(url: string, options: RequestInit = {}) {
   const base = process.env.NEXT_PUBLIC_POLA_API_BASE_URL ?? "";
+
   const accessToken = localStorage.getItem("accessToken") ?? "";
-  const refreshToken = localStorage.getItem("refreshToken") ?? "";
+
+  const clientType = "WEB";
 
   const headers: Record<string, string> = {
     ...((options.headers as Record<string, string>) || {}),
-    Authorization: accessToken ? `Bearer ${accessToken}` : "",
+    "X-Client-Type": clientType,
     "Content-Type": "application/json",
   };
 
-  let res: Response = await fetch(base + url, { ...options, headers });
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
+  }
 
-  // ✅ Access Token 만료 시(401) → Refresh Token으로 재발급
-  if (res.status === 401 && refreshToken) {
+  let res: Response = await fetch(base + url, {
+    ...options,
+    headers,
+    credentials: "include",
+  });
+
+  if (res.status === 401) {
+    console.warn("Access Token 만료됨 → /oauth/reissue 호출");
+
     const refreshRes: Response = await fetch(base + "/oauth/reissue", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${refreshToken}`,
+        "X-Client-Type": clientType,
         "Content-Type": "application/json",
       },
+      credentials: "include",
     });
 
-    // Refresh 실패 → 강제 로그아웃
     if (!refreshRes.ok) {
+      console.error("토큰 재발급 실패:", refreshRes.status);
       localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
       window.location.href = "/";
       throw new Error("Token refresh failed");
     }
 
     const tokenJson = await refreshRes.json();
-
     const newAccess = tokenJson?.data?.accessToken ?? "";
-    const newRefresh = tokenJson?.data?.refreshToken ?? "";
 
-    if (!newAccess || !newRefresh) {
+    if (!newAccess) {
+      console.error("새로운 Access Token 누락:", tokenJson);
       localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
       window.location.href = "/";
-      throw new Error("New tokens missing");
+      throw new Error("New access token missing");
     }
 
-    // ✅ 새 토큰 저장
     localStorage.setItem("accessToken", newAccess);
-    localStorage.setItem("refreshToken", newRefresh);
 
-    // ✅ 새 Access Token으로 원래 요청 재시도
     res = await fetch(base + url, {
       ...options,
       headers: {
         ...headers,
         Authorization: `Bearer ${newAccess}`,
       },
+      credentials: "include",
     });
   }
 

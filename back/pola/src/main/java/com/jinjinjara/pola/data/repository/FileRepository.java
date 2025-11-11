@@ -89,6 +89,7 @@ public interface FileRepository extends JpaRepository<File, Long> {
             @Param("categoryId") Long categoryId,
             @Param("tagId") Long tagId
     );
+    List<File> findAllByCategoryId(Long categoryId);
 
     @Query("""
             SELECT f

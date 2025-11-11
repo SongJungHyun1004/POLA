@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, memo } from "react";
 import {
   DndContext,
   closestCenter,
@@ -15,151 +15,257 @@ import {
   rectSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+
 import PolaroidCard from "@/app/home/components/PolaroidCard";
-import { Plus, Pencil } from "lucide-react";
 import PolaroidDetail from "../categories/[id]/components/PolaroidDetail";
+import { Plus } from "lucide-react";
+import { getFavoriteFiles } from "@/services/favoriteService";
+import { getFileDetail } from "@/services/categoryService";
 
-type SortableItemProps = {
-  img: {
-    id: number;
-    src: string;
-    tags: string[];
-    contexts: string;
-    favorite: boolean;
-    date: string;
-  };
-  rotation: string;
-  selected: number | null;
-  onSelect: (id: number) => void;
-};
-
-function SortableItem({
-  img,
-  rotation,
-  selected,
-  onSelect,
-}: SortableItemProps) {
-  const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id: img.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform) || rotation,
-    transition: transition || "transform 0.2s ease",
-    transformOrigin: "center bottom",
-  };
-
-  return (
-    <div ref={setNodeRef} style={style} className="w-fit overflow-visible">
-      <button
-        {...attributes}
-        {...listeners}
-        onClick={() => onSelect(img.id)}
-        className={`relative hover:scale-[1.08] transition-transform ${
-          selected === img.id ? "opacity-90" : "opacity-100"
-        }`}
-      >
-        <PolaroidCard src={img.src} />
-        {img.favorite && (
-          <span className="absolute top-2 right-2 text-yellow-500 text-lg">
-            ★
-          </span>
-        )}
-      </button>
-    </div>
-  );
+interface SelectedFile {
+  id: number;
+  src: string;
+  tags: string[];
+  context: string;
+  created_at: string;
+  category_id?: number;
+  favorite: boolean;
 }
 
+interface SortableItemProps {
+  file: any;
+  selectedId: number | null;
+  onSelect: (file: any) => void;
+}
+
+const SortableItem = memo(
+  ({ file, selectedId, onSelect }: SortableItemProps) => {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({ id: file.id });
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition: isDragging ? "none" : transition || "transform 0.2s ease",
+      transformOrigin: "center bottom",
+      willChange: "transform", // ✅ GPU 가속
+      zIndex: isDragging ? 50 : 1,
+    } as const;
+
+    return (
+      <div ref={setNodeRef} style={style} className="w-fit overflow-visible">
+        <button
+          {...attributes}
+          {...listeners}
+          onClick={() => onSelect(file)}
+          className={`relative hover:scale-[1.08] transition-transform ${
+            selectedId === file.id ? "opacity-90" : "opacity-100"
+          }`}
+        >
+          <PolaroidCard src={file.src || "/images/dummy_image_1.png"} />
+          {file.favorite && (
+            <span className="absolute top-2 right-2 text-yellow-500 text-lg">
+              ★
+            </span>
+          )}
+        </button>
+      </div>
+    );
+  }
+);
+SortableItem.displayName = "SortableItem";
+
 export default function FavoritePage() {
-  const [selected, setSelected] = useState<number | null>(null);
+  const [files, setFiles] = useState<any[]>([]);
+  const [selectedFile, setSelectedFile] = useState<SelectedFile | null>(null);
+  const [page, setPage] = useState(0);
+  const [isFetching, setIsFetching] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
 
-  const [images, setImages] = useState(() =>
-    Array.from({ length: 30 }, (_, i) => ({
-      id: i + 1,
-      src: "/images/dummy_image_1.png",
-      tags: ["#태그1", "#태그2", "#태그3", "#태그4", "#태그5", "#태그6"],
-      contexts: "내용을 입력하세요...",
-      favorite: true,
-      date: "2025.10.30",
-    }))
-  );
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const [rotations, setRotations] = useState<string[]>([]);
-  const selectedImage = images.find((img) => img.id === selected);
-
-  useEffect(() => {
-    const newRotations = Array.from({ length: images.length }, () => {
-      const deg = Math.random() * 8 - 4;
-      return `rotate(${deg}deg)`;
-    });
-    setRotations(newRotations);
-  }, [images.length]);
-
-  // long press sensor
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: { delay: 200, tolerance: 5 },
+      activationConstraint: { delay: 150, tolerance: 5 },
     })
   );
+
+async function loadMore() {
+  if (isFetching || !hasMore) return;
+  try {
+    setIsFetching(true);
+    const newFiles = await getFavoriteFiles(page);
+    if (newFiles.length === 0) {
+      setHasMore(false);
+      return;
+    }
+
+    const newFilesWithRotation = newFiles.map((f: any) => ({
+      ...f,
+      rotation: `rotate(${Math.random() * 8 - 4}deg)`,
+    }));
+
+    setFiles((prev) => {
+      const merged = [...prev, ...newFilesWithRotation];
+      return merged.filter(
+        (v, i, a) => a.findIndex((t) => t.id === v.id) === i
+      );
+    });
+
+    setPage((prev) => prev + 1);
+  } catch (e) {
+    console.error(e);
+  } finally {
+    setIsFetching(false);
+  }
+}
+
+  useEffect(() => {
+    loadMore();
+  }, []);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const onScroll = () => {
+      if (
+        container.scrollTop + container.clientHeight >=
+        container.scrollHeight - 300
+      ) {
+        loadMore();
+      }
+    };
+    container.addEventListener("scroll", onScroll);
+    return () => container.removeEventListener("scroll", onScroll);
+  }, [files, hasMore, isFetching]);
+
+  const handleSelectFile = async (file: any) => {
+    setSelectedFile({
+      id: file.id,
+      src: file.src ?? "/images/dummy_image_1.png",
+      favorite: file.favorite,
+      tags: [],
+      context: "",
+      created_at: "",
+    });
+
+    try {
+      const detail = await getFileDetail(file.id);
+      const normalizedTags = (detail.tags ?? []).map(
+        (t: any) => `#${t.tagName}`
+      );
+
+      setSelectedFile({
+        id: detail.id,
+        src: detail.src ?? file.src ?? "/images/dummy_image_1.png",
+        tags: normalizedTags,
+        context: detail.context ?? "",
+        created_at: detail.created_at,
+        category_id: detail.category_id,
+        favorite: detail.favorite,
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const handleDragEnd = (event: any) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    const oldIndex = images.findIndex((img) => img.id === active.id);
-    const newIndex = images.findIndex((img) => img.id === over.id);
-
-    // 임시 상태 변경 (API 연동되면 이 부분에서 PATCH)
-    setImages((prev) => arrayMove(prev, oldIndex, newIndex));
+    const oldIndex = files.findIndex((f) => f.id === active.id);
+    const newIndex = files.findIndex((f) => f.id === over.id);
+    setFiles((prev) => arrayMove(prev, oldIndex, newIndex));
   };
 
   return (
     <div className="flex h-full bg-[#FFFEF8] text-[#4C3D25] px-8 py-6 gap-8">
-      {/* 좌측 메인 */}
+      {/* 좌측 리스트 */}
       <div className="flex flex-col flex-1 overflow-hidden">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-6xl font-bold mb-2">Favorite</h1>
-          <div className="flex items-center gap-4">
-            <button className="p-2 rounded-full hover:bg-[#EDE6D8]">
-              <Plus className="w-5 h-5" />
-            </button>
-            <button className="p-2 rounded-full hover:bg-[#EDE6D8]">
-              <Pencil className="w-5 h-5" />
-            </button>
-          </div>
+          <button className="p-2 rounded-full hover:bg-[#EDE6D8]">
+            <Plus className="w-5 h-5" />
+          </button>
         </div>
 
-        {/* DnD 리스트 */}
-        <div className="flex-1 overflow-y-auto pr-2">
+        <div
+          ref={containerRef}
+          className="flex-1 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-[#CBBF9E]/50"
+        >
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
             onDragEnd={handleDragEnd}
           >
-            <SortableContext items={images} strategy={rectSortingStrategy}>
+            <SortableContext items={files} strategy={rectSortingStrategy}>
               <div className="grid grid-cols-6 gap-6 overflow-visible p-6">
-                {images.map((img, i) => (
-                  <SortableItem
-                    key={img.id}
-                    img={img}
-                    rotation={rotations[i]}
-                    selected={selected}
-                    onSelect={setSelected}
-                  />
+                {files.map((file) => (
+                  <div
+                    key={file.id}
+                    style={{
+                      transform: file.rotation,
+                      transition: "transform 0.2s ease",
+                      transformOrigin: "center bottom",
+                    }}
+                  >
+                    <SortableItem
+                      file={file}
+                      selectedId={selectedFile?.id ?? null}
+                      onSelect={handleSelectFile}
+                    />
+                  </div>
                 ))}
               </div>
             </SortableContext>
           </DndContext>
+
+          {isFetching && (
+            <div className="text-center text-[#7A6A48] py-4 animate-pulse">
+              불러오는 중...
+            </div>
+          )}
+          {!hasMore && (
+            <div className="text-center text-[#7A6A48] py-4">
+              더 이상 데이터가 없습니다.
+            </div>
+          )}
         </div>
       </div>
 
-      {/* 우측 상세 */}
       <div className="w-2/7 flex-shrink-0 border-l border-[#E3DCC8] pl-6 flex flex-col items-center justify-center">
         <PolaroidDetail
-          id={selectedImage?.id}
-          src={selectedImage?.src}
-          tags={selectedImage?.tags ?? []}
-          contexts={selectedImage?.contexts ?? ""}
-          date={selectedImage?.date}
+          id={selectedFile?.id}
+          src={selectedFile?.src}
+          tags={selectedFile?.tags ?? []}
+          contexts={selectedFile?.context ?? ""}
+          date={selectedFile?.created_at}
+          categoryId={selectedFile?.category_id}
+          favorite={selectedFile?.favorite}
+          onCategoryUpdated={async () => {
+            const refreshed = await getFavoriteFiles(0);
+            setFiles(
+              refreshed.map((f: any) => ({
+                ...f,
+                rotation: `rotate(${Math.random() * 8 - 4}deg)`,
+              }))
+            );
+          }}
+          onFavoriteChange={(newState) => {
+            if (!selectedFile) return;
+            setSelectedFile((prev) => prev && { ...prev, favorite: newState });
+            setFiles((prev) =>
+              prev.map((f) =>
+                f.id === selectedFile.id ? { ...f, favorite: newState } : f
+              )
+            );
+          }}
         />
       </div>
     </div>

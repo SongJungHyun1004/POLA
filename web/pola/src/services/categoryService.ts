@@ -105,3 +105,18 @@ export async function getMyCategories() {
   const json = await res.json();
   return json.data;
 }
+
+export async function createInitialCategories(categories: any[]) {
+  const res = await apiClient("/categories/tags/init", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ categories }),
+  });
+
+  if (!res.ok) throw new Error("기본 카테고리 생성 실패");
+
+  const json = await res.json();
+  return json.data;
+}
