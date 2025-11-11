@@ -153,13 +153,15 @@ public class DataController {
         return ApiResponse.ok(updated, "즐겨찾기 순서 변경 완료");
     }
     // ==========================================
-    // 파일 삭제 (임시)
-    // ==========================================
+// 파일 삭제
+// ==========================================
     @Operation(summary = "데이터 삭제", description = "사용자가 지정한 파일을 제거합니다.")
     @DeleteMapping("/{id}")
-    public ApiResponse<List<Object>> deleteData(@PathVariable("id") Long fileId) {
-        return ApiResponse.okMessage("파일이 성공적으로 삭제되었습니다.");
+    public ApiResponse<Void> deleteData(@PathVariable("id") Long fileId) {
+        dataService.deleteFile(fileId);
+        return ApiResponse.ok(null, "파일이 성공적으로 삭제되었습니다.");
     }
+
 
     @Operation(
             summary = "파일 공유 링크 생성",
