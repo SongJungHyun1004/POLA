@@ -73,9 +73,12 @@ dependencies {
     implementation "com.google.genai:google-genai:1.25.0"
     implementation 'com.google.auth:google-auth-library-oauth2-http'
 
-    //pg vector
+    // pg vector
     implementation "org.hibernate.orm:hibernate-vector:6.6.2.Final"
     implementation 'com.pgvector:pgvector:0.1.5'
+
+    // yaml parser
+    implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.17.2"
 }
 
 tasks.named('test') {

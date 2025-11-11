@@ -1,15 +1,14 @@
 package com.jinjinjara.pola.rag.service;
 
-import com.jinjinjara.pola.vision.entity.FileEmbeddings;
+
+import com.jinjinjara.pola.rag.dto.common.SearchRow;
 import com.jinjinjara.pola.vision.repository.FileEmbeddingsRepository;
 import com.jinjinjara.pola.vision.service.EmbeddingService;
-import com.pgvector.PGvector;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-
 
 @Service
 @RequiredArgsConstructor
@@ -19,7 +18,7 @@ public class EmbeddingSearchService {
     private final EmbeddingService embeddingService;
     private final FileEmbeddingsRepository fileEmbeddingsRepository;
 
-    public List<FileEmbeddings> searchSimilarFiles(Long userId, String query, int limit) {
+    public List<SearchRow> searchSimilarFiles(Long userId, String query, int limit) {
         log.info("[EmbeddingSearch] userId={}, query='{}', limit={}", userId, query, limit);
 
         float[] q = embeddingService.embedQuery(query);
@@ -29,10 +28,7 @@ public class EmbeddingSearchService {
         }
 
         String vec = toVectorLiteral(q);
-
-        List<FileEmbeddings> results = fileEmbeddingsRepository.findSimilarFiles(userId, vec, limit);
-        log.info("[EmbeddingSearch] found {} results", results.size());
-        return results;
+        return fileEmbeddingsRepository.findSimilarFilesWithScore(userId, vec, limit);
     }
 
     private static String toVectorLiteral(float[] v) {
@@ -40,7 +36,6 @@ public class EmbeddingSearchService {
         sb.append('[');
         for (int i = 0; i < v.length; i++) {
             if (i > 0) sb.append(',');
-
             sb.append(Float.toString(v[i]));
         }
         sb.append(']');
