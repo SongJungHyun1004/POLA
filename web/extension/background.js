@@ -523,6 +523,9 @@ async function handleTextCapture(info, tab) {
             console.log('🎉 전체 업로드 플로우 완료!');
             console.log('파일 ID:', completeData.data.id);
             console.log('저장 URL:', completeData.data.originUrl);
+
+            // 4단계: 파일 분류 (백그라운드에서 실행)
+            triggerPostProcess(completeData.data.id, accessToken);
             
         } catch (uploadError) {
             console.error('❌ 저장 실패:', uploadError);
@@ -690,6 +693,9 @@ async function handleAreaCapture(area, tab) {
         console.log('파일 ID:', completeData.data.id);
         console.log('저장 URL:', completeData.data.originUrl);
 
+        // 4단계: 파일 분류 (백그라운드에서 실행)
+        triggerPostProcess(completeData.data.id, accessToken);
+
       } catch (uploadError) {
         console.error('❌ 업로드 실패:', uploadError);
         showNotification(
@@ -702,5 +708,34 @@ async function handleAreaCapture(area, tab) {
   } catch (error) {
     console.error('영역 캡처 실패:', error);
     showNotification('캡처 실패', error.message);
+  }
+}
+
+/**
+ * 파일 분류 처리 (백그라운드 실행)
+ */
+async function triggerPostProcess(fileId, accessToken) {
+  try {
+    console.log(`4단계: 파일 분류 시작 (File ID: ${fileId})...`);
+    
+    const postProcessResponse = await fetch(
+      `${API_BASE_URL}files/${fileId}/post-process`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      }
+    );
+    
+    if (postProcessResponse.ok) {
+      const result = await postProcessResponse.json();
+      console.log('✅ 4단계 완료 - 파일 분류 성공:', result);
+    } else {
+      console.warn('⚠️ 파일 분류 실패:', postProcessResponse.status);
+    }
+  } catch (error) {
+    // 분류 실패는 사용자에게 알리지 않음 (백그라운드 작업)
+    console.error('⚠️ 파일 분류 오류:', error);
   }
 }
