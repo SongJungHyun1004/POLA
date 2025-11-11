@@ -215,6 +215,7 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
         ) { backStackEntry ->
             val categoryId = backStackEntry.arguments?.getLong("categoryId") ?: -1L
             CategoryScreen(
+                navController = navController,
                 categoryId = categoryId,
                 onBackClick = { navController.popBackStack() },
                 onNavigateToFavorite = {
@@ -250,13 +251,14 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
         ) { backStackEntry ->
             val contentId = backStackEntry.arguments?.getLong("contentId") ?: -1L
             ContentsScreen(
+                navController = navController,
                 fileId = contentId,
                 onBackClick = { navController.popBackStack() },
                 onShareClick = { /* TODO: 공유 기능 */ },
                 onEditClick = {
                     navController.navigate(Screen.ContentsEdit.createRoute(contentId))
                 },
-                onDeleteClick = { /* 삭제 기능 내부 구현*/ }
+                onDeleteClick = { /* 내부 삭제 구현 */ }
             )
         }
 

@@ -46,12 +46,12 @@ import kotlinx.coroutines.flow.map
 import kotlin.math.roundToInt
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
 import com.jinjinjara.pola.presentation.ui.component.CategoryChips
 import com.jinjinjara.pola.presentation.ui.component.DisplayItem
 import com.jinjinjara.pola.presentation.ui.component.ItemGrid2View
 import com.jinjinjara.pola.presentation.ui.component.ItemGrid3View
 import com.jinjinjara.pola.domain.model.UserCategory
-
 
 
 enum class ViewMode {
@@ -64,6 +64,7 @@ fun CategoryScreen(
     onBackClick: () -> Unit = {},
     onNavigateToFavorite: () -> Unit = {},
     onNavigateToContents : (Long) -> Unit = {},
+    navController: NavHostController,
     viewModel: CategoryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -75,6 +76,28 @@ fun CategoryScreen(
         )
     }
 
+    // SavedStateHandle 값 감시
+    val refreshNeeded = navController
+        .currentBackStackEntryFlow
+        .collectAsState(initial = null)
+
+    LaunchedEffect(refreshNeeded.value) {
+        // SavedStateHandle에 "refreshNeeded"가 true이면 갱신
+        val refresh = navController
+            .currentBackStackEntry
+            ?.savedStateHandle
+            ?.get<Boolean>("refreshNeeded") ?: false
+
+        if (refresh) {
+            viewModel.refresh()
+
+            // 다시 false로 초기화
+            navController
+                .currentBackStackEntry
+                ?.savedStateHandle
+                ?.set("refreshNeeded", false)
+        }
+    }
 
     // 디버깅 로그 추가
     LaunchedEffect(uiState.categoryName, uiState.userCategories) {
@@ -440,8 +463,8 @@ fun CategoryScreen(
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun CategoryScreenPreview() {
-    CategoryScreen()
-}
+//@Preview(showBackground = true)
+//@Composable
+//fun CategoryScreenPreview() {
+//    CategoryScreen()
+//}

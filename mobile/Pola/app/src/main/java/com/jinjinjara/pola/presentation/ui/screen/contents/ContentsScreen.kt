@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.jinjinjara.pola.R
 import com.jinjinjara.pola.domain.model.FileDetail
@@ -55,6 +56,7 @@ fun ContentsScreen(
     onShareClick: () -> Unit = {},
     onEditClick: () -> Unit = {},
     onDeleteClick: () -> Unit = {},
+    navController: NavHostController,
     viewModel: ContentsViewModel = hiltViewModel()
 ) {
 
@@ -72,6 +74,10 @@ fun ContentsScreen(
 
     LaunchedEffect(deleteState) {
         if (deleteState is DeleteState.Success) {
+            navController.previousBackStackEntry
+                ?.savedStateHandle
+                ?.set("refreshNeeded", true)
+
             onBackClick()
             viewModel.resetDeleteState()
         }
