@@ -2,6 +2,7 @@ package com.jinjinjara.pola.domain.repository
 
 import com.jinjinjara.pola.domain.model.Category
 import com.jinjinjara.pola.domain.model.CategoryRecommendation
+import com.jinjinjara.pola.domain.model.FileDetail
 import com.jinjinjara.pola.domain.model.FilesPage
 import com.jinjinjara.pola.domain.model.UserCategory
 import com.jinjinjara.pola.util.Result
@@ -39,4 +40,6 @@ interface CategoryRepository {
      * Get user's categories
      */
     suspend fun getCategories(): Result<List<Category>>
+
+    suspend fun getFileDetail(fileId: Long): Result<FileDetail>
 }

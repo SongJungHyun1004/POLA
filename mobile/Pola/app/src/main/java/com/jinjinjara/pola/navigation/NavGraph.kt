@@ -247,6 +247,7 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
         ) { backStackEntry ->
             val contentId = backStackEntry.arguments?.getLong("contentId") ?: -1L
             ContentsScreen(
+                fileId = contentId,
                 onBackClick = { navController.popBackStack() },
                 onShareClick = { /* TODO: 공유 기능 */ },
                 onEditClick = {
