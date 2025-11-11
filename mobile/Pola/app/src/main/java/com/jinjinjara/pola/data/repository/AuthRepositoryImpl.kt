@@ -125,9 +125,17 @@ class AuthRepositoryImpl @Inject constructor(
     override suspend fun logout(): Result<Unit> {
         return withContext(ioDispatcher) {
             try {
-                Log.d("Auth:Logout", "Sending logout request to server")
-                authApi.logout()
-                Log.d("Auth:Logout", "Server logout successful")
+                // Refresh Token 가져오기
+                val refreshToken = preferencesManager.getRefreshToken()
+
+                if (!refreshToken.isNullOrEmpty()) {
+                    Log.d("Auth:Logout", "Sending logout request to server with refresh token")
+                    authApi.logout("Bearer $refreshToken")
+                    Log.d("Auth:Logout", "Server logout successful - current device's refresh token invalidated")
+                } else {
+                    Log.d("Auth:Logout", "No refresh token available, skipping server logout")
+                }
+
                 clearTokens()
                 Log.d("Auth:Logout", "Local tokens cleared")
                 Result.Success(Unit)

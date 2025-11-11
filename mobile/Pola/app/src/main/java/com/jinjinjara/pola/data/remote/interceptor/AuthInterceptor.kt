@@ -32,7 +32,8 @@ class AuthInterceptor @Inject constructor(
             "/oauth/token",
             "/oauth/signup",
             "/oauth/signin",
-            "/oauth/reissue"  // reissue는 Authorization 헤더에 Refresh Token을 직접 전달
+            "/oauth/reissue",  // reissue는 Authorization 헤더에 Refresh Token을 직접 전달
+            "/oauth/logout"    // logout도 Authorization 헤더에 Refresh Token을 직접 전달
         )
 
         if (skipTokenPaths.any { path.contains(it) }) {

@@ -42,8 +42,25 @@ class TokenAuthenticator @Inject constructor(
             return null
         }
 
+        // 현재 요청에 사용된 토큰 추출
+        val requestToken = response.request.header("Authorization")?.removePrefix("Bearer ")?.trim()
+
         return runBlocking {
             mutex.withLock {
+                Log.d("Auth:Token", "Lock acquired, checking if token was already refreshed")
+
+                // 현재 저장된 토큰 가져오기
+                val currentToken = preferencesDataStore.getAccessToken()
+
+                // 토큰이 이미 갱신되었는지 확인 (다른 스레드가 이미 갱신함)
+                if (!currentToken.isNullOrEmpty() && currentToken != requestToken) {
+                    Log.d("Auth:Token", "Token already refreshed by another request, using new token")
+                    return@withLock response.request.newBuilder()
+                        .header("Authorization", "Bearer $currentToken")
+                        .header("Token-Refreshed", "true")
+                        .build()
+                }
+
                 Log.d("Auth:Token", "Attempting to refresh access token")
 
                 // 1. Refresh Token 가져오기
