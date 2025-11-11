@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import useAuthStore from "@/store/useAuthStore";
+import { authService } from "@/services/authService";
 
 export default function Header() {
   const { user } = useAuthStore();
@@ -26,9 +27,9 @@ export default function Header() {
   const [aiMode, setAiMode] = useState(false);
   const [tag, setTag] = useState("");
   const [category, setCategory] = useState("");
-  const [showModal, setShowModal] = useState(false); // 🔹 상세 검색 모달
-  const [showProfileModal, setShowProfileModal] = useState(false); // 🔹 프로필 모달
-  const [showUploadModal, setShowUploadModal] = useState(false); // 🔹 업로드 모달
+  const [showModal, setShowModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
   const profileRef = useRef<HTMLDivElement>(null);
 
@@ -226,7 +227,16 @@ export default function Header() {
                 <hr />
 
                 <button
-                  onClick={() => alert("로그아웃 되었습니다.")}
+                  onClick={async () => {
+                    try {
+                      await authService.logout();
+                    } catch (err) {
+                      console.error(err);
+                      alert("로그아웃 중 오류가 발생했습니다.");
+                      localStorage.removeItem("accessToken");
+                      window.location.href = "/";
+                    }
+                  }}
                   className="flex items-center justify-center gap-2 text-red-500 hover:text-red-600 w-full font-semibold"
                 >
                   <LogOut className="w-4 h-4" />

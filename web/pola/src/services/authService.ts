@@ -34,4 +34,27 @@ export const authService = {
     const json = await res.json();
     return json.data;
   },
+
+  logout: async () => {
+    const base = process.env.NEXT_PUBLIC_POLA_API_BASE_URL ?? "";
+    const res = await fetch(`${base}/oauth/logout`, {
+      method: "POST",
+      headers: {
+        "X-Client-Type": "WEB",
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      console.error("로그아웃 실패:", res.status);
+      throw new Error("Logout failed");
+    }
+
+    // ✅ 로컬 토큰 제거
+    localStorage.removeItem("accessToken");
+
+    // ✅ 홈(로그인)으로 이동
+    window.location.href = "/";
+  },
 };
