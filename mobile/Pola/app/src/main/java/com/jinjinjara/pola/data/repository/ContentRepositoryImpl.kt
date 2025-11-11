@@ -10,11 +10,13 @@ import com.jinjinjara.pola.data.mapper.toDomain
 import com.jinjinjara.pola.data.remote.api.AuthApi
 import com.jinjinjara.pola.data.remote.api.ContentApi
 import com.jinjinjara.pola.data.remote.dto.request.FilesListRequest
+import com.jinjinjara.pola.data.remote.dto.request.ShareRequest
 import com.jinjinjara.pola.di.IoDispatcher
 import com.jinjinjara.pola.domain.model.Category
 import com.jinjinjara.pola.domain.model.CategoryRecommendation
 import com.jinjinjara.pola.domain.model.FileDetail
 import com.jinjinjara.pola.domain.model.FilesPage
+import com.jinjinjara.pola.domain.model.ShareLink
 import com.jinjinjara.pola.domain.model.UserCategory
 import com.jinjinjara.pola.domain.repository.CategoryRepository
 import com.jinjinjara.pola.domain.repository.ContentRepository
@@ -95,6 +97,50 @@ class ContentRepositoryImpl @Inject constructor(
                 }
             } catch (e: Exception) {
                 Log.e("File:Repo", "Exception while deleting file", e)
+                Result.Error(
+                    exception = e,
+                    message = e.message ?: "알 수 없는 오류가 발생했습니다",
+                    errorType = ErrorType.NETWORK
+                )
+            }
+        }
+    }
+
+
+    override suspend fun createShareLink(fileId: Long, expireHours: Int): Result<ShareLink> {
+        return withContext(ioDispatcher) {
+            try {
+                Log.d("File:Repo", "Creating share link for fileId: $fileId (expireHours: $expireHours)")
+                val response = contentApi.createShareLink(
+                    fileId = fileId,
+                    request = ShareRequest(expireHours)
+                )
+
+                Log.d("File:Repo", "Response code: ${response.code()}")
+                Log.d("File:Repo", "Is successful: ${response.isSuccessful}")
+
+                if (response.isSuccessful && response.body() != null) {
+                    val data = response.body()!!.data
+                    Log.d("File:Repo", "Share link successfully created: ${data.shareUrl}")
+
+                    Result.Success(
+                        ShareLink(
+                            shareUrl = data.shareUrl,
+                            expiredAt = data.expiredAt
+                        )
+                    )
+                } else {
+                    val errorBody = response.errorBody()?.string()
+                    Log.e("File:Repo", "Failed to create share link")
+                    Log.e("File:Repo", "Error body: $errorBody")
+
+                    Result.Error(
+                        message = "공유 링크 생성에 실패했습니다",
+                        errorType = ErrorType.SERVER
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("File:Repo", "Exception while creating share link", e)
                 Result.Error(
                     exception = e,
                     message = e.message ?: "알 수 없는 오류가 발생했습니다",

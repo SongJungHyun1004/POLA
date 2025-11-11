@@ -1,9 +1,13 @@
 package com.jinjinjara.pola.data.remote.api
 
+import com.jinjinjara.pola.data.remote.dto.request.ShareRequest
 import com.jinjinjara.pola.data.remote.dto.response.FileDetailResponse
+import com.jinjinjara.pola.data.remote.dto.response.ShareResponse
 import retrofit2.Response
+import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.POST
 import retrofit2.http.Path
 
 interface ContentApi {
@@ -20,5 +24,14 @@ interface ContentApi {
     suspend fun deleteFile(
         @Path("fileId") fileId: Long
     ): Response<Unit>
+
+    /**
+     * 파일 공유 링크 생성
+     */
+    @POST("files/{fileId}/share")
+    suspend fun createShareLink(
+        @Path("fileId") fileId: Long,
+        @Body request: ShareRequest
+    ): Response<ShareResponse>
 
 }

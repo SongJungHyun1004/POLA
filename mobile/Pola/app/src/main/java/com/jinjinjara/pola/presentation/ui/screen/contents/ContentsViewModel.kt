@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jinjinjara.pola.domain.model.FileDetail
+import com.jinjinjara.pola.domain.model.ShareLink
 import com.jinjinjara.pola.domain.repository.ContentRepository
 import com.jinjinjara.pola.domain.usecase.favorite.ToggleFavoriteUseCase
 import com.jinjinjara.pola.util.Result
@@ -32,6 +33,9 @@ class ContentsViewModel @Inject constructor(
 
     private val _deleteState = MutableStateFlow<DeleteState>(DeleteState.Idle)
     val deleteState: StateFlow<DeleteState> = _deleteState.asStateFlow()
+
+    private val _shareState = MutableStateFlow<ShareState>(ShareState.Idle)
+    val shareState: StateFlow<ShareState> = _shareState.asStateFlow()
 
     /**
      * 파일 상세 정보 로드
@@ -111,8 +115,43 @@ class ContentsViewModel @Inject constructor(
         }
     }
 
+
+    /**
+     * 공유 링크 생성
+     */
+    fun createShareLink(expireHours: Int = 24) {
+        val fileId = currentFileId ?: return
+
+        viewModelScope.launch {
+            _shareState.value = ShareState.Loading
+
+            when (val result = contentRepository.createShareLink(fileId, expireHours)) {
+                is Result.Success -> {
+                    Log.d("ContentsVM", "Share link created: ${result.data.shareUrl}")
+                    _shareState.value = ShareState.Success(result.data)
+                }
+                is Result.Error -> {
+                    Log.e("ContentsVM", "Failed to create share link: ${result.message}")
+                    _shareState.value = ShareState.Error(result.message ?: "공유 링크 생성 실패")
+                }
+                else -> Unit
+            }
+        }
+    }
+
     fun resetDeleteState() {
         _deleteState.value = DeleteState.Idle
+    }
+
+    fun resetShareState() {
+        _shareState.value = ShareState.Idle
+    }
+
+    sealed class ShareState {
+        object Idle : ShareState()
+        object Loading : ShareState()
+        data class Success(val shareLink: ShareLink) : ShareState()
+        data class Error(val message: String) : ShareState()
     }
 }
 
