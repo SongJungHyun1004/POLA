@@ -37,7 +37,8 @@ public class DataController {
     @Operation(
             summary = "파일 업로드 완료 처리",
             description = "클라이언트에서 Presigned URL로 S3 업로드가 끝난 후, 해당 파일 메타데이터를 DB에 저장합니다.\n" +
-                    "업로드된 URL의 '?' 앞부분을 originUrl로 전달해야 합니다."
+                    "업로드된 URL의 '?' 앞부분을 originUrl로 전달해야 합니다." +
+                    "platform에는 WEB / APP으로 구분하여 입력"
     )
     @PostMapping("/complete")
     public ApiResponse<File> saveUploadedFile(
