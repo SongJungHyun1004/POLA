@@ -112,3 +112,25 @@ export async function createFileShareLink(fileId: number) {
   const json = await res.json();
   return json.data;
 }
+
+export async function addFileFavorite(fileId: number) {
+  const res = await apiClient(`/files/${fileId}/favorite`, {
+    method: "PUT",
+  });
+
+  if (!res.ok) {
+    throw new Error("즐겨찾기 추가 실패");
+  }
+  return true;
+}
+
+export async function removeFileFavorite(fileId: number) {
+  const res = await apiClient(`/files/${fileId}/favorite`, {
+    method: "DELETE",
+  });
+
+  if (!res.ok) {
+    throw new Error("즐겨찾기 해제 실패");
+  }
+  return true;
+}

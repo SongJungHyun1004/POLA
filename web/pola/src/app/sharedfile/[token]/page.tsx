@@ -40,6 +40,10 @@ export default async function SharedFilePage({
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-[#FFFEF8] text-[#4C3D25] px-4 py-10">
+      <div className="mb-4 text-lg sm:text-xl text-[#333]">
+        <span className="font-medium">[{sharedFile.ownerName}]</span>님이 공유한
+        컨텐츠
+      </div>
       <PolaroidDetail
         id={detail.id}
         src={detail.src}
@@ -49,11 +53,6 @@ export default async function SharedFilePage({
         sharedView
         downloadUrl={sharedFile.downloadUrl}
       />
-
-      <div className="mt-8 text-lg sm:text-xl text-[#333]">
-        <span className="font-medium">[{sharedFile.ownerName}]</span>님이 공유한
-        컨텐츠
-      </div>
     </main>
   );
 }
