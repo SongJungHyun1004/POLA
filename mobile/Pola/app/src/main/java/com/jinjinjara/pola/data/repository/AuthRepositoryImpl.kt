@@ -191,10 +191,11 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun saveTokens(accessToken: String, refreshToken: String) {
         withContext(ioDispatcher) {
-            Log.d("Auth:Token", "Saving access token: ${accessToken.take(20)}...")
+            Log.d("Auth:Token", "Saving access token: $accessToken")
             preferencesManager.saveAccessToken(accessToken)
-            Log.d("Auth:Token", "Saving refresh token: ${refreshToken.take(20)}...")
+            Log.d("Auth:Token", "Saving refresh token: $refreshToken")
             preferencesManager.saveRefreshToken(refreshToken)
+            Log.d("Auth:Token", "Tokens are same? ${accessToken == refreshToken}")
         }
     }
 

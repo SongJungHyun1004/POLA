@@ -1,5 +1,8 @@
 package com.jinjinjara.pola.presentation.ui.screen.start
 
+import android.app.Activity
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -26,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -71,6 +75,31 @@ fun CategorySelectScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val selectedCategories by viewModel.selectedCategories.collectAsState()
+    val showExitToast by viewModel.showExitToast.collectAsState()
+
+    val context = LocalContext.current
+    val activity = context as? Activity
+
+    // 뒤로가기 처리
+    BackHandler {
+        val shouldExit = viewModel.onBackPressed()
+        if (shouldExit) {
+            // 두 번째 뒤로가기 -> 앱 종료
+            activity?.finish()
+        }
+    }
+
+    // 토스트 표시
+    LaunchedEffect(showExitToast) {
+        if (showExitToast) {
+            Toast.makeText(
+                context,
+                "뒤로가기를 한 번 더 누르면 앱이 종료됩니다",
+                Toast.LENGTH_SHORT
+            ).show()
+            viewModel.resetExitToast()
+        }
+    }
 
     Column(
         modifier = Modifier

@@ -1,9 +1,14 @@
 package com.jinjinjara.pola.data.remote.interceptor
 
+import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
+import android.widget.Toast
 import com.jinjinjara.pola.data.local.datastore.PreferencesDataStore
 import com.jinjinjara.pola.data.remote.api.AuthApi
 import com.jinjinjara.pola.data.remote.dto.request.RefreshTokenRequest
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -21,7 +26,8 @@ import javax.inject.Singleton
 @Singleton
 class TokenAuthenticator @Inject constructor(
     private val preferencesDataStore: PreferencesDataStore,
-    private val authApi: dagger.Lazy<AuthApi>
+    private val authApi: dagger.Lazy<AuthApi>,
+    @ApplicationContext private val context: Context
 ) : Authenticator {
 
     private val mutex = Mutex()
@@ -116,6 +122,15 @@ class TokenAuthenticator @Inject constructor(
             Log.d("Auth:Token", "Clearing all tokens for forced logout")
             preferencesDataStore.clearTokens()
             Log.d("Auth:Token", "All tokens cleared, user must login again")
+
+            // Main Thread에서 Toast 표시
+            Handler(Looper.getMainLooper()).post {
+                Toast.makeText(
+                    context,
+                    "로그인이 만료되었습니다. 다시 로그인해주세요.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
         }
     }
 }

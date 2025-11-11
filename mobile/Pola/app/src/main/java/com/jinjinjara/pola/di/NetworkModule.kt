@@ -1,5 +1,6 @@
 package com.jinjinjara.pola.di
 
+import android.content.Context
 import com.jinjinjara.pola.data.local.datastore.PreferencesDataStore
 import com.jinjinjara.pola.data.remote.api.AuthApi
 import com.jinjinjara.pola.data.remote.api.CategoryApi
@@ -16,6 +17,7 @@ import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -66,9 +68,10 @@ object NetworkModule {
     @Singleton
     fun provideTokenAuthenticator(
         preferencesDataStore: PreferencesDataStore,
-        authApi: dagger.Lazy<AuthApi>
+        authApi: dagger.Lazy<AuthApi>,
+        @ApplicationContext context: Context
     ): TokenAuthenticator {
-        return TokenAuthenticator(preferencesDataStore, authApi)
+        return TokenAuthenticator(preferencesDataStore, authApi, context)
     }
 
     // OkHttpClient 제공
