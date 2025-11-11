@@ -77,8 +77,9 @@ public class TokenProvider {
         Claims claims = parseClaims(refreshToken);
         String email = claims.getSubject();
 
-        Object storedRefreshTokenObj = redisUtil.get(email);
-        if (storedRefreshTokenObj == null || !storedRefreshTokenObj.toString().equals(refreshToken)) {
+        // Redis에서 Refresh Token으로 이메일 조회 (다중 디바이스 지원)
+        String storedEmail = redisUtil.getEmailByRefreshToken(refreshToken);
+        if (storedEmail == null || !storedEmail.equals(email)) {
             throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN, "저장된 토큰과 일치하지 않습니다.");
         }
 
@@ -92,8 +93,13 @@ public class TokenProvider {
         String newAccessToken = generateAccessToken(email, authorities, userId);
         String newRefreshToken = generateRefreshToken(email, authorities, userId);
 
-        redisUtil.save(email, newRefreshToken, refreshExpireMs);
-        log.info("[REDIS] Rotated and saved new refresh token for {}: {}...", email, newRefreshToken.substring(0, 16));
+        // 기존 Refresh Token 삭제 후 새로운 Refresh Token 저장 (Rotation)
+        redisUtil.deleteRefreshToken(refreshToken);
+        redisUtil.saveRefreshToken(newRefreshToken, email, refreshExpireMs);
+        log.info("[REDIS] Rotated refresh token for {}: {}... → {}...",
+                email,
+                refreshToken.substring(0, 16),
+                newRefreshToken.substring(0, 16));
 
         return TokenDto.builder()
                 .grantType(BEARER_TYPE)

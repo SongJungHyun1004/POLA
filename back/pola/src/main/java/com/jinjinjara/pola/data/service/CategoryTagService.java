@@ -208,6 +208,43 @@ public class CategoryTagService {
                 })
                 .toList();
     }
+    /**
+     * ✅ 카테고리에 여러 태그를 한 번에 추가
+     * - 같은 이름의 태그가 없으면 새로 생성
+     * - 이미 연결된 태그는 중복 연결 방지
+     */
+    @Transactional
+    public List<CategoryTagResponse> addTagsToCategory(Long categoryId, List<String> tagNames) {
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
+
+        List<CategoryTagResponse> results = tagNames.stream()
+                .map(tagName -> {
+                    //  태그 존재 확인 (없으면 생성)
+                    Tag tag = tagRepository.findByTagName(tagName)
+                            .orElseGet(() -> tagRepository.save(Tag.builder().tagName(tagName).build()));
+
+                    // 2이미 연결된 경우 건너뛰기
+                    boolean exists = categoryTagRepository.existsByCategoryAndTag(category, tag);
+                    if (exists) {
+                        System.out.println("[CategoryTagService] 이미 연결된 태그: " + tagName);
+                        return null;
+                    }
+
+                    //  새로운 연결 저장
+                    CategoryTag categoryTag = CategoryTag.builder()
+                            .category(category)
+                            .tag(tag)
+                            .build();
+                    CategoryTag saved = categoryTagRepository.save(categoryTag);
+
+                    return CategoryTagResponse.fromEntity(saved);
+                })
+                .filter(ct -> ct != null)
+                .toList();
+
+        return results;
+    }
 
 
 }
