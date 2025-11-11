@@ -4,16 +4,17 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect } from "react";
 import { authService } from "@/services/authService";
+import { userService } from "@/services/userService";
 
 export default function LandingPage() {
-  /**
-   * Google 로그인 성공 콜백
-   */
   const handleCredentialResponse = async (response: any) => {
     const idToken = response.credential;
-
     try {
       const res = await authService.googleLogin(idToken);
+      console.log("OAuth 응답 상태:", res.status, "ok:", res.ok);
+
+      const raw = await res.text();
+      console.log("Raw 응답 본문:", raw);
 
       if (!res.ok) {
         console.error("OAuth 요청 실패:", res.status);
@@ -21,19 +22,33 @@ export default function LandingPage() {
         return;
       }
 
-      const data = await res.json();
-      const status = res.status;
-      const { accessToken, refreshToken } = data.data;
+      const data = JSON.parse(raw);
+      const accessToken = data?.data?.accessToken;
 
-      // JWT 저장
+      if (!accessToken) {
+        console.error("Access Token 누락:", data);
+        alert("Access Token을 받지 못했습니다.");
+        return;
+      }
+
       localStorage.setItem("accessToken", accessToken);
-      localStorage.setItem("refreshToken", refreshToken);
 
-      // 리다이렉트
-      if (status === 201) {
+      if (res.status === 201) {
+        console.log("신규 유저 → 온보딩 이동");
         window.location.href = "/onboarding";
-      } else {
+        return;
+      }
+
+      try {
+        const categories = await userService.getMyCategories();
+        if (!categories || categories.length === 0) {
+          console.log("카테고리 없음 → 온보딩 이동");
+          window.location.href = "/onboarding";
+          return;
+        }
         window.location.href = "/home";
+      } catch {
+        window.location.href = "/onboarding";
       }
     } catch (error) {
       console.error("로그인 중 오류:", error);
@@ -41,18 +56,65 @@ export default function LandingPage() {
     }
   };
 
-  /**
-   * Google Login Script 초기화
-   */
+  useEffect(() => {
+    const tryAutoLogin = async () => {
+      const accessToken = localStorage.getItem("accessToken");
+      if (!accessToken) return;
+
+      try {
+        console.log("Access Token 검증 시도 중...");
+        const verify = await authService.verifyAccessToken();
+        console.log("Access Token 유효:", verify);
+
+        const categories = await userService.getMyCategories();
+        if (!categories || categories.length === 0) {
+          window.location.href = "/onboarding";
+          return;
+        }
+        window.location.href = "/home";
+      } catch (err) {
+        console.warn("Access Token 만료 또는 무효, 재발급 시도...");
+
+        try {
+          const base = process.env.NEXT_PUBLIC_POLA_API_BASE_URL ?? "";
+          const refreshRes = await fetch(`${base}/oauth/reissue`, {
+            method: "POST",
+            headers: {
+              "X-Client-Type": "WEB",
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+          });
+
+          if (!refreshRes.ok) {
+            console.error("토큰 재발급 실패 → 로그인 페이지로 이동");
+            localStorage.removeItem("accessToken");
+            window.location.href = "/";
+            return;
+          }
+
+          const tokenJson = await refreshRes.json();
+          const newAccess = tokenJson?.data?.accessToken;
+          if (!newAccess) throw new Error("새 Access Token 누락");
+
+          localStorage.setItem("accessToken", newAccess);
+
+          console.log("토큰 재발급 성공 → 홈 이동");
+          window.location.href = "/home";
+        } catch (refreshErr) {
+          console.error("자동 로그인 실패:", refreshErr);
+          localStorage.removeItem("accessToken");
+          window.location.href = "/";
+        }
+      }
+    };
+
+    tryAutoLogin();
+  }, []);
+
   useEffect(() => {
     const script = document.createElement("script");
-
-    if (process.env.NEXT_PUBLIC_GOOGLE_CLIENT_SOURCE) {
-      script.src = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_SOURCE;
-    } else {
-      console.error("NEXT_PUBLIC_GOOGLE_CLIENT_SOURCE 환경변수가 없습니다.");
-    }
-
+    script.src = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_SOURCE ?? "";
     script.async = true;
 
     script.onload = () => {
@@ -61,7 +123,6 @@ export default function LandingPage() {
         client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
         callback: handleCredentialResponse,
         ux_mode: "popup",
-        prompt_parent_id: "googleSignInDiv",
         auto_select: false,
       });
 
@@ -84,19 +145,6 @@ export default function LandingPage() {
     };
   }, []);
 
-  /**
-   * 자동 로그인 (TODO)
-   */
-  useEffect(() => {
-    const accessToken = localStorage.getItem("accessToken");
-    const refreshToken = localStorage.getItem("refreshToken");
-
-    if (accessToken && refreshToken) {
-      // TODO: 실제 /auth/me API로 검증해야 함
-      console.log("JWT 존재: 자동 로그인 예정");
-    }
-  }, []);
-
   return (
     <main className="flex flex-col items-center justify-center min-h-screen bg-[#FFFEF8]">
       <Image
@@ -113,7 +161,6 @@ export default function LandingPage() {
         </h1>
       </Link>
 
-      {/* Google 로그인 버튼 mount point */}
       <div id="googleSignInDiv"></div>
     </main>
   );
