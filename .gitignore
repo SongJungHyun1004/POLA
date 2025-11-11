@@ -27,6 +27,8 @@ captures/
 output.json
 
 # IntelliJ
+nul
+NUL
 *.iml
 .idea/
 misc.xml
