@@ -99,3 +99,16 @@ export async function getRemindFiles() {
   const json = await res.json();
   return json.data as any[];
 }
+
+export async function createFileShareLink(fileId: number) {
+  const res = await apiClient(`/files/${fileId}/share`, {
+    method: "POST",
+  });
+
+  if (!res || !res.ok) {
+    throw new Error("공유 링크 생성 실패");
+  }
+
+  const json = await res.json();
+  return json.data;
+}

@@ -1,6 +1,5 @@
 "use client";
 
-import CryptoJS from "crypto-js";
 import Image from "next/image";
 import { useState, useMemo, useEffect } from "react";
 import ImageModal from "./ImageModal";
@@ -23,6 +22,7 @@ interface PolaroidDetailProps {
   categoryId?: number;
   onCategoryUpdated?: () => void;
   sharedView?: boolean;
+  downloadUrl?: string;
 }
 
 export default function PolaroidDetail({
@@ -34,9 +34,8 @@ export default function PolaroidDetail({
   categoryId,
   onCategoryUpdated,
   sharedView,
+  downloadUrl,
 }: PolaroidDetailProps) {
-  const { user } = useAuthStore();
-
   const [open, setOpen] = useState(false);
   const [flipped, setFlipped] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -46,10 +45,6 @@ export default function PolaroidDetail({
   const [tagState, setTagState] = useState(tags);
   const [categories, setCategories] = useState<any[]>([]);
   const [downloading, setDownloading] = useState(false);
-
-  const secret = process.env.NEXT_PUBLIC_SHARE_KEY!;
-  const username = user?.display_name ?? "알 수 없음";
-  const encrypted = CryptoJS.AES.encrypt(username, secret).toString();
 
   useEffect(() => setTagState(tags), [tags]);
   useEffect(() => setContext(contexts), [contexts]);
@@ -106,13 +101,20 @@ export default function PolaroidDetail({
   }
 
   async function handleDownload() {
-    if (!id) return;
-    if (downloading) return;
+    if (sharedView && downloadUrl) {
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = "";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      return;
+    }
 
+    if (!id || downloading) return;
     try {
       setDownloading(true);
       const url = await getFileDownloadUrl(id);
-
       const a = document.createElement("a");
       a.href = url;
       a.download = "";
@@ -209,11 +211,7 @@ export default function PolaroidDetail({
       {open && <ImageModal src={displaySrc} onClose={() => setOpen(false)} />}
 
       {shareOpen && id && (
-        <ShareModal
-          id={id}
-          username={encodeURIComponent(encrypted)}
-          onClose={() => setShareOpen(false)}
-        />
+        <ShareModal id={id} onClose={() => setShareOpen(false)} />
       )}
 
       {editOpen && (
