@@ -75,6 +75,10 @@ fun HomeScreen(
 
     val uiState by viewModel.uiState.collectAsState()
 
+    LaunchedEffect(Unit) {
+        viewModel.loadHomeData()
+    }
+
     when (val state = uiState) {
         is HomeUiState.Loading -> {
             Box(
