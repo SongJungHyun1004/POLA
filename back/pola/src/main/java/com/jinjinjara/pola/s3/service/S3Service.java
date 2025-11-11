@@ -95,7 +95,7 @@ public class S3Service {
                             key.toLowerCase().matches(".*\\.(jpg|jpeg|png)$")
             );
 
-            //  이미지인 경우 preview 경로 우선 시도
+            // 이미지인 경우 preview 경로 우선 시도
             if (isImage) {
                 String previewKey = key.replace("home/original/", "home/preview/");
                 try {
@@ -110,13 +110,14 @@ public class S3Service {
                             builder.signatureDuration(Duration.ofMinutes(10))
                                     .getObjectRequest(previewRequest));
 
-                    return presignedPreview.url();
+                    return presignedPreview.url(); // preview 성공 시 바로 리턴
                 } catch (Exception e) {
+                    //  preview 파일이 없는 경우 original로 fallback
                     System.err.println("[S3Service] Preview not found, falling back to original: " + key);
                 }
             }
 
-            //  비이미지이거나 preview가 없으면 original 반환
+            //  fallback: preview가 없거나 이미지가 아닌 경우 → original 반환
             GetObjectRequest originalRequest = GetObjectRequest.builder()
                     .bucket(bucket)
                     .key(key)
@@ -131,6 +132,8 @@ public class S3Service {
             return presignedOriginal.url();
 
         } catch (Exception e) {
+            //  최종 실패 시 예외 처리
+            System.err.println("[S3Service] Preview & original URL generation failed: " + key);
             throw new CustomException(ErrorCode.FILE_NOT_FOUND, e.getMessage());
         }
     }

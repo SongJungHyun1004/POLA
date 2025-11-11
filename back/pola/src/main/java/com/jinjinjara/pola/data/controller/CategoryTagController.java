@@ -106,5 +106,13 @@ public class CategoryTagController {
     }
 
 
-
+    @Operation(summary = "카테고리에 태그 여러개 추가", description = "같은 이름의 태그가 없으면 새로 생성 후 연결합니다.")
+    @PostMapping("/{categoryId}/tags")
+    public ApiResponse<List<CategoryTagResponse>> addTagsToCategory(
+            @PathVariable Long categoryId,
+            @RequestBody List<String> tagNames
+    ) {
+        List<CategoryTagResponse> responses = categoryTagService.addTagsToCategory(categoryId, tagNames);
+        return ApiResponse.ok(responses, "카테고리에 태그가 성공적으로 추가되었습니다.");
+    }
 }
