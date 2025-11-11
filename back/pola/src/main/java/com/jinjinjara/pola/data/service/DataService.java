@@ -263,7 +263,7 @@ public class DataService {
                 .context("Llava")
                 .fileSize((long) request.getFileSize())
                 .originUrl(request.getOriginUrl())
-                .platform("S3")
+                .platform(request.getPlatform())
                 .shareStatus(false)
                 .favorite(false)
                 .favoriteSort(0)
