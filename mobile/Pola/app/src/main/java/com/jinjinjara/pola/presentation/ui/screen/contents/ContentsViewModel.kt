@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jinjinjara.pola.domain.model.FileDetail
 import com.jinjinjara.pola.domain.repository.CategoryRepository
+import com.jinjinjara.pola.domain.usecase.favorite.ToggleFavoriteUseCase
 import com.jinjinjara.pola.util.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,11 +20,13 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class ContentsViewModel @Inject constructor(
-    private val categoryRepository: CategoryRepository
+    private val categoryRepository: CategoryRepository,
+    private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<ContentsUiState>(ContentsUiState.Loading)
     val uiState: StateFlow<ContentsUiState> = _uiState.asStateFlow()
+    private var currentFileId: Long? = null
 
     private val _isBookmarked = MutableStateFlow(false)
     val isBookmarked: StateFlow<Boolean> = _isBookmarked.asStateFlow()
@@ -34,6 +37,7 @@ class ContentsViewModel @Inject constructor(
     fun loadFileDetail(fileId: Long) {
         viewModelScope.launch {
             _uiState.value = ContentsUiState.Loading
+            currentFileId = fileId
 
             Log.d("ContentsVM", "Loading file detail for fileId: $fileId")
 
@@ -58,8 +62,28 @@ class ContentsViewModel @Inject constructor(
      * 즐겨찾기 토글
      */
     fun toggleBookmark() {
-        _isBookmarked.value = !_isBookmarked.value
-        // TODO: API 연동하여 서버에 즐겨찾기 상태 업데이트
+        val fileId = currentFileId ?: return
+        val newFavoriteState = !_isBookmarked.value
+
+        // UI 즉시 반영 (낙관적 업데이트)
+        _isBookmarked.value = newFavoriteState
+
+        viewModelScope.launch {
+            Log.d("ContentsVM", "Toggling favorite for fileId=$fileId, newState=$newFavoriteState")
+
+            when (val result = toggleFavoriteUseCase(fileId, newFavoriteState)) {
+                is Result.Success -> {
+                    Log.d("ContentsVM", "Favorite toggle success: ${result.data}")
+                    _isBookmarked.value = result.data // 서버 응답에 따라 최종 반영
+                }
+                is Result.Error -> {
+                    Log.e("ContentsVM", "Favorite toggle failed: ${result.message}")
+                    // 실패 시 UI 롤백
+                    _isBookmarked.value = !newFavoriteState
+                }
+                else -> Unit
+            }
+        }
     }
 }
 
