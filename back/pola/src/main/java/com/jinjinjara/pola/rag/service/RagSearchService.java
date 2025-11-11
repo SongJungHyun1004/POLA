@@ -1,9 +1,9 @@
 package com.jinjinjara.pola.rag.service;
 
 import com.jinjinjara.pola.rag.dto.common.RagSearchSource;
+import com.jinjinjara.pola.rag.dto.common.SearchRow;
 import com.jinjinjara.pola.rag.dto.response.RagSearchResponse;
 import com.jinjinjara.pola.s3.service.S3Service;
-import com.jinjinjara.pola.vision.entity.FileEmbeddings;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,17 +21,17 @@ public class RagSearchService {
     public RagSearchResponse search(Long userId, String query, int limit) {
         log.info("[RagSearch] userId={}, query='{}', limit={}", userId, query, limit);
 
-        List<FileEmbeddings> hits = embeddingSearchService.searchSimilarFiles(userId, query, limit);
-        if (hits.isEmpty()) {
+        List<SearchRow> rows = embeddingSearchService.searchSimilarFiles(userId, query, limit);
+        if (rows.isEmpty()) {
             return new RagSearchResponse("검색 결과가 없습니다.", List.of());
         }
 
-        List<RagSearchSource> sources = hits.stream()
-                .map(e -> new RagSearchSource(
-                        e.getFile().getId(),                   // file id
-                        s3Service.generateDownloadUrl(e.getFile().getSrc()),        // S3 다운 링크
-                        e.getContext(),              // 요약/설명 텍스트
-                        null                         // relevanceScore(선택)
+        List<RagSearchSource> sources = rows.stream()
+                .map(r -> new RagSearchSource(
+                        r.getId(),                                   // 파일 ID (쿼리에서 f.id AS id)
+                        s3Service.generateDownloadUrl(r.getSrc()),   // S3 프리사인드 URL
+                        r.getContext(),                              // 컨텍스트
+                        r.getRelevanceScore()                        // 유사도 스코어
                 ))
                 .toList();
 
