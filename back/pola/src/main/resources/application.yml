@@ -197,3 +197,7 @@ classifier:
 embedding:
   cache:
     centroids-ttl-ms: 86400000
+  chunk:
+    maxChars: 8000     # 한 번에 임베딩할 최대 문자 수
+    window: 3000       # 청크 크기
+    overlap: 400       # 청크 간 중복 영역

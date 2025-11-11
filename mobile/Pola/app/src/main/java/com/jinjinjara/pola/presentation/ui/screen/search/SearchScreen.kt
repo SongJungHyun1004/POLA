@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jinjinjara.pola.R
 import com.jinjinjara.pola.presentation.ui.component.PolaSearchBar
-import com.jinjinjara.pola.presentation.ui.screen.timeline.CategoryChips
+import com.jinjinjara.pola.presentation.ui.component.CategoryChips
 
 @Composable
 fun SearchScreen(

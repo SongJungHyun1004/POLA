@@ -27,7 +27,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.jinjinjara.pola.R
 import com.jinjinjara.pola.presentation.ui.component.PolaCard
 import com.jinjinjara.pola.presentation.ui.component.PolaSearchBar
-import com.jinjinjara.pola.presentation.ui.screen.timeline.CategoryChips
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -44,20 +43,12 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlin.math.roundToInt
 import androidx.compose.ui.zIndex
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.jinjinjara.pola.presentation.ui.component.CategoryChips
 import com.jinjinjara.pola.presentation.ui.component.DisplayItem
 import com.jinjinjara.pola.presentation.ui.component.ItemGrid2View
 import com.jinjinjara.pola.presentation.ui.component.ItemGrid3View
 
-
-data class CategoryItem(
-    override val id: String,
-    val name: String,
-    override val imageRes: Int = R.drawable.temp_image,
-    override val imageUrl: String = "",
-    override val tags: List<String> = listOf(name),
-    override val description: String = "",
-    override val isFavorite: Boolean = false
-) : DisplayItem
 
 enum class ViewMode {
     GRID_3, GRID_2
@@ -65,41 +56,34 @@ enum class ViewMode {
 
 @Composable
 fun CategoryScreen(
-    categoryName: String = "카테고리",
+    categoryId: Long = -1L,
     onBackClick: () -> Unit = {},
-    onNavigateToTag: (String) -> Unit = {}
+    onNavigateToContents : (String) -> Unit = {},
+    viewModel: CategoryViewModel = hiltViewModel()
 ) {
+    val uiState by viewModel.uiState.collectAsState()
+
     var selectedTab by remember { mutableStateOf("전체") }
+
+    // 디버깅 로그 추가
+    LaunchedEffect(uiState.categoryName, uiState.userCategories) {
+        android.util.Log.d("CategoryScreen", "categoryName: ${uiState.categoryName}")
+        android.util.Log.d("CategoryScreen", "userCategories: ${uiState.userCategories.map { it.categoryName }}")
+        android.util.Log.d("CategoryScreen", "selectedTab: $selectedTab")
+    }
+
+    // uiState.categoryName이 로드되면 selectedTab 업데이트
+    LaunchedEffect(uiState.categoryName) {
+        if (uiState.categoryName.isNotEmpty()) {
+            android.util.Log.d("CategoryScreen", "Updating selectedTab to: ${uiState.categoryName}")
+            selectedTab = uiState.categoryName
+        }
+    }
     var isMenuExpanded by remember { mutableStateOf(false) }
     var selectedSort by remember { mutableStateOf("최신순") }
     var viewMode by remember { mutableStateOf(ViewMode.GRID_3) }
 
-    val categories = listOf(
-        CategoryItem("1", "말차"),
-        CategoryItem("2", "초코"),
-        CategoryItem("3", "딸기"),
-        CategoryItem("1", "말차"),
-        CategoryItem("2", "초코"),
-        CategoryItem("3", "딸기"),
-        CategoryItem("1", "말차"),
-        CategoryItem("2", "초코"),
-        CategoryItem("3", "딸기"),
-        CategoryItem("1", "말차"),
-        CategoryItem("2", "초코"),
-        CategoryItem("3", "딸기"),
-        CategoryItem("1", "말차"),
-        CategoryItem("2", "초코"),
-        CategoryItem("3", "딸기"),
-        CategoryItem("1", "말차"),
-        CategoryItem("2", "초코"),
-        CategoryItem("3", "딸기"),
-        CategoryItem("1", "말차"),
-        CategoryItem("2", "초코"),
-        CategoryItem("3", "딸기"),
-        CategoryItem("1", "말차"),
-        CategoryItem("2", "초코"),
-        CategoryItem("3", "딸기"),
-    )
+    val categories = uiState.files
 
     var searchText by remember { mutableStateOf("") }
 
@@ -167,8 +151,7 @@ fun CategoryScreen(
                 ItemGrid3View(
                     items = categories,
                     onItemClick = { item ->
-                        val tagName = if (item is CategoryItem) item.name else item.tags.firstOrNull() ?: ""
-                        onNavigateToTag(tagName)
+                        onNavigateToContents(item.id)
                     },
                     onFavoriteToggle = { }, // 빈 람다 (기능 없음)
                     state = gridState,
@@ -186,8 +169,7 @@ fun CategoryScreen(
                 ItemGrid2View(
                     items = categories,
                     onItemClick = { item ->
-                        val tagName = if (item is CategoryItem) item.name else item.tags.firstOrNull() ?: ""
-                        onNavigateToTag(tagName)
+                        onNavigateToContents(item.id)
                     },
                     onFavoriteToggle = { }, // 빈 람다 (기능 없음)
                     state = gridState,
@@ -202,33 +184,6 @@ fun CategoryScreen(
                 )
             }
         }
-        // Category Grid
-//        LazyVerticalGrid(
-//            state = gridState,
-//            columns = GridCells.Fixed(3),
-//            contentPadding = PaddingValues(
-//                top = headerHeightDp + 8.dp,
-//                start = 16.dp,
-//                end = 16.dp,
-//                bottom = 16.dp
-//            ),
-//            horizontalArrangement = Arrangement.spacedBy(12.dp),
-//            verticalArrangement = Arrangement.spacedBy(24.dp),
-//            modifier = Modifier.fillMaxSize()
-//        ) {
-//            items(categories) { category ->
-//                PolaCard(
-//                    modifier = Modifier.shadow(elevation = 8.dp),
-//                    ratio = 0.7661f,
-//                    imageRatio = 0.9062f,
-//                    paddingValues = PaddingValues(top = 4.dp, start = 4.dp, end = 4.dp),
-//                    imageResId = R.drawable.temp_image,
-//                    textList = listOf(category.name),
-//                    textSize = 12.sp,
-//                    textSpacing = 8.dp,
-//                )
-//            }
-//        }
 
         Box(
             modifier = Modifier
@@ -272,7 +227,7 @@ fun CategoryScreen(
                     )
 
                     Text(
-                        text = categoryName,
+                        text = categoryId.toString(), // id로 name 알아내기
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.tertiary
@@ -308,8 +263,12 @@ fun CategoryScreen(
                 }
 
                 // CategoryChips
+                val categoryNames = remember(uiState.userCategories) {
+                    listOf("전체") + uiState.userCategories.map { it.categoryName }
+                }
+
                 CategoryChips(
-                    categories = listOf("전체", "말차", "초코", "딸기"),
+                    categories = categoryNames,
                     selectedCategory = selectedTab,
                     onCategorySelected = { selectedTab = it }
                 )

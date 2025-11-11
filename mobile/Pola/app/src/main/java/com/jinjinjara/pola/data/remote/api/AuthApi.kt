@@ -13,6 +13,7 @@ import com.jinjinjara.pola.data.remote.dto.response.OAuthReissueResponse
 import com.jinjinjara.pola.data.remote.dto.response.OAuthTokenData
 import com.jinjinjara.pola.data.remote.dto.response.OAuthVerifyData
 import com.jinjinjara.pola.data.remote.dto.response.RefreshTokenResponse
+import com.jinjinjara.pola.data.remote.dto.response.UserCategoriesResponse
 import com.jinjinjara.pola.data.remote.dto.response.UserResponse
 import retrofit2.Response
 import retrofit2.http.Body
@@ -54,7 +55,7 @@ interface AuthApi {
     suspend fun getUser(): Response<OAuthApiResponse<UserResponse>>
 
     @GET("users/me/categories")
-    suspend fun getUserCategories(): Response<OAuthApiResponse<Any>>
+    suspend fun getUserCategories(): Response<UserCategoriesResponse>
 
     // OAuth 2.0 엔드포인트
     @POST("oauth/token")

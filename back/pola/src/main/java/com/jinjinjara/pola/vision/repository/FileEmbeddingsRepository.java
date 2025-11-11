@@ -1,7 +1,9 @@
 package com.jinjinjara.pola.vision.repository;
 
 
+import com.jinjinjara.pola.rag.dto.common.SearchRow;
 import com.jinjinjara.pola.vision.entity.FileEmbeddings;
+import com.pgvector.PGvector;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -53,7 +55,25 @@ public interface FileEmbeddingsRepository extends JpaRepository<FileEmbeddings, 
                   fe.context = :context
             where fe.id      = :id
            """)
+
     int updateTexts(@Param("id") Long id,
                     @Param("ocrText") String ocrText,
                     @Param("context") String context);
+
+    @Query(value = """
+      SELECT
+        fe.id AS id,
+        f.src AS src,
+        fe.context AS context,
+        1 - (fe.embedding <-> CAST(:vec AS vector(768))) AS relevance_score
+      FROM file_embeddings fe
+      JOIN files f ON f.id = fe.file_id
+      WHERE fe.user_id = :userId
+      ORDER BY fe.embedding <-> CAST(:vec AS vector(768))
+      LIMIT :limit
+    """, nativeQuery = true)
+    List<SearchRow> findSimilarFilesWithScore(@Param("userId") Long userId,
+                                              @Param("vec") String vectorLiteral,
+                                              @Param("limit") int limit);
 }
+

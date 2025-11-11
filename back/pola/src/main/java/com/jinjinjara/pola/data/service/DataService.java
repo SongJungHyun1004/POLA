@@ -531,6 +531,13 @@ public class DataService {
         log.info("[PostProcess] File entity updated (in-memory): fileId={}, vectorId={}",
                 file.getId(), file.getVectorId());
 
+        // ✅ OpenSearch 색인 추가
+        String categoryName = categoryRepository.findById(analyzeResponse.getCategoryId())
+                .map(Category::getCategoryName)
+                .orElse("미분류");
+        indexToOpenSearchAsync(file, categoryName);
+        log.info("[PostProcess] OpenSearch indexing initiated for fileId={}", fileId);
+
         log.info("[PostProcess] Post-processing completed successfully for fileId={}", fileId);
         return file;
     }
