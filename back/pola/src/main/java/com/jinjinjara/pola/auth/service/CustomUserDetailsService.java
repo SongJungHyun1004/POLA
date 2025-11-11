@@ -92,9 +92,9 @@ public class CustomUserDetailsService implements UserDetailsService {
                 token.getRefreshToken()
         );
 
-        // 4. Redis에 Refresh Token 저장 (만료 시간과 함께)
-        redisUtil.save(user.getEmail(), token.getRefreshToken(), refreshTokenExpireTime);
-        log.info("[REDIS] saved refresh for {}: {}...",
+        // 4. Redis에 Refresh Token 저장 (다중 디바이스 지원)
+        redisUtil.saveRefreshToken(token.getRefreshToken(), user.getEmail(), refreshTokenExpireTime);
+        log.info("[REDIS] saved refresh token for {}: {}...",
                 user.getEmail(),
                 token.getRefreshToken().substring(0, 16));
         return res;
