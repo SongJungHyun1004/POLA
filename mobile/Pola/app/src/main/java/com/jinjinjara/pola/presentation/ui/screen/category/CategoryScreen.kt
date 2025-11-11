@@ -322,7 +322,7 @@ fun CategoryScreen(
                         val selectedCategory = categories.find { it.categoryName == selectedName }
                         selectedCategoryId = selectedCategory?.id ?: -1
                         selectedTab = selectedName
-                        viewModel.loadCategoryFiles(0, selectedCategoryId) // 새 카테고리 로드
+                        viewModel.selectCategory(selectedCategoryId)
                     }
                 )
 
