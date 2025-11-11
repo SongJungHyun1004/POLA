@@ -48,6 +48,8 @@ import com.jinjinjara.pola.presentation.ui.component.CategoryChips
 import com.jinjinjara.pola.presentation.ui.component.DisplayItem
 import com.jinjinjara.pola.presentation.ui.component.ItemGrid2View
 import com.jinjinjara.pola.presentation.ui.component.ItemGrid3View
+import com.jinjinjara.pola.domain.model.UserCategory
+
 
 
 enum class ViewMode {
@@ -63,13 +65,24 @@ fun CategoryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    var selectedTab by remember { mutableStateOf("전체") }
+    var selectedCategoryId by remember { mutableStateOf(categoryId) }
+    var selectedTab by remember {
+        mutableStateOf(
+            uiState.userCategories.find { it.id == categoryId }?.categoryName ?: "전체"
+        )
+    }
+
 
     // 디버깅 로그 추가
     LaunchedEffect(uiState.categoryName, uiState.userCategories) {
         android.util.Log.d("CategoryScreen", "categoryName: ${uiState.categoryName}")
         android.util.Log.d("CategoryScreen", "userCategories: ${uiState.userCategories.map { it.categoryName }}")
         android.util.Log.d("CategoryScreen", "selectedTab: $selectedTab")
+        if (uiState.userCategories.isNotEmpty()) {
+            val currentCategory = uiState.userCategories.find { it.id == categoryId }
+            selectedCategoryId = currentCategory?.id ?: -1
+            selectedTab = currentCategory?.categoryName ?: "전체"
+        }
     }
 
     // uiState.categoryName이 로드되면 selectedTab 업데이트
@@ -227,7 +240,7 @@ fun CategoryScreen(
                     )
 
                     Text(
-                        text = uiState.categoryName.ifEmpty { "카테고리" },
+                        text = uiState.categoryName.ifEmpty { "전체" },
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.tertiary
@@ -263,14 +276,19 @@ fun CategoryScreen(
                 }
 
                 // CategoryChips
-                val categoryNames = remember(uiState.userCategories) {
-                    listOf("전체") + uiState.userCategories.map { it.categoryName }
+                val categories = remember(uiState.userCategories) {
+                    listOf(UserCategory(-1, "전체")) + uiState.userCategories
                 }
 
                 CategoryChips(
-                    categories = categoryNames,
-                    selectedCategory = selectedTab,
-                    onCategorySelected = { selectedTab = it }
+                    categories = categories.map { it.categoryName },
+                    selectedCategory = categories.find { it.id == selectedCategoryId }?.categoryName ?: "전체",
+                    onCategorySelected = { selectedName ->
+                        val selectedCategory = categories.find { it.categoryName == selectedName }
+                        selectedCategoryId = selectedCategory?.id ?: -1
+                        selectedTab = selectedName
+                        viewModel.loadCategoryFiles(0, selectedCategoryId) // 새 카테고리 로드
+                    }
                 )
 
                 // Grid Icon and Sort Menu

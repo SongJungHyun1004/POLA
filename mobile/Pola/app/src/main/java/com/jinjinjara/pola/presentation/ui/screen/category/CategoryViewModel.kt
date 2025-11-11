@@ -75,11 +75,11 @@ class CategoryViewModel @Inject constructor(
         }
     }
 
-    private fun loadCategoryFiles(page: Int = 0) {
+    fun loadCategoryFiles(page: Int = 0, targetCategoryId: Long = categoryId) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
-            when (val result = getFilesByCategoryUseCase(categoryId, page)) {
+            when (val result = getFilesByCategoryUseCase(targetCategoryId, page)) {
                 is Result.Success -> {
                     _uiState.update {
                         it.copy(
