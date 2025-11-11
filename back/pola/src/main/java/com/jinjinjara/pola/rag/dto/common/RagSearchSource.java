@@ -1,8 +1,15 @@
 package com.jinjinjara.pola.rag.dto.common;
 
-public record RagSearchSource(
-        Long id,
-        java.net.URL src,
-        String context,
-        Double relevanceScore
-) {}
+import lombok.*;
+
+@Getter
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+@ToString
+public class RagSearchSource {
+    private Long id;
+    private java.net.URL src;
+    private String context;
+    private Double relevanceScore;
+}
