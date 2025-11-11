@@ -30,6 +30,9 @@ class ContentsViewModel @Inject constructor(
     private val _isBookmarked = MutableStateFlow(false)
     val isBookmarked: StateFlow<Boolean> = _isBookmarked.asStateFlow()
 
+    private val _deleteState = MutableStateFlow<DeleteState>(DeleteState.Idle)
+    val deleteState: StateFlow<DeleteState> = _deleteState.asStateFlow()
+
     /**
      * 파일 상세 정보 로드
      */
@@ -84,7 +87,35 @@ class ContentsViewModel @Inject constructor(
             }
         }
     }
+
+    /**
+     * 파일 삭제
+     */
+    fun deleteFile() {
+        val fileId = currentFileId ?: return
+
+        viewModelScope.launch {
+            _deleteState.value = DeleteState.Loading
+
+            when (val result = contentRepository.deleteFile(fileId)) {
+                is Result.Success -> {
+                    Log.d("ContentsVM", "File deleted successfully")
+                    _deleteState.value = DeleteState.Success
+                }
+                is Result.Error -> {
+                    Log.e("ContentsVM", "Failed to delete file: ${result.message}")
+                    _deleteState.value = DeleteState.Error(result.message ?: "삭제 실패")
+                }
+                else -> Unit
+            }
+        }
+    }
+
+    fun resetDeleteState() {
+        _deleteState.value = DeleteState.Idle
+    }
 }
+
 
 /**
  * 파일 상세 화면 UI 상태
@@ -93,4 +124,11 @@ sealed class ContentsUiState {
     object Loading : ContentsUiState()
     data class Success(val fileDetail: FileDetail) : ContentsUiState()
     data class Error(val message: String) : ContentsUiState()
+}
+
+sealed class DeleteState {
+    object Idle : DeleteState()
+    object Loading : DeleteState()
+    object Success : DeleteState()
+    data class Error(val message: String) : DeleteState()
 }

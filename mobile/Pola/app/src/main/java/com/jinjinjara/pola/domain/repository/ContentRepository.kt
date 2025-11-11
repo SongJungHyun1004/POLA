@@ -10,4 +10,5 @@ import com.jinjinjara.pola.util.Result
 interface ContentRepository {
 
     suspend fun getFileDetail(fileId: Long): Result<FileDetail>
+    suspend fun deleteFile(fileId: Long): Result<Unit>
 }

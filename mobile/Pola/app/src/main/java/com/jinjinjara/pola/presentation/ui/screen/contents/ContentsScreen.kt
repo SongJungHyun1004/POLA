@@ -63,9 +63,18 @@ fun ContentsScreen(
     var showMenu by remember { mutableStateOf(false) }
     var isExpanded by remember { mutableStateOf(false) }
     var showFullImage by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    val deleteState by viewModel.deleteState.collectAsState()
 
     LaunchedEffect(fileId) {
         viewModel.loadFileDetail(fileId)
+    }
+
+    LaunchedEffect(deleteState) {
+        if (deleteState is DeleteState.Success) {
+            onBackClick()
+            viewModel.resetDeleteState()
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -109,7 +118,7 @@ fun ContentsScreen(
                     onBackClick = onBackClick,
                     onShareClick = onShareClick,
                     onEditClick = onEditClick,
-                    onDeleteClick = onDeleteClick,
+                    onDeleteClick = { showDeleteDialog = true },
                     onMenuToggle = { showMenu = !showMenu },
                     onMenuDismiss = { showMenu = false },
                     onExpandToggle = { isExpanded = !isExpanded },
@@ -117,6 +126,32 @@ fun ContentsScreen(
                     onImageClick = { showFullImage = !showFullImage }
                 )
             }
+        }
+
+        if (showDeleteDialog) {
+            AlertDialog(
+                containerColor = MaterialTheme.colorScheme.background,
+                onDismissRequest = { showDeleteDialog = false },
+                title = { Text("컨텐츠 삭제") },
+                text = { Text("이 컨텐츠를 삭제하시겠습니까?") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showDeleteDialog = false
+                            viewModel.deleteFile()
+                        }
+                    ) {
+                        Text("확인")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { showDeleteDialog = false }
+                    ) {
+                        Text("취소")
+                    }
+                }
+            )
         }
     }
 }

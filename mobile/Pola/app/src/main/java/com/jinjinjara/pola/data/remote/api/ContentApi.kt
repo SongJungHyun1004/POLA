@@ -2,6 +2,7 @@ package com.jinjinjara.pola.data.remote.api
 
 import com.jinjinjara.pola.data.remote.dto.response.FileDetailResponse
 import retrofit2.Response
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Path
 
@@ -14,5 +15,10 @@ interface ContentApi {
     suspend fun getFileDetail(
         @Path("fileId") fileId: Long
     ): Response<FileDetailResponse>
+
+    @DELETE("files/{fileId}")
+    suspend fun deleteFile(
+        @Path("fileId") fileId: Long
+    ): Response<Unit>
 
 }

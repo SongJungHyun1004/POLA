@@ -71,5 +71,38 @@ class ContentRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun deleteFile(fileId: Long): Result<Unit> {
+        return withContext(ioDispatcher) {
+            try {
+                Log.d("File:Repo", "Deleting file with fileId: $fileId")
+                val response = contentApi.deleteFile(fileId)
+
+                Log.d("File:Repo", "Response code: ${response.code()}")
+                Log.d("File:Repo", "Is successful: ${response.isSuccessful}")
+
+                if (response.isSuccessful) {
+                    Log.d("File:Repo", "File successfully deleted")
+                    Result.Success(Unit)
+                } else {
+                    val errorBody = response.errorBody()?.string()
+                    Log.e("File:Repo", "Failed to delete file")
+                    Log.e("File:Repo", "Error body: $errorBody")
+
+                    Result.Error(
+                        message = "파일 삭제에 실패했습니다",
+                        errorType = ErrorType.SERVER
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("File:Repo", "Exception while deleting file", e)
+                Result.Error(
+                    exception = e,
+                    message = e.message ?: "알 수 없는 오류가 발생했습니다",
+                    errorType = ErrorType.NETWORK
+                )
+            }
+        }
+    }
+
 
 }

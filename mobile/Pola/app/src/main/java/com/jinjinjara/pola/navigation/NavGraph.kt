@@ -256,7 +256,7 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
                 onEditClick = {
                     navController.navigate(Screen.ContentsEdit.createRoute(contentId))
                 },
-                onDeleteClick = { /* TODO: 삭제 기능 */ }
+                onDeleteClick = { /* 삭제 기능 내부 구현*/ }
             )
         }
 
