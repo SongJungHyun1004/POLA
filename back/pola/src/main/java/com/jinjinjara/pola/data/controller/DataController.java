@@ -207,7 +207,6 @@ public class DataController {
         ```
         """
     )
-
     @PostMapping("/list")
     public ApiResponse<PagedResponseDto<DataResponse>> getFileList(
             @AuthenticationPrincipal Users user,
@@ -215,7 +214,10 @@ public class DataController {
     ) {
         Page<DataResponse> filePage = dataService.getFiles(user, request);
 
+        String filterName = dataService.getFilterName(request.getFilterType(), request.getFilterId());
+
         PagedResponseDto<DataResponse> response = PagedResponseDto.<DataResponse>builder()
+                .filterName(filterName)
                 .content(filePage.getContent())
                 .page(filePage.getNumber())
                 .size(filePage.getSize())
@@ -226,6 +228,7 @@ public class DataController {
 
         return ApiResponse.ok(response, "파일 목록 조회 성공");
     }
+
 
     @Operation(
             summary = "파일 내용(context) 수정",

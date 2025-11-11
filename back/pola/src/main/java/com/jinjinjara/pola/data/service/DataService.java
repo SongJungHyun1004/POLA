@@ -164,18 +164,20 @@ public class DataService {
         }
 
         Pageable pageable = request.toPageable();
+        String filterType = request.getFilterType() == null ? "" : request.getFilterType();
+        Long filterId = request.getFilterId();
 
-        Page<File> files = switch (request.getFilterType() == null ? "" : request.getFilterType()) {
+        Page<File> files = switch (filterType) {
             case "category" -> {
-                if (request.getFilterId() == null)
+                if (filterId == null)
                     throw new CustomException(ErrorCode.INVALID_REQUEST, "카테고리 ID가 필요합니다.");
-                yield fileRepository.findAllByUserIdAndCategoryId(user.getId(), request.getFilterId(), pageable);
+                yield fileRepository.findAllByUserIdAndCategoryId(user.getId(), filterId, pageable);
             }
             case "favorite" -> fileRepository.findAllByUserIdAndFavoriteTrue(user.getId(), pageable);
             case "tag" -> {
-                if (request.getFilterId() == null)
+                if (filterId == null)
                     throw new CustomException(ErrorCode.INVALID_REQUEST, "태그 ID가 필요합니다.");
-                yield fileRepository.findAllByUserIdAndTagId(user.getId(), request.getFilterId(), pageable);
+                yield fileRepository.findAllByUserIdAndTagId(user.getId(), filterId, pageable);
             }
             default -> fileRepository.findAllByUserId(user.getId(), pageable);
         };
@@ -189,7 +191,6 @@ public class DataService {
         Map<Long, String> previewUrls = s3Service.generatePreviewUrls(metaMap);
 
         List<Long> fileIds = files.stream().map(File::getId).toList();
-
         List<FileTag> fileTags = fileTagRepository.findAllByFileIds(fileIds);
         Map<Long, List<String>> tagMap = fileTags.stream()
                 .collect(Collectors.groupingBy(
@@ -209,6 +210,30 @@ public class DataService {
     }
 
 
+
+    @Transactional(readOnly = true)
+    public String getFilterName(String filterType, Long filterId) {
+        if (filterType == null || filterType.isEmpty()) {
+            return "all";
+        }
+
+        return switch (filterType) {
+            case "category" -> {
+                if (filterId == null) yield "category";
+                yield categoryRepository.findById(filterId)
+                        .map(Category::getCategoryName)
+                        .orElse("category");
+            }
+            case "tag" -> {
+                if (filterId == null) yield "tag";
+                yield tagRepository.findById(filterId)
+                        .map(Tag::getTagName)
+                        .orElse("tag");
+            }
+            case "favorite" -> "favorite";
+            default -> filterType;
+        };
+    }
 
 
 
