@@ -141,8 +141,8 @@ class CategoryRepositoryImpl @Inject constructor(
                     size = size,
                     sortBy = "createdAt",
                     direction = "DESC",
-                    filterType = "category",
-                    filterId = categoryId
+                    filterType = if (categoryId == -1L) null else "category",
+                    filterId = if (categoryId == -1L) null else categoryId
                 )
 
                 val response = categoryApi.getFilesList(request)

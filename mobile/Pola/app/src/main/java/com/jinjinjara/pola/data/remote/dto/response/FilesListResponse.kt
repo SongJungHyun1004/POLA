@@ -12,6 +12,7 @@ data class FilesListResponse(
 
 @JsonClass(generateAdapter = true)
 data class FilesPageData(
+    @Json(name = "filterName") val categoryName: String,
     @Json(name = "content") val content: List<FileItemDto>,
     @Json(name = "page") val page: Int,
     @Json(name = "size") val size: Int,

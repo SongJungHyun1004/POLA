@@ -84,6 +84,7 @@ class CategoryViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
+                            categoryName = result.data.fileName,
                             files = if (page == 0) result.data.content else it.files + result.data.content,
                             currentPage = page,
                             hasMorePages = !result.data.last,

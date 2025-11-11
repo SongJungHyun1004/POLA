@@ -227,7 +227,7 @@ fun CategoryScreen(
                     )
 
                     Text(
-                        text = categoryId.toString(), // id로 name 알아내기
+                        text = uiState.categoryName.ifEmpty { "카테고리" },
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.tertiary
