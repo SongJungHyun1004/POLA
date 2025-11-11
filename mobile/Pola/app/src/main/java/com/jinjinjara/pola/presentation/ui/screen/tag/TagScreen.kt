@@ -28,7 +28,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.jinjinjara.pola.R
 import com.jinjinjara.pola.presentation.ui.component.PolaCard
 import com.jinjinjara.pola.presentation.ui.component.PolaSearchBar
-import com.jinjinjara.pola.presentation.ui.screen.timeline.CategoryChips
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween

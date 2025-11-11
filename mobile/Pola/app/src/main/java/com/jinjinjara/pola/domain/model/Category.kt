@@ -7,3 +7,8 @@ data class UserCategory(
     val createdAt: String,
     val userEmail: String
 )
+data class Category(
+    val id: Long,
+    val name: String,
+    val sort: Int
+)

@@ -8,10 +8,12 @@ import com.jinjinjara.pola.data.mapper.toDomain
 import com.jinjinjara.pola.data.remote.api.AuthApi
 import com.jinjinjara.pola.data.remote.dto.request.FilesListRequest
 import com.jinjinjara.pola.di.IoDispatcher
+import com.jinjinjara.pola.domain.model.Category
 import com.jinjinjara.pola.domain.model.CategoryRecommendation
 import com.jinjinjara.pola.domain.model.FilesPage
 import com.jinjinjara.pola.domain.model.UserCategory
 import com.jinjinjara.pola.domain.repository.CategoryRepository
+import com.jinjinjara.pola.util.ErrorType
 import com.jinjinjara.pola.util.Result
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
@@ -187,9 +189,50 @@ class CategoryRepositoryImpl @Inject constructor(
                 Result.Error(
                     exception = e,
                     message = e.message ?: "네트워크 오류가 발생했습니다."
+
+
                 )
             }
         }
+    }
+    override suspend fun getCategories(): Result<List<Category>> {
+        return withContext(ioDispatcher) {
+            try {
+                Log.d("Category:Repo", "Fetching user categories")
+                val response = categoryApi.getCategories()
+
+                Log.d("Category:Repo", "Response code: ${response.code()}")
+                Log.d("Category:Repo", "Is successful: ${response.isSuccessful}")
+
+                if (response.isSuccessful && response.body() != null) {
+                    val body = response.body()!!
+                    Log.d("Category:Repo", "Successfully fetched ${body.data.size} categories")
+
+                    val categories = body.data
+                        .map { it.toDomain() }
+                        .sortedBy { it.sort }
+
+                    Result.Success(categories)
+                } else {
+                    val errorBody = response.errorBody()?.string()
+                    Log.e("Category:Repo", "Failed to fetch categories")
+                    Log.e("Category:Repo", "Error body: $errorBody")
+
+                    Result.Error(
+                        message = "카테고리 목록을 불러올 수 없습니다",
+                        errorType = ErrorType.SERVER
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("Category:Repo", "Exception while fetching categories", e)
+                Result.Error(
+                    exception = e,
+                    message = e.message ?: "알 수 없는 오류가 발생했습니다",
+                    errorType = ErrorType.NETWORK
+                )
+            }
+        }
+
     }
 
 }
