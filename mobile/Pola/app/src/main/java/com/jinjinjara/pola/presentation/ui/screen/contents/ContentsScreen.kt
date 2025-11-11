@@ -462,6 +462,21 @@ private fun ContentsScreenContent(
                             }
                     )
 
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // 이미지 파일이면 이미지 표시
+                    if (fileDetail.type?.startsWith("image") == true && !fileDetail.src.isNullOrEmpty()) {
+                        AsyncImage(
+                            model = fileDetail.src,
+                            contentDescription = "전체 화면 이미지",
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp)
+                                .padding(bottom = 16.dp)
+                        )
+                    }
+
                     // 텍스트 파일이면 텍스트 표시
                     if (fileDetail.type?.startsWith("text") == true && !fileDetail.src.isNullOrEmpty()) {
                         var textContent by remember { mutableStateOf<String?>(null) }
