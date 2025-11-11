@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -36,6 +37,9 @@ import com.jinjinjara.pola.R
 import com.jinjinjara.pola.domain.model.FileDetail
 import com.jinjinjara.pola.presentation.ui.component.PolaCard
 import com.jinjinjara.pola.presentation.ui.screen.category.CategoryScreen
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.net.URL
 import java.text.SimpleDateFormat
 import java.time.LocalDateTime
 import java.util.Date
@@ -458,16 +462,32 @@ private fun ContentsScreenContent(
                             }
                     )
 
-                    // 이미지 영역
-                    AsyncImage(
-                        model = fileDetail.src,
-                        contentDescription = "전체 화면 이미지",
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp)
-                            .padding(bottom = 16.dp)
-                    )
+                    // 텍스트 파일이면 텍스트 표시
+                    if (fileDetail.type?.startsWith("text") == true && !fileDetail.src.isNullOrEmpty()) {
+                        var textContent by remember { mutableStateOf<String?>(null) }
+
+                        LaunchedEffect(fileDetail.src) {
+                            try {
+                                textContent = withContext(Dispatchers.IO) {
+                                    URL(fileDetail.src).readText(Charsets.UTF_8)
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                                textContent = "(텍스트 로드 실패)"
+                            }
+                        }
+
+                        textContent?.let { content ->
+                            Text(
+                                text = content,
+                                color = Color.White,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(16.dp)
+                            )
+                        }
+                    }
+
                 }
             }
         }
