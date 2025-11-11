@@ -67,7 +67,7 @@ enum class ViewMode {
 fun TagScreen(
     tagName: String = "태그",
     onBackClick: () -> Unit = {},
-    onNavigateToContents: (String) -> Unit = {},
+    onNavigateToContents: (Long) -> Unit = {},
 ) {
     var isMenuExpanded by remember { mutableStateOf(false) }
     var selectedSort by remember { mutableStateOf("최신순") }
@@ -145,7 +145,7 @@ fun TagScreen(
                 ItemGrid3View(
                     items = categories,
                     onFavoriteToggle = { }, // 빈 람다 (기능 없음)
-                    onItemClick = { item -> onNavigateToContents(item.id) },
+                    onItemClick = { item -> onNavigateToContents(item.id.toLong()) },
                     state = gridState,
                     contentPadding = PaddingValues(
                         top = headerHeightDp + 8.dp,
@@ -161,7 +161,7 @@ fun TagScreen(
                 ItemGrid2View(
                     items = categories,
                     onFavoriteToggle = { }, // 빈 람다 (기능 없음)
-                    onItemClick = { item -> onNavigateToContents(item.id) },
+                    onItemClick = { item -> onNavigateToContents(item.id.toLong()) },
                     state = gridState,
                     contentPadding = PaddingValues(
                         top = headerHeightDp + 8.dp,
