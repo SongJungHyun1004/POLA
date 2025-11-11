@@ -131,7 +131,9 @@ class CategoryRepositoryImpl @Inject constructor(
     override suspend fun getFilesByCategory(
         categoryId: Long,
         page: Int,
-        size: Int
+        size: Int,
+        sortBy: String,
+        direction: String
     ): Result<FilesPage> {
         return withContext(ioDispatcher) {
             try {
@@ -139,8 +141,8 @@ class CategoryRepositoryImpl @Inject constructor(
                 val request = FilesListRequest(
                     page = page,
                     size = size,
-                    sortBy = "createdAt",
-                    direction = "DESC",
+                    sortBy = sortBy,
+                    direction = direction,
                     filterType = if (categoryId == -1L) null else "category",
                     filterId = if (categoryId == -1L) null else categoryId
                 )

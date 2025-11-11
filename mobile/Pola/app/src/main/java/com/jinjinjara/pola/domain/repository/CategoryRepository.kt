@@ -28,7 +28,9 @@ interface CategoryRepository {
     suspend fun getFilesByCategory(
         categoryId: Long,
         page: Int = 0,
-        size: Int = 20
+        size: Int = 20,
+        sortBy: String,
+        direction: String
     ): Result<FilesPage>
 
     /**

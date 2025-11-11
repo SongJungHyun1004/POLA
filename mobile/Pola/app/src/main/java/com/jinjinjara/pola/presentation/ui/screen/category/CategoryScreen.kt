@@ -62,6 +62,7 @@ enum class ViewMode {
 fun CategoryScreen(
     categoryId: Long = -1L,
     onBackClick: () -> Unit = {},
+    onNavigateToFavorite: () -> Unit = {},
     onNavigateToContents : (Long) -> Unit = {},
     viewModel: CategoryViewModel = hiltViewModel()
 ) {
@@ -289,7 +290,7 @@ fun CategoryScreen(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
                             ) {
-                                // 즐겨찾기 이동
+                                onNavigateToFavorite()
                             }
                             .size(30.dp)
                     )
@@ -391,7 +392,7 @@ fun CategoryScreen(
                                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                                     )
 
-                                    val sortOptions = listOf("태그순", "최신순", "오래된순")
+                                    val sortOptions = listOf("최신순", "오래된순", "조회순")
                                     sortOptions.forEachIndexed { index, sort ->
                                         Row(
                                             modifier = Modifier
@@ -399,6 +400,14 @@ fun CategoryScreen(
                                                 .clickable {
                                                     selectedSort = sort
                                                     isMenuExpanded = false
+                                                    val (sortBy, direction) = when (sort) {
+                                                        "최신순" -> "createdAt" to "DESC"
+                                                        "오래된순" -> "createdAt" to "ASC"
+                                                        "조회순" -> "views" to "DESC"
+                                                        else -> "createdAt" to "DESC"
+                                                    }
+
+                                                    viewModel.updateSort(sortBy, direction)
                                                 }
                                                 .padding(horizontal = 16.dp, vertical = 10.dp),
                                             horizontalArrangement = Arrangement.SpaceBetween,

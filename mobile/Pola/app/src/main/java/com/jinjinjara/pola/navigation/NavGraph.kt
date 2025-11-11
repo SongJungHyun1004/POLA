@@ -217,6 +217,9 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
             CategoryScreen(
                 categoryId = categoryId,
                 onBackClick = { navController.popBackStack() },
+                onNavigateToFavorite = {
+                    navController.navigate(Screen.Favorite.route)
+                },
                 onNavigateToContents = { contentId ->
                     navController.navigate(Screen.Contents.createRoute(contentId))
                 }

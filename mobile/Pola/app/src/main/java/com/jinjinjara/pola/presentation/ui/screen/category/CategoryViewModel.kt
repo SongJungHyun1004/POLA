@@ -36,7 +36,9 @@ class CategoryViewModel @Inject constructor(
         val userCategories: List<UserCategory> = emptyList(),
         val errorMessage: String? = null,
         val currentPage: Int = 0,
-        val hasMorePages: Boolean = true
+        val hasMorePages: Boolean = true,
+        val sortBy: String = "createdAt",
+        val direction: String = "DESC"
     )
 
     init {
@@ -75,11 +77,16 @@ class CategoryViewModel @Inject constructor(
         }
     }
 
-    fun loadCategoryFiles(page: Int = 0, targetCategoryId: Long = categoryId) {
+    fun loadCategoryFiles(
+        page: Int = 0,
+        targetCategoryId: Long = categoryId,
+        sortBy: String = _uiState.value.sortBy,
+        direction: String = _uiState.value.direction
+    ) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
-            when (val result = getFilesByCategoryUseCase(targetCategoryId, page)) {
+            when (val result = getFilesByCategoryUseCase(targetCategoryId, page, 20, sortBy, direction)) {
                 is Result.Success -> {
                     _uiState.update {
                         it.copy(
@@ -108,6 +115,12 @@ class CategoryViewModel @Inject constructor(
             }
         }
     }
+
+    fun updateSort(sortBy: String, direction: String) {
+        _uiState.update { it.copy(sortBy = sortBy, direction = direction) }
+        loadCategoryFiles(0, sortBy = sortBy, direction = direction)
+    }
+
 
     fun loadMoreFiles() {
         if (!_uiState.value.isLoading && _uiState.value.hasMorePages) {
