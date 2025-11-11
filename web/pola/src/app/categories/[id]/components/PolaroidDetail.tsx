@@ -258,6 +258,7 @@ export default function PolaroidDetail({
         >
           <RotateCcw className="w-5 h-5 text-[#4C3D25]" />
         </button>
+        <p className="text-md mt-2">버튼을 눌러서 사진을 뒤집어 보세요</p>
       </div>
 
       {open && <ImageModal src={displaySrc} onClose={() => setOpen(false)} />}
