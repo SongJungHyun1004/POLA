@@ -32,9 +32,11 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.window.Popup
@@ -75,6 +77,7 @@ fun CategoryScreen(
 
     // 디버깅 로그 추가
     LaunchedEffect(uiState.categoryName, uiState.userCategories) {
+        if (selectedCategoryId != null) return@LaunchedEffect
         android.util.Log.d("CategoryScreen", "categoryName: ${uiState.categoryName}")
         android.util.Log.d("CategoryScreen", "userCategories: ${uiState.userCategories.map { it.categoryName }}")
         android.util.Log.d("CategoryScreen", "selectedTab: $selectedTab")
@@ -159,42 +162,73 @@ fun CategoryScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        when (viewMode) {
-            ViewMode.GRID_3 -> {
-                ItemGrid3View(
-                    items = categories,
-                    onItemClick = { item ->
-                        onNavigateToContents(item.fileId)
-                    },
-                    onFavoriteToggle = { }, // 빈 람다 (기능 없음)
-                    state = gridState,
-                    contentPadding = PaddingValues(
-                        top = headerHeightDp + 8.dp,
-                        start = 16.dp,
-                        end = 16.dp,
-                        bottom = 16.dp
-                    ),
-                    showFavoriteIcon = false,
-                    modifier = Modifier.fillMaxSize()
-                )
+        if (uiState.files.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = headerHeightDp + 48.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.empty),
+                        contentDescription = "Empty Content",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 32.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text(
+                        text = "이 카테고리에 분류된 컨텐츠가 없어요",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
+                }
             }
-            ViewMode.GRID_2 -> {
-                ItemGrid2View(
-                    items = categories,
-                    onItemClick = { item ->
-                        onNavigateToContents(item.fileId)
-                    },
-                    onFavoriteToggle = { }, // 빈 람다 (기능 없음)
-                    state = gridState,
-                    contentPadding = PaddingValues(
-                        top = headerHeightDp + 8.dp,
-                        start = 16.dp,
-                        end = 16.dp,
-                        bottom = 16.dp
-                    ),
-                    showFavoriteIcon = false,
-                    modifier = Modifier.fillMaxSize()
-                )
+        } else {
+            when (viewMode) {
+                ViewMode.GRID_3 -> {
+                    ItemGrid3View(
+                        items = categories,
+                        onItemClick = { item ->
+                            onNavigateToContents(item.fileId)
+                        },
+                        onFavoriteToggle = { }, // 빈 람다 (기능 없음)
+                        state = gridState,
+                        contentPadding = PaddingValues(
+                            top = headerHeightDp + 8.dp,
+                            start = 16.dp,
+                            end = 16.dp,
+                            bottom = 16.dp
+                        ),
+                        showFavoriteIcon = false,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+
+                ViewMode.GRID_2 -> {
+                    ItemGrid2View(
+                        items = categories,
+                        onItemClick = { item ->
+                            onNavigateToContents(item.fileId)
+                        },
+                        onFavoriteToggle = { }, // 빈 람다 (기능 없음)
+                        state = gridState,
+                        contentPadding = PaddingValues(
+                            top = headerHeightDp + 8.dp,
+                            start = 16.dp,
+                            end = 16.dp,
+                            bottom = 16.dp
+                        ),
+                        showFavoriteIcon = false,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
             }
         }
 
@@ -311,7 +345,8 @@ fun CategoryScreen(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
                             ) {
-                                viewMode = if (viewMode == ViewMode.GRID_3) ViewMode.GRID_2 else ViewMode.GRID_3
+                                viewMode =
+                                    if (viewMode == ViewMode.GRID_3) ViewMode.GRID_2 else ViewMode.GRID_3
                             }
                     )
                     Box {
