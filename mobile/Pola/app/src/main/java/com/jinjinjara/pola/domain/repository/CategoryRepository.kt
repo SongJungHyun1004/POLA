@@ -1,5 +1,6 @@
 package com.jinjinjara.pola.domain.repository
 
+import com.jinjinjara.pola.domain.model.Category
 import com.jinjinjara.pola.domain.model.CategoryRecommendation
 import com.jinjinjara.pola.util.Result
 
@@ -17,4 +18,9 @@ interface CategoryRepository {
      * Initialize user's categories and tags
      */
     suspend fun initCategoryTags(categoriesWithTags: Map<String, List<String>>): Result<Unit>
+
+    /**
+     * Get user's categories
+     */
+    suspend fun getCategories(): Result<List<Category>>
 }

@@ -7,6 +7,7 @@ import com.jinjinjara.pola.data.remote.api.FavoriteApi
 import com.jinjinjara.pola.data.remote.api.FileUploadApi
 import com.jinjinjara.pola.data.remote.api.HomeApi
 import com.jinjinjara.pola.data.remote.api.RemindApi
+import com.jinjinjara.pola.data.remote.api.TimelineApi
 import com.jinjinjara.pola.data.remote.interceptor.AuthInterceptor
 import com.jinjinjara.pola.data.remote.interceptor.TokenAuthenticator
 import com.jinjinjara.pola.util.Constants
@@ -142,5 +143,12 @@ object NetworkModule {
     @Singleton
     fun provideFavoriteApi(retrofit: Retrofit): FavoriteApi {
         return retrofit.create(FavoriteApi::class.java)
+    }
+
+    // TimelineApi
+    @Provides
+    @Singleton
+    fun provideTimelineApi(retrofit: Retrofit): TimelineApi {
+        return retrofit.create(TimelineApi::class.java)
     }
 }
