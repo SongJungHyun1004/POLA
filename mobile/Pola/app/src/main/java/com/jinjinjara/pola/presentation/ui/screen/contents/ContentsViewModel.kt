@@ -4,14 +4,13 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jinjinjara.pola.domain.model.FileDetail
-import com.jinjinjara.pola.domain.repository.CategoryRepository
+import com.jinjinjara.pola.domain.repository.ContentRepository
 import com.jinjinjara.pola.domain.usecase.favorite.ToggleFavoriteUseCase
 import com.jinjinjara.pola.util.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -20,7 +19,7 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class ContentsViewModel @Inject constructor(
-    private val categoryRepository: CategoryRepository,
+    private val contentRepository: ContentRepository,
     private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
 ) : ViewModel() {
 
@@ -41,7 +40,7 @@ class ContentsViewModel @Inject constructor(
 
             Log.d("ContentsVM", "Loading file detail for fileId: $fileId")
 
-            when (val result = categoryRepository.getFileDetail(fileId)) {
+            when (val result = contentRepository.getFileDetail(fileId)) {
                 is Result.Success -> {
                     Log.d("ContentsVM", "Successfully loaded file detail")
                     _uiState.value = ContentsUiState.Success(result.data)

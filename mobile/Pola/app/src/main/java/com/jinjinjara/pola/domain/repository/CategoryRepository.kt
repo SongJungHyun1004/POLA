@@ -43,5 +43,4 @@ interface CategoryRepository {
      */
     suspend fun getCategories(): Result<List<Category>>
 
-    suspend fun getFileDetail(fileId: Long): Result<FileDetail>
 }

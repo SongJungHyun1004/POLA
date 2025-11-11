@@ -3,6 +3,7 @@ package com.jinjinjara.pola.di
 import com.jinjinjara.pola.data.local.datastore.PreferencesDataStore
 import com.jinjinjara.pola.data.remote.api.AuthApi
 import com.jinjinjara.pola.data.remote.api.CategoryApi
+import com.jinjinjara.pola.data.remote.api.ContentApi
 import com.jinjinjara.pola.data.remote.api.FavoriteApi
 import com.jinjinjara.pola.data.remote.api.FileUploadApi
 import com.jinjinjara.pola.data.remote.api.HomeApi
@@ -150,5 +151,12 @@ object NetworkModule {
     @Singleton
     fun provideTimelineApi(retrofit: Retrofit): TimelineApi {
         return retrofit.create(TimelineApi::class.java)
+    }
+
+    // ContentApi
+    @Provides
+    @Singleton
+    fun proviceContentApi(retrofit: Retrofit): ContentApi {
+        return retrofit.create(ContentApi::class.java)
     }
 }

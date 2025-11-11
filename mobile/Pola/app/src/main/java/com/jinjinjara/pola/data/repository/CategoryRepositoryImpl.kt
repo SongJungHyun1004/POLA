@@ -240,43 +240,5 @@ class CategoryRepositoryImpl @Inject constructor(
 
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    override suspend fun getFileDetail(fileId: Long): Result<FileDetail> {
-        return withContext(ioDispatcher) {
-            try {
-                Log.d("File:Repo", "Fetching file detail for fileId: $fileId")
-                val response = categoryApi.getFileDetail(fileId)
-
-                Log.d("File:Repo", "Response code: ${response.code()}")
-                Log.d("File:Repo", "Is successful: ${response.isSuccessful}")
-
-                if (response.isSuccessful && response.body() != null) {
-                    val body = response.body()!!
-                    Log.d("File:Repo", "Successfully fetched file detail")
-                    Log.d("File:Repo", "File ID: ${body.data.id}, Views: ${body.data.views}")
-
-                    val fileDetail = body.data.toDomain()
-                    Result.Success(fileDetail)
-                } else {
-                    val errorBody = response.errorBody()?.string()
-                    Log.e("File:Repo", "Failed to fetch file detail")
-                    Log.e("File:Repo", "Error body: $errorBody")
-
-                    Result.Error(
-                        message = "파일 정보를 불러올 수 없습니다",
-                        errorType = ErrorType.SERVER
-                    )
-                }
-            } catch (e: Exception) {
-                Log.e("File:Repo", "Exception while fetching file detail", e)
-                Result.Error(
-                    exception = e,
-                    message = e.message ?: "알 수 없는 오류가 발생했습니다",
-                    errorType = ErrorType.NETWORK
-                )
-            }
-        }
-    }
-
 
 }
