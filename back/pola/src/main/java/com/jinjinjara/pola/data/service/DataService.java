@@ -107,6 +107,30 @@ public class DataService {
                 .toList();
     }
 
+    @Transactional
+    public void deleteFile(Long fileId) {
+        File file = fileRepository.findById(fileId)
+                .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
+
+        try {
+            // 1. FileTag 관계 먼저 삭제
+            fileTagRepository.deleteByFile(file);
+            System.out.println("[DataService] Deleted file_tags for fileId=" + fileId);
+
+            // 2. S3에서 원본 + 미리보기 삭제
+            s3Service.deleteFileFromS3(file.getSrc());
+
+            // 3. DB에서 파일 삭제
+            fileRepository.delete(file);
+            System.out.println("[DataService] File deleted successfully: " + fileId);
+
+        } catch (Exception e) {
+            throw new CustomException(ErrorCode.FILE_DELETE_FAIL, e.getMessage());
+        }
+    }
+
+
+
 
     @Transactional
     public FileDetailResponse getFileDetail(Long userId, Long fileId) {
@@ -126,10 +150,12 @@ public class DataService {
                         .build())
                 .toList();
 
-        // presigned URL 생성 (파일 1개용)
-        String presignedUrl = s3Service.generatePreviewUrl(
-                new S3Service.FileMeta(file.getSrc(), file.getType())
+        //원본 미리보기 URL 생성
+        String presignedUrl = s3Service.generateOriginalPreviewUrl(
+                file.getSrc(),
+                file.getType()
         );
+
 
         // 응답 DTO 구성
         return FileDetailResponse.builder()
