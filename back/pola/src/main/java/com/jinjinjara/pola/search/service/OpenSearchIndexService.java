@@ -35,14 +35,14 @@ public class OpenSearchIndexService {
                     .value();
 
             if (!exists) {
-                log.warn("⚠️ OpenSearch 인덱스 '{}' 가 존재하지 않습니다.", INDEX_NAME);
-                log.warn("⚠️ OpenSearch Dashboard에서 Nori 매핑으로 인덱스를 생성해주세요.");
-                log.warn("⚠️ 참고: opensearch-mapping.json");
+                log.warn(" OpenSearch 인덱스 '{}' 가 존재하지 않습니다.", INDEX_NAME);
+                log.warn(" OpenSearch Dashboard에서 Nori 매핑으로 인덱스를 생성해주세요.");
+                log.warn(" 참고: opensearch-mapping.json");
             } else {
-                log.info("✅ OpenSearch 인덱스 '{}' 확인 완료", INDEX_NAME);
+                log.info(" OpenSearch 인덱스 '{}' 확인 완료", INDEX_NAME);
             }
         } catch (Exception e) {
-            log.error("❌ OpenSearch 연결 실패", e);
+            log.error("OpenSearch 연결 실패", e);
             // 실패해도 애플리케이션은 계속 실행 (OpenSearch 장애 시에도 서비스 가능)
         }
     }
