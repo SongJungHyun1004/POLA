@@ -4,6 +4,10 @@ import androidx.room.Database
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
+import com.jinjinjara.pola.data.local.database.converter.ChatMessageConverters
+import com.jinjinjara.pola.data.local.database.dao.ChatMessageDao
+import com.jinjinjara.pola.data.local.database.entity.ChatMessageEntity
 
 /**
  * 임시 더미 Entity (빌드 에러 방지용)
@@ -20,11 +24,14 @@ internal data class DummyEntity(
 @Database(
     entities = [
         DummyEntity::class, // 임시 더미
+        ChatMessageEntity::class,
         // UserEntity::class, // TODO: 주석 해제
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
+@TypeConverters(ChatMessageConverters::class)
 abstract class PolaDatabase : RoomDatabase() {
+    abstract fun chatMessageDao(): ChatMessageDao
     // abstract fun userDao(): UserDao // TODO: 주석 해제
 }
