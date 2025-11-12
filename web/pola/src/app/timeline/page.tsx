@@ -23,20 +23,16 @@ export default function TimeLinePage() {
   const [hasMore, setHasMore] = useState(true);
   const didFetch = useRef(false);
 
-  // ✅ 수평 스크롤 처리
   const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
     if (!containerRef.current) return;
     containerRef.current.scrollLeft += e.deltaY;
   };
 
-  // ✅ 타임라인 데이터 로드
   useEffect(() => {
     const controller = new AbortController();
 
     async function load() {
       if (loading || !hasMore) return;
-
-      // ✅ 초기 렌더 시 StrictMode로 인한 중복 실행 방지
       if (page === 0 && didFetch.current) return;
       didFetch.current = true;
 
@@ -55,7 +51,6 @@ export default function TimeLinePage() {
           for (const group of grouped) {
             const existing = merged.find((x) => x.date === group.date);
             if (existing) {
-              // 중복 날짜 → 이미지 병합
               existing.images.push(...group.images);
             } else {
               merged.push(group);
@@ -71,11 +66,9 @@ export default function TimeLinePage() {
     }
 
     load();
-
     return () => controller.abort();
   }, [page]);
 
-  // ✅ IntersectionObserver → 수평 무한 스크롤
   useEffect(() => {
     const container = containerRef.current;
     if (!container || !hasMore) return;
@@ -131,33 +124,49 @@ export default function TimeLinePage() {
                       key={colIndex}
                       className="flex flex-col-reverse rounded-md"
                     >
-                      {col.map((img, i) => (
-                        <div
-                          key={i}
-                          className="relative h-[129px] w-40 rounded-md"
-                        >
-                          {/* 필름 프레임 */}
-                          <Image
-                            src="/images/flim_rotate.png"
-                            alt="film frame"
-                            fill
-                            className="object-contain pointer-events-none"
-                          />
+                      {col.map((img, i) => {
+                        const isText =
+                          img.type?.includes("text/plain") ||
+                          img.src?.endsWith(".txt") ||
+                          img.src?.includes("/text/");
 
-                          {/* 내부 이미지 (센터크롭) */}
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="relative w-[120px] h-[120px] overflow-hidden rounded-md bg-gray-200 shadow-sm">
-                              <Image
-                                src={img.src || "/images/dummy_image_1.png"}
-                                alt="content"
-                                fill
-                                sizes="120px"
-                                className="object-cover object-center"
-                              />
+                        return (
+                          <div
+                            key={i}
+                            className="relative h-[129px] w-40 rounded-md"
+                          >
+                            {/* 필름 프레임 */}
+                            <Image
+                              src="/images/flim_rotate.png"
+                              alt="film frame"
+                              fill
+                              className="object-contain pointer-events-none"
+                            />
+
+                            {/* 내부 콘텐츠 */}
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <div className="relative w-[120px] h-[120px] overflow-hidden rounded-md bg-[#FFFEF8] border border-[#CBBF9E] shadow-sm flex items-center justify-center p-1">
+                                {isText ? (
+                                  <div
+                                    className="w-full h-full overflow-hidden text-[10px] leading-tight text-[#4C3D25]
+                                    whitespace-pre-line break-words p-1 text-left"
+                                  >
+                                    {img.ocr_text || "(텍스트 없음)"}
+                                  </div>
+                                ) : (
+                                  <Image
+                                    src={img.src || "/images/dummy_image_1.png"}
+                                    alt="content"
+                                    fill
+                                    sizes="120px"
+                                    className="object-cover object-center"
+                                  />
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   ))}
                 </div>
@@ -169,7 +178,6 @@ export default function TimeLinePage() {
                     {item.date}
                   </span>
 
-                  {/* 다음 날짜와 연결선 */}
                   {index < timelineData.length - 1 && (
                     <div
                       className="absolute top-[6px] h-[2px] bg-[#4C3D25] left-1/2"

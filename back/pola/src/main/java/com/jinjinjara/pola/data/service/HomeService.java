@@ -106,7 +106,7 @@ public class HomeService {
                 .id(f.getId())
                 .src(previewUrls.get(f.getId())) // 접근 가능한 URL
                 .type(f.getType())
-                .ocr(f.getOcrText())
+                .ocrText(f.getOcrText())
                 .context(f.getContext())
                 .favorite(f.getFavorite())
                 .build();

@@ -30,8 +30,8 @@ public class DataResponse {
     @JsonProperty("favorite")
     private Boolean favorite;
 
-    @JsonProperty("ocr")
-    private String ocr;
+    @JsonProperty("ocr_text")
+    private String ocrText;
 
     @JsonProperty("tags")
     private List<String> tags;
