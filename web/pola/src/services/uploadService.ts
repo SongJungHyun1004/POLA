@@ -11,7 +11,7 @@ export const uploadService = {
     fileName: string
   ): Promise<PresignedUploadResponse> => {
     const res = await apiClient(
-      `/files/s3/presigned/upload?fileName=${encodeURIComponent(fileName)}`,
+      `/s3/presigned/upload?fileName=${encodeURIComponent(fileName)}`,
       {
         method: "GET",
         credentials: "include",

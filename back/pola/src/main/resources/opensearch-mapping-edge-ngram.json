@@ -1,0 +1,102 @@
+{
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 1,
+    "analysis": {
+      "tokenizer": {
+        "nori_mixed": {
+          "type": "nori_tokenizer",
+          "decompound_mode": "mixed"
+        },
+        "edge_ngram_tokenizer": {
+          "type": "edge_ngram",
+          "min_gram": 1,
+          "max_gram": 10,
+          "token_chars": ["letter", "digit"]
+        }
+      },
+      "analyzer": {
+        "nori_analyzer": {
+          "type": "custom",
+          "tokenizer": "nori_mixed",
+          "filter": ["nori_posfilter", "lowercase"]
+        },
+        "edge_ngram_analyzer": {
+          "type": "custom",
+          "tokenizer": "edge_ngram_tokenizer",
+          "filter": ["lowercase"]
+        },
+        "edge_ngram_search_analyzer": {
+          "type": "custom",
+          "tokenizer": "standard",
+          "filter": ["lowercase"]
+        }
+      },
+      "filter": {
+        "nori_posfilter": {
+          "type": "nori_part_of_speech",
+          "stoptags": ["E", "J", "SC", "SE", "SF", "VCN", "VCP", "VX"]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "fileId": {
+        "type": "long"
+      },
+      "userId": {
+        "type": "long"
+      },
+      "categoryName": {
+        "type": "keyword"
+      },
+      "tags": {
+        "type": "text",
+        "analyzer": "nori_analyzer",
+        "search_analyzer": "nori_analyzer",
+        "fields": {
+          "keyword": {
+            "type": "keyword"
+          },
+          "edge_ngram": {
+            "type": "text",
+            "analyzer": "edge_ngram_analyzer",
+            "search_analyzer": "edge_ngram_search_analyzer"
+          }
+        }
+      },
+      "context": {
+        "type": "text",
+        "analyzer": "nori_analyzer",
+        "search_analyzer": "nori_analyzer",
+        "fields": {
+          "edge_ngram": {
+            "type": "text",
+            "analyzer": "edge_ngram_analyzer",
+            "search_analyzer": "edge_ngram_search_analyzer"
+          }
+        }
+      },
+      "ocrText": {
+        "type": "text",
+        "analyzer": "nori_analyzer",
+        "search_analyzer": "nori_analyzer",
+        "fields": {
+          "edge_ngram": {
+            "type": "text",
+            "analyzer": "edge_ngram_analyzer",
+            "search_analyzer": "edge_ngram_search_analyzer"
+          }
+        }
+      },
+      "imageUrl": {
+        "type": "keyword"
+      },
+      "createdAt": {
+        "type": "date",
+        "format": "yyyy-MM-dd'T'HH:mm:ss.SSSSSS||yyyy-MM-dd'T'HH:mm:ss||strict_date_optional_time||epoch_millis"
+      }
+    }
+  }
+}

@@ -3,12 +3,12 @@ package com.jinjinjara.pola.vision.repository;
 
 import com.jinjinjara.pola.rag.dto.common.SearchRow;
 import com.jinjinjara.pola.vision.entity.FileEmbeddings;
-import com.pgvector.PGvector;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -62,7 +62,7 @@ public interface FileEmbeddingsRepository extends JpaRepository<FileEmbeddings, 
 
     @Query(value = """
       SELECT
-        fe.id AS id,
+        f.id AS id,
         f.src AS src,
         fe.context AS context,
         1 - (fe.embedding <-> CAST(:vec AS vector(768))) AS relevance_score
@@ -75,5 +75,26 @@ public interface FileEmbeddingsRepository extends JpaRepository<FileEmbeddings, 
     List<SearchRow> findSimilarFilesWithScore(@Param("userId") Long userId,
                                               @Param("vec") String vectorLiteral,
                                               @Param("limit") int limit);
+
+    @Query(value = """
+    SELECT
+      f.id AS id,
+      f.src AS src,
+      fe.context AS context,
+      1 - (fe.embedding <-> CAST(:vec AS vector(768))) AS relevance_score
+    FROM file_embeddings fe
+    JOIN files f ON f.id = fe.file_id
+    WHERE fe.user_id = :userId
+      AND fe.created_at BETWEEN :startTs AND :endTs
+    ORDER BY fe.embedding <-> CAST(:vec AS vector(768))
+    LIMIT :limit
+    """, nativeQuery = true)
+    List<SearchRow> findSimilarFilesWithScoreAndDate(
+            @Param("userId") Long userId,
+            @Param("vec") String vectorLiteral,
+            @Param("limit") int limit,
+            @Param("startTs") LocalDateTime startTs,
+            @Param("endTs") LocalDateTime endTs
+    );
 }
 
