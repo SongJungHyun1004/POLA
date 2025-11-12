@@ -194,7 +194,7 @@ fun UploadScreen(
                     }
                 } else {
                     Text(
-                        text = "클립보드",
+                        text = "업로드",
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier
@@ -203,7 +203,7 @@ fun UploadScreen(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
                             ) {
-                                onClipboardClick()
+                                Toast.makeText(context,"사진을 선택해 주세요", Toast.LENGTH_SHORT).show()
                             }
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     )
