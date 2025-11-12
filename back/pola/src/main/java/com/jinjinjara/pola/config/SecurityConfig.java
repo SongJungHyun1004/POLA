@@ -69,7 +69,6 @@ public class SecurityConfig {
                                 "/api/v1/share/**"
                         )
                         .permitAll()
-                        .requestMatchers("/api/v2/admin/**").hasAuthority("ROLE_ADMIN")
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2

@@ -134,3 +134,64 @@ export async function removeFileFavorite(fileId: number) {
   }
   return true;
 }
+
+export const fileService = {
+  /** 파일 삭제 */
+  deleteFile: async (fileId: number): Promise<void> => {
+    const res = await apiClient(`/files/${fileId}`, {
+      method: "DELETE",
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      const message = errorData?.message || "파일 삭제 중 오류가 발생했습니다.";
+      throw new Error(message);
+    }
+
+    const data = await res.json();
+    if (data.status !== "SUCCESS") {
+      throw new Error(data.message || "파일 삭제 실패");
+    }
+  },
+};
+
+export const fileEditService = {
+  /** (1) 파일 내용(context) 수정 */
+  async updateFileContext(fileId: number, context: string) {
+    const res = await apiClient(`/files/${fileId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ context }),
+    });
+    if (!res.ok) throw new Error("내용 수정 실패");
+    return await res.json();
+  },
+
+  /** (2) 파일의 태그 목록 조회 */
+  async getFileTags(fileId: number) {
+    const res = await apiClient(`/files/${fileId}/tags`, { method: "GET" });
+    if (!res.ok) throw new Error("태그 조회 실패");
+    const data = await res.json();
+    return data.data || []; // [{ id: number, tagName: string }]
+  },
+
+  /** (3) 파일에 새 태그 추가 */
+  async addFileTags(fileId: number, tagNames: string[]) {
+    const res = await apiClient(`/files/${fileId}/tags`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tagNames }),
+    });
+    if (!res.ok) throw new Error("태그 추가 실패");
+    return await res.json();
+  },
+
+  /** (4) 파일에서 특정 태그 제거 */
+  async removeFileTag(fileId: number, tagId: number) {
+    const res = await apiClient(`/files/${fileId}/tags/${tagId}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) throw new Error("태그 삭제 실패");
+    return await res.json();
+  },
+};

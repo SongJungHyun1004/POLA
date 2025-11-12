@@ -3,9 +3,17 @@
 import Image from "next/image";
 import { useState, useMemo, useEffect } from "react";
 import ImageModal from "./ImageModal";
+import OCRModal from "./OCRModal";
 import EditModal from "./EditModal";
 import ShareModal from "./ShareModal";
-import { RotateCcw, Download, Share2, Pencil, Star } from "lucide-react";
+import {
+  RotateCcw,
+  Download,
+  Share2,
+  Pencil,
+  Star,
+  Trash2,
+} from "lucide-react";
 import {
   getMyCategories,
   updateFileCategory,
@@ -14,11 +22,14 @@ import {
   getFileDownloadUrl,
   addFileFavorite,
   removeFileFavorite,
+  fileService,
 } from "@/services/fileService";
 
 interface PolaroidDetailProps {
   id?: number;
   src?: string;
+  type?: string;
+  ocr_text?: string;
   tags: string[];
   date?: string;
   contexts: string;
@@ -33,6 +44,8 @@ interface PolaroidDetailProps {
 export default function PolaroidDetail({
   id,
   src,
+  type,
+  ocr_text,
   tags,
   date,
   contexts,
@@ -47,13 +60,18 @@ export default function PolaroidDetail({
   const [flipped, setFlipped] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
-
   const [context, setContext] = useState(contexts);
   const [tagState, setTagState] = useState(tags);
   const [categories, setCategories] = useState<any[]>([]);
   const [downloading, setDownloading] = useState(false);
   const [favorite, setFavorite] = useState(initialFavorite);
   const [updatingFavorite, setUpdatingFavorite] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const isTextFile =
+    type?.includes("text/plain") ||
+    (src?.endsWith(".txt") ?? false) ||
+    src?.includes("/text/");
 
   useEffect(() => setTagState(tags), [tags]);
   useEffect(() => setContext(contexts), [contexts]);
@@ -75,7 +93,7 @@ export default function PolaroidDetail({
     }
   }, [date]);
 
-  if (!src) {
+  if (!src && !ocr_text) {
     return (
       <div className="flex flex-1 items-center justify-center text-[#A89B82]">
         이미지를 선택하세요.
@@ -163,6 +181,24 @@ export default function PolaroidDetail({
     }
   }
 
+  /** 🔹 파일 삭제 처리 */
+  async function handleDelete() {
+    if (!id || deleting) return;
+    if (!confirm("정말 이 파일을 삭제하시겠습니까?")) return;
+
+    try {
+      setDeleting(true);
+      await fileService.deleteFile(id);
+      alert("파일이 성공적으로 삭제되었습니다.");
+      onCategoryUpdated?.();
+    } catch (err: any) {
+      console.error("파일 삭제 실패:", err);
+      alert(err.message || "파일 삭제 중 오류가 발생했습니다.");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   return (
     <div className="flex flex-col items-center w-full">
       {/* 카드 */}
@@ -177,7 +213,7 @@ export default function PolaroidDetail({
           onClick={() => setOpen(true)}
         >
           <div
-            className="relative w-[85%] h-[70%] overflow-hidden rounded-sm border border-[#8B857C] bg-[#FFFEF8]"
+            className="relative w-[85%] h-[70%] overflow-hidden rounded-sm border border-[#8B857C] bg-[#FFFEF8] p-2"
             style={{ marginBottom: "14%" }}
           >
             {!sharedView && (
@@ -198,12 +234,28 @@ export default function PolaroidDetail({
               </button>
             )}
 
-            <Image
-              src={displaySrc}
-              alt="selected polaroid"
-              fill
-              className="object-cover object-center"
-            />
+            {isTextFile ? (
+              <div
+                className="w-full h-full overflow-y-auto text-[11px] leading-tight text-[#4C3D25] whitespace-pre-line break-words scrollbar-none"
+                style={{
+                  WebkitOverflowScrolling: "touch",
+                  overscrollBehavior: "contain",
+                  touchAction: "auto",
+                  msOverflowStyle: "none",
+                  scrollbarWidth: "none",
+                }}
+                onWheel={(e) => e.stopPropagation()}
+              >
+                {ocr_text || "(텍스트 없음)"}
+              </div>
+            ) : (
+              <Image
+                src={displaySrc}
+                alt="selected polaroid"
+                fill
+                className="object-cover object-center"
+              />
+            )}
           </div>
         </div>
 
@@ -232,9 +284,20 @@ export default function PolaroidDetail({
                 />
               </button>
               {!sharedView && (
-                <button onClick={() => id && setShareOpen(true)}>
-                  <Share2 className="w-5 h-5 text-[#4C3D25] hover:text-black" />
-                </button>
+                <>
+                  <button onClick={() => id && setShareOpen(true)}>
+                    <Share2 className="w-5 h-5 text-[#4C3D25] hover:text-black" />
+                  </button>
+                  <button onClick={handleDelete} disabled={deleting}>
+                    <Trash2
+                      className={`w-5 h-5 ${
+                        deleting
+                          ? "text-gray-400 animate-pulse"
+                          : "text-red-500 hover:text-red-600"
+                      }`}
+                    />
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -261,20 +324,25 @@ export default function PolaroidDetail({
         <p className="text-md mt-2">버튼을 눌러서 사진을 뒤집어 보세요</p>
       </div>
 
-      {open && <ImageModal src={displaySrc} onClose={() => setOpen(false)} />}
+      {open &&
+        (isTextFile ? (
+          <OCRModal text={ocr_text ?? ""} onClose={() => setOpen(false)} />
+        ) : (
+          <ImageModal src={displaySrc} onClose={() => setOpen(false)} />
+        ))}
 
       {shareOpen && id && (
         <ShareModal id={id} onClose={() => setShareOpen(false)} />
       )}
-
-      {editOpen && (
+      {editOpen && id && (
         <EditModal
+          fileId={id}
           defaultTags={tagState}
           defaultContext={context}
           defaultCategoryId={categoryId ?? 0}
           categories={categories}
           onClose={() => setEditOpen(false)}
-          onSave={handleSave}
+          onSave={onCategoryUpdated ?? (() => {})}
         />
       )}
     </div>

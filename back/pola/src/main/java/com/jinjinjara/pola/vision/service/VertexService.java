@@ -33,8 +33,8 @@ public class VertexService {
     private String visionModel;
 
     // 다운로드 안전 가드
-    private static final long MAX_IMAGE_BYTES = 20L * 1024 * 1024; // 20MB
-    private static final long MAX_TEXT_BYTES  = 2L  * 1024 * 1024; // 2MB
+    private static final long MAX_IMAGE_BYTES = 100L * 1024 * 1024; // 100MB
+    private static final long MAX_TEXT_BYTES  = 20L  * 1024 * 1024; // 20MB
 
     private final ObjectMapper om = new ObjectMapper();
     // Vertex 호출용
@@ -167,6 +167,24 @@ public class VertexService {
         );
 
         String url = endpoint(visionModel);
+        return postJson(url, body);
+    }
+
+    public String generateText(String prompt, double temperature, int maxTokens) {
+        if (prompt == null || prompt.isBlank()) {
+            return "{\"error\":\"prompt is empty\"}";
+        }
+        Map<String, Object> body = Map.of(
+                "contents", List.of(Map.of(
+                        "role", "user",
+                        "parts", List.of(Map.of("text", prompt))
+                )),
+                "generationConfig", Map.of(
+                        "temperature", temperature,
+                        "maxOutputTokens", maxTokens
+                )
+        );
+        String url = endpoint(textModel);
         return postJson(url, body);
     }
 

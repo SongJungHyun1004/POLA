@@ -68,13 +68,19 @@ export default function Timeline({ timeline }: TimelineProps) {
                   className="object-cover select-none pointer-events-none"
                 />
 
-                <div className="absolute top-1/2 left-1/2 w-[120px] h-[120px] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-md bg-[#FFFEF8]">
-                  <Image
-                    src={item.src || "/images/dummy_image_1.png"}
-                    alt="pola"
-                    fill
-                    className="object-cover object-center select-none pointer-events-none"
-                  />
+                <div className="absolute top-1/2 left-1/2 w-[120px] h-[120px] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-md bg-[#FFFEF8] flex items-center justify-center p-2">
+                  {item.type?.startsWith("text/") ? (
+                    <div className="w-full h-full text-[10px] leading-tight text-[#4C3D25] whitespace-pre-line break-words overflow-hidden">
+                      {item.ocr_text || "(텍스트 미리보기 없음)"}
+                    </div>
+                  ) : (
+                    <Image
+                      src={item.src}
+                      alt="pola"
+                      fill
+                      className="object-cover object-center select-none pointer-events-none"
+                    />
+                  )}
                 </div>
               </div>
             ))}

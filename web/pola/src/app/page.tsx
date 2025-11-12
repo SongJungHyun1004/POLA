@@ -155,11 +155,9 @@ export default function LandingPage() {
         priority
       />
 
-      <Link href="/home">
-        <h1 className="text-4xl font-semibold text-[#4C3D25] mt-8 mb-6">
-          나만의 스크랩북, POLA
-        </h1>
-      </Link>
+      <h1 className="text-4xl font-semibold text-[#4C3D25] mt-8 mb-6">
+        나만의 스크랩북, POLA
+      </h1>
 
       <div id="googleSignInDiv"></div>
     </main>

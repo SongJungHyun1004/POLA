@@ -10,9 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
@@ -79,7 +77,8 @@ public class S3Service {
         return generateDownloadUrl(file.getSrc());
     }
 
-    // 미리보기 presigned URL (이미지면 preview, 없으면 original)
+
+
     public URL generatePreviewUrl(String key, String contentType) {
         boolean isImage = contentType != null && (
                 contentType.startsWith("image/") ||
@@ -90,6 +89,15 @@ public class S3Service {
             if (isImage) {
                 String previewKey = key.replace("home/original/", "home/preview/");
                 try {
+                    S3Client s3Client = S3Client.builder()
+                            .region(Region.AP_NORTHEAST_2)
+                            .build();
+                    s3Client.headObject(HeadObjectRequest.builder()
+                            .bucket(bucket)
+                            .key(previewKey)
+                            .build());
+
+                    // 존재하면 presigned URL 생성
                     GetObjectRequest previewRequest = GetObjectRequest.builder()
                             .bucket(bucket)
                             .key(previewKey)
@@ -101,12 +109,19 @@ public class S3Service {
                             builder.signatureDuration(Duration.ofMinutes(10))
                                     .getObjectRequest(previewRequest));
 
+                    System.out.println("[S3Service] Using preview: " + previewKey);
                     return presignedPreview.url();
-                } catch (Exception previewError) {
-                    System.out.println("[S3Service] Preview not found, returning original instead: " + previewKey);
+
+                } catch (S3Exception e) {
+                    if (e.statusCode() == 404) {
+                        System.out.println("[S3Service] Preview not found, fallback to original: " + key);
+                    } else {
+                        throw e;
+                    }
                 }
             }
 
+            // fallback → 원본 URL
             GetObjectRequest originalRequest = GetObjectRequest.builder()
                     .bucket(bucket)
                     .key(key)
@@ -121,7 +136,6 @@ public class S3Service {
             return presignedOriginal.url();
 
         } catch (Exception e) {
-            System.out.println("[S3Service] Failed to generate preview/original URL: " + key);
             throw new CustomException(ErrorCode.FILE_NOT_FOUND, e.getMessage());
         }
     }
