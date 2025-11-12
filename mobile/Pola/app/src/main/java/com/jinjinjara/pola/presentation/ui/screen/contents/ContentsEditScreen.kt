@@ -27,6 +27,7 @@ import com.jinjinjara.pola.R
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ContentsEditScreen(
+    contentId: Long = -1L,
     onBackClick: () -> Unit = {},
     onSaveClick: () -> Unit = {}
 ) {

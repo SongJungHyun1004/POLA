@@ -94,7 +94,7 @@ public class FileSearchService {
                 .index(INDEX_NAME)
                 .query(q -> q.bool(b -> b
                         .must(m -> m.term(t -> t.field("userId").value(FieldValue.of(userId))))
-                        .must(m -> m.term(t -> t.field("categoryName.keyword").value(FieldValue.of(categoryName))))
+                        .must(m -> m.term(t -> t.field("categoryName").value(FieldValue.of(categoryName))))
                 )), FileSearch.class);
 
         return res.hits().hits().stream()
@@ -151,7 +151,7 @@ public class FileSearchService {
                         .should(sh -> sh.match(match -> match.field("tags").query(FieldValue.of(keyword))))
                         .should(sh -> sh.match(match -> match.field("ocrText").query(FieldValue.of(keyword))))
                         .should(sh -> sh.match(match -> match.field("context").query(FieldValue.of(keyword))))
-                        .minimumShouldMatch("1")
+                        .minimumShouldMatch(String.valueOf(1))
                 )), FileSearch.class);
 
         return res.hits().hits().stream()

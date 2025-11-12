@@ -9,8 +9,10 @@ import com.jinjinjara.pola.data.dto.response.CategoryIdResponse;
 import com.jinjinjara.pola.data.dto.response.CategoryResponse;
 import com.jinjinjara.pola.data.entity.Category;
 import com.jinjinjara.pola.data.entity.CategoryTag;
+import com.jinjinjara.pola.data.entity.File;
 import com.jinjinjara.pola.data.repository.CategoryRepository;
 import com.jinjinjara.pola.data.repository.CategoryTagRepository;
+import com.jinjinjara.pola.data.repository.FileRepository;
 import com.jinjinjara.pola.data.repository.TagRepository;
 import com.jinjinjara.pola.user.entity.Users;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +33,7 @@ public class CategoryService {
     private final CategoryRepository categoryRepository;
     private final TagRepository tagRepository;
     private final CategoryTagRepository categoryTagRepository;
-
+    private final FileRepository fileRepository;
     /**
      * CREATE - 카테고리 생성
      */
@@ -127,18 +129,38 @@ public class CategoryService {
 
     /**
      * DELETE
+     * 카테고리 삭제 시, 해당 카테고리를 참조하는 파일들은 모두 '미분류' 카테고리로 이동
      */
     @Transactional
     public void deleteCategory(Long id) {
         try {
-            if (!categoryRepository.existsById(id)) {
-                throw new CustomException(ErrorCode.CATEGORY_NOT_FOUND);
-            }
+            // 1. 삭제 대상 카테고리 확인
+            Category category = categoryRepository.findById(id)
+                    .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
 
-            // 1️⃣ category_tags 먼저 삭제
+            Users user = category.getUser(); // Category 엔티티의 Users 참조
+
+            // 2. 해당 유저의 '미분류' 카테고리 찾기 (없으면 생성)
+            Category uncategorized = categoryRepository.findByUserIdAndCategoryName(user.getId(), "미분류")
+                    .orElseGet(() -> {
+                        Category newCategory = Category.builder()
+                                .user(user) // 올바른 필드 이름
+                                .categoryName("미분류")
+                                .build();
+                        return categoryRepository.save(newCategory);
+                    });
+
+            // 3. 연결된 파일들의 category_id를 모두 '미분류'로 변경
+            List<File> files = fileRepository.findAllByCategoryId(id);
+            for (File file : files) {
+                file.setCategoryId(uncategorized.getId());
+            }
+            fileRepository.saveAll(files);
+
+            // 4. category_tags 먼저 삭제
             categoryTagRepository.deleteByCategoryId(id);
 
-            // 2️⃣ 카테고리 삭제
+            // 5. 카테고리 삭제
             categoryRepository.deleteById(id);
 
         } catch (CustomException e) {
@@ -147,6 +169,9 @@ public class CategoryService {
             throw new CustomException(ErrorCode.CATEGORY_DELETE_FAIL, e.getMessage());
         }
     }
+
+
+
 
 
 

@@ -4,14 +4,18 @@ import com.jinjinjara.pola.data.repository.AuthRepositoryImpl
 import com.jinjinjara.pola.data.repository.FileUploadRepositoryImpl
 import com.jinjinjara.pola.data.repository.HomeRepositoryImpl
 import com.jinjinjara.pola.data.repository.CategoryRepositoryImpl
+import com.jinjinjara.pola.data.repository.ContentRepositoryImpl
 import com.jinjinjara.pola.data.repository.RemindRepositoryImpl
 import com.jinjinjara.pola.data.repository.FavoriteRepositoryImpl
+import com.jinjinjara.pola.data.repository.TimelineRepositoryImpl
 import com.jinjinjara.pola.domain.repository.AuthRepository
 import com.jinjinjara.pola.domain.repository.CategoryRepository
+import com.jinjinjara.pola.domain.repository.ContentRepository
 import com.jinjinjara.pola.domain.repository.FileUploadRepository
 import com.jinjinjara.pola.domain.repository.HomeRepository
 import com.jinjinjara.pola.domain.repository.RemindRepository
 import com.jinjinjara.pola.domain.repository.FavoriteRepository
+import com.jinjinjara.pola.domain.repository.TimelineRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -84,4 +88,16 @@ abstract class RepositoryModule {
     abstract fun bindFavoriteRepository(
         favoriteRepositoryImpl: FavoriteRepositoryImpl
     ): FavoriteRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindTimelineRepository(
+        timelineRepositoryImpl: TimelineRepositoryImpl
+    ): TimelineRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindContentRepository(
+        contentRepositoryImpl: ContentRepositoryImpl
+    ): ContentRepository
 }

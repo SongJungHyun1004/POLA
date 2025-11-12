@@ -14,6 +14,7 @@ import androidx.navigation.navArgument
 import androidx.navigation.navigation
 import com.jinjinjara.pola.data.local.datastore.PreferencesDataStore
 import com.jinjinjara.pola.presentation.ui.screen.start.CategorySelectViewModel
+import com.jinjinjara.pola.presentation.ui.screen.start.TagSelectViewModel
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.android.scopes.ActivityScoped
 import kotlinx.coroutines.launch
@@ -70,17 +71,12 @@ fun NavGraphBuilder.authNavGraph(
     ) {
         // 시작 화면 (구글 로그인) 화면
         composable(route = Screen.Start.route) {
-            StartScreen(onLoginSuccess = { onboardingCompleted ->
-                if (onboardingCompleted) {
-                    // 온보딩 이미 완료 -> 바로 메인으로
-                    navController.navigate(NavGraphs.MAIN) {
-                        popUpTo(NavGraphs.AUTH) { inclusive = true }
-                    }
-                } else {
-                    // 온보딩 필요 -> 카테고리 선택 화면으로
-                    navController.navigate(Screen.CategorySelect.route)
+            StartScreen(
+                onLoginSuccess = { onboardingCompleted ->
+                    // PolaNavHost의 LaunchedEffect가 자동으로 네비게이션 처리
+                    // 여기서는 아무것도 하지 않음 (DataStore 상태 변경으로 자동 이동)
                 }
-            })
+            )
         }
 
         // 카테고리 선택 화면
@@ -110,6 +106,12 @@ fun NavGraphBuilder.authNavGraph(
             val context = LocalContext.current
             val coroutineScope = rememberCoroutineScope()
 
+            // AUTH 그래프 스코프의 ViewModel 사용 (상태 유지)
+            val authBackStackEntry = remember(it) {
+                navController.getBackStackEntry(NavGraphs.AUTH)
+            }
+            val tagSelectViewModel: TagSelectViewModel = hiltViewModel(authBackStackEntry)
+
             // 이전 화면에서 전달받은 선택된 카테고리 정보
             val categoriesWithTags = navController.previousBackStackEntry
                 ?.savedStateHandle
@@ -118,19 +120,16 @@ fun NavGraphBuilder.authNavGraph(
 
             TagSelectScreen(
                 categoriesWithTags = categoriesWithTags,
+                viewModel = tagSelectViewModel,
                 onNextClick = {
                     // 온보딩 완료 플래그 저장
+                    // PolaNavHost의 LaunchedEffect가 자동으로 MAIN으로 네비게이션 처리
                     coroutineScope.launch {
                         val entryPoint = EntryPointAccessors.fromActivity(
                             context as android.app.Activity,
                             DataStoreEntryPoint::class.java
                         )
                         entryPoint.preferencesDataStore().setOnboardingCompleted(true)
-
-                        // 태그 선택 완료 후 메인으로 이동
-                        navController.navigate(NavGraphs.MAIN) {
-                            popUpTo(NavGraphs.AUTH) { inclusive = true }
-                        }
                     }
                 },
                 onBackClick = {
@@ -144,9 +143,11 @@ fun NavGraphBuilder.authNavGraph(
 /**
  * Main 네비게이션 그래프
  */
-fun NavGraphBuilder.mainNavGraph() {
+fun NavGraphBuilder.mainNavGraph(navController: NavHostController) {
     composable(route = NavGraphs.MAIN) {
         MainScreen()
+        // MainViewModel이 카테고리 체크 후 필요시 DataStore 업데이트
+        // PolaNavHost의 LaunchedEffect가 자동으로 네비게이션 처리
     }
 }
 
@@ -160,8 +161,8 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
     ) {
         composable(Screen.Home.route) {
             HomeScreen(
-                onNavigateToCategory = { categoryName ->
-                    navController.navigate(Screen.Category.createRoute(categoryName))
+                onNavigateToCategory = { categoryId ->
+                    navController.navigate(Screen.Category.createRoute(categoryId))
                 },
                 onNavigateToFavorite = {
                     navController.navigate(Screen.Favorite.route)
@@ -210,15 +211,19 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
         composable(
             route = Screen.Category.route,
             arguments = listOf(
-                navArgument("categoryName") { type = NavType.StringType }
+                navArgument("categoryId") { type = NavType.LongType }
             )
         ) { backStackEntry ->
-            val categoryName = backStackEntry.arguments?.getString("categoryName") ?: ""
+            val categoryId = backStackEntry.arguments?.getLong("categoryId") ?: -1L
             CategoryScreen(
-                categoryName = categoryName,
+                navController = navController,
+                categoryId = categoryId,
                 onBackClick = { navController.popBackStack() },
-                onNavigateToTag = { tagName ->
-                    navController.navigate(Screen.Tag.createRoute(tagName))
+                onNavigateToFavorite = {
+                    navController.navigate(Screen.Favorite.route)
+                },
+                onNavigateToContents = { contentId ->
+                    navController.navigate(Screen.Contents.createRoute(contentId))
                 }
             )
         }
@@ -242,17 +247,19 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
         composable(
             route = Screen.Contents.route,
             arguments = listOf(
-                navArgument("contentId") { type = NavType.StringType }
+                navArgument("contentId") { type = NavType.LongType }
             )
         ) { backStackEntry ->
-            val contentId = backStackEntry.arguments?.getString("contentId") ?: ""
+            val contentId = backStackEntry.arguments?.getLong("contentId") ?: -1L
             ContentsScreen(
+                navController = navController,
+                fileId = contentId,
                 onBackClick = { navController.popBackStack() },
                 onShareClick = { /* TODO: 공유 기능 */ },
                 onEditClick = {
                     navController.navigate(Screen.ContentsEdit.createRoute(contentId))
                 },
-                onDeleteClick = { /* TODO: 삭제 기능 */ }
+                onDeleteClick = { /* 내부 삭제 구현 */ }
             )
         }
 
@@ -262,8 +269,9 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
                 navArgument("contentId") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val contentId = backStackEntry.arguments?.getString("contentId") ?: ""
+            val contentId = backStackEntry.arguments?.getLong("contentId") ?: -1L
             ContentsEditScreen(
+                contentId = contentId,
                 onBackClick = { navController.popBackStack() },
                 onSaveClick = {
                     // TODO: 저장 로직

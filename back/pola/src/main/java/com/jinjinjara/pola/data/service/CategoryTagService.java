@@ -2,6 +2,7 @@ package com.jinjinjara.pola.data.service;
 
 import com.jinjinjara.pola.common.CustomException;
 import com.jinjinjara.pola.common.ErrorCode;
+import com.jinjinjara.pola.common.YamlRecommendedCatalogService;
 import com.jinjinjara.pola.data.dto.request.CategoryWithTags;
 import com.jinjinjara.pola.data.dto.request.InitCategoryTagRequest;
 import com.jinjinjara.pola.data.dto.response.*;
@@ -29,6 +30,7 @@ public class CategoryTagService {
     private final CategoryRepository categoryRepository;
     private final TagRepository tagRepository;
     private final CategoryTagRepository categoryTagRepository;
+    private final YamlRecommendedCatalogService yamlCatalog;
 
     // 카테고리에 태그 추가
     public CategoryTagResponse addTagToCategory(Long categoryId, Long tagId) {
@@ -172,13 +174,9 @@ public class CategoryTagService {
 
     @Transactional(readOnly = true)
     public RecommendedCategoryList getRecommendedCategoriesAndTags() {
-        List<RecommendedCategory> recommended = List.of(
-                new RecommendedCategory("여행", List.of("유럽", "가족", "사진","동남아","비행기","기차","맛집","여행비")),
-                new RecommendedCategory("음식", List.of("한식", "야식", "디저트","양식","중식","일식","분식","배달음식")),
-                new RecommendedCategory("취미", List.of("그림", "음악", "운동","게임","운동","마라톤","러닝","조깅"))
-        );
-        return new RecommendedCategoryList(recommended);
+        return yamlCatalog.getRecommendedCategories();
     }
+
     @Transactional(readOnly = true)
     public List<CategoryWithTagsResponse> getUserCategoriesWithTags(Users user) {
         List<CategoryTag> categoryTags = categoryTagRepository.findAllByUserId(user.getId());
@@ -209,6 +207,43 @@ public class CategoryTagService {
                             .build();
                 })
                 .toList();
+    }
+    /**
+     * ✅ 카테고리에 여러 태그를 한 번에 추가
+     * - 같은 이름의 태그가 없으면 새로 생성
+     * - 이미 연결된 태그는 중복 연결 방지
+     */
+    @Transactional
+    public List<CategoryTagResponse> addTagsToCategory(Long categoryId, List<String> tagNames) {
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
+
+        List<CategoryTagResponse> results = tagNames.stream()
+                .map(tagName -> {
+                    //  태그 존재 확인 (없으면 생성)
+                    Tag tag = tagRepository.findByTagName(tagName)
+                            .orElseGet(() -> tagRepository.save(Tag.builder().tagName(tagName).build()));
+
+                    // 2이미 연결된 경우 건너뛰기
+                    boolean exists = categoryTagRepository.existsByCategoryAndTag(category, tag);
+                    if (exists) {
+                        System.out.println("[CategoryTagService] 이미 연결된 태그: " + tagName);
+                        return null;
+                    }
+
+                    //  새로운 연결 저장
+                    CategoryTag categoryTag = CategoryTag.builder()
+                            .category(category)
+                            .tag(tag)
+                            .build();
+                    CategoryTag saved = categoryTagRepository.save(categoryTag);
+
+                    return CategoryTagResponse.fromEntity(saved);
+                })
+                .filter(ct -> ct != null)
+                .toList();
+
+        return results;
     }
 
 

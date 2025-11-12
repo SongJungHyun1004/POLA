@@ -9,6 +9,9 @@ import com.jinjinjara.pola.domain.repository.FileUploadRepository
 import com.jinjinjara.pola.util.ErrorType
 import com.jinjinjara.pola.util.Result
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
@@ -82,11 +85,13 @@ class FileUploadRepositoryImpl @Inject constructor(
             val originUrl = presignedData.url.substringBefore("?")
             Log.d("FileUpload", "Origin URL: $originUrl")
 
+            val platform = "APP"
             val completeRequest = FileCompleteRequest(
                 key = presignedData.key,
                 type = contentType,
                 fileSize = fileSize,
-                originUrl = originUrl
+                originUrl = originUrl,
+                platform = platform,
             )
 
             val completeResponse = fileUploadApi.completeUpload(completeRequest)
@@ -103,8 +108,24 @@ class FileUploadRepositoryImpl @Inject constructor(
                 )
             }
 
+            val fileId = completeResponse.body()!!.data.id
             Log.d("FileUpload", "=== Upload Complete SUCCESS ===")
-            Log.d("FileUpload", "File ID: ${completeResponse.body()!!.data.id}")
+            Log.d("FileUpload", "File ID: $fileId")
+
+            // 파일 후처리 (자동 분류)를 별도 코루틴으로 실행 - UI는 기다리지 않음
+            CoroutineScope(Dispatchers.IO).launch {
+                Log.d("FileUpload", "Starting automatic classification in background...")
+                val postProcessResult = postProcessFile(fileId)
+                when (postProcessResult) {
+                    is Result.Success -> {
+                        Log.d("FileUpload", "Auto classification SUCCESS")
+                    }
+                    is Result.Error -> {
+                        Log.w("FileUpload", "Auto classification failed: ${postProcessResult.message}")
+                    }
+                    is Result.Loading -> {}
+                }
+            }
 
             Result.Success(completeResponse.body()!!.message)
 
@@ -172,12 +193,14 @@ class FileUploadRepositoryImpl @Inject constructor(
             Log.d("FileUpload", "S3 upload successful")
 
             // 4. 업로드 완료 처리
+            val platform = "APP"
             val originUrl = presignedData.url.substringBefore("?")
             val completeRequest = FileCompleteRequest(
                 key = presignedData.key,
                 type = "text/plain",
                 fileSize = fileSize,
-                originUrl = originUrl
+                originUrl = originUrl,
+                platform = platform,
             )
 
             val completeResponse = fileUploadApi.completeUpload(completeRequest)
@@ -209,6 +232,57 @@ class FileUploadRepositoryImpl @Inject constructor(
             Result.Error(
                 exception = e,
                 message = e.message ?: "업로드 실패",
+                errorType = ErrorType.UNKNOWN
+            )
+        }
+    }
+
+    override suspend fun postProcessFile(fileId: Long): Result<String> {
+        return try {
+            Log.d("FileUpload", "=== Starting Post Process ===")
+            Log.d("FileUpload", "FileId: $fileId")
+
+            val response = fileUploadApi.postProcessFile(fileId)
+
+            if (!response.isSuccessful || response.body() == null) {
+                Log.e("FileUpload", "Post process failed: ${response.code()}")
+                return Result.Error(
+                    message = "파일 분석 실패",
+                    errorType = when (response.code()) {
+                        401 -> ErrorType.UNAUTHORIZED
+                        404 -> ErrorType.BAD_REQUEST
+                        in 400..499 -> ErrorType.BAD_REQUEST
+                        in 500..599 -> ErrorType.SERVER
+                        else -> ErrorType.UNKNOWN
+                    }
+                )
+            }
+
+            Log.d("FileUpload", "=== Post Process SUCCESS ===")
+            Log.d("FileUpload", "Category ID: ${response.body()!!.data.categoryId}")
+            Log.d("FileUpload", "OCR Text: ${response.body()!!.data.ocrText?.take(50)}...")
+
+            Result.Success(response.body()!!.message)
+
+        } catch (e: UnknownHostException) {
+            Log.e("FileUpload", "Network error during post process", e)
+            Result.Error(
+                exception = e,
+                message = "인터넷 연결을 확인해주세요",
+                errorType = ErrorType.NETWORK
+            )
+        } catch (e: SocketTimeoutException) {
+            Log.e("FileUpload", "Timeout during post process", e)
+            Result.Error(
+                exception = e,
+                message = "요청 시간이 초과되었습니다",
+                errorType = ErrorType.TIMEOUT
+            )
+        } catch (e: Exception) {
+            Log.e("FileUpload", "Post process failed with exception", e)
+            Result.Error(
+                exception = e,
+                message = e.message ?: "파일 분석 실패",
                 errorType = ErrorType.UNKNOWN
             )
         }

@@ -1,17 +1,20 @@
 "use client";
 
-import CryptoJS from "crypto-js";
 import Image from "next/image";
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect } from "react";
 import ImageModal from "./ImageModal";
 import EditModal from "./EditModal";
 import ShareModal from "./ShareModal";
-import { RotateCcw, Download, Share2, Pencil } from "lucide-react";
+import { RotateCcw, Download, Share2, Pencil, Star } from "lucide-react";
 import {
   getMyCategories,
   updateFileCategory,
 } from "@/services/categoryService";
-import useAuthStore from "@/store/useAuthStore";
+import {
+  getFileDownloadUrl,
+  addFileFavorite,
+  removeFileFavorite,
+} from "@/services/fileService";
 
 interface PolaroidDetailProps {
   id?: number;
@@ -22,6 +25,9 @@ interface PolaroidDetailProps {
   categoryId?: number;
   onCategoryUpdated?: () => void;
   sharedView?: boolean;
+  downloadUrl?: string;
+  favorite?: boolean;
+  onFavoriteChange?: (newState: boolean) => void;
 }
 
 export default function PolaroidDetail({
@@ -33,9 +39,10 @@ export default function PolaroidDetail({
   categoryId,
   onCategoryUpdated,
   sharedView,
+  downloadUrl,
+  favorite: initialFavorite = false,
+  onFavoriteChange,
 }: PolaroidDetailProps) {
-  const { user } = useAuthStore();
-
   const [open, setOpen] = useState(false);
   const [flipped, setFlipped] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -44,13 +51,15 @@ export default function PolaroidDetail({
   const [context, setContext] = useState(contexts);
   const [tagState, setTagState] = useState(tags);
   const [categories, setCategories] = useState<any[]>([]);
-
-  const secret = process.env.NEXT_PUBLIC_SHARE_KEY!;
-  const username = user?.display_name ?? "알 수 없음";
-  const encrypted = CryptoJS.AES.encrypt(username, secret).toString();
+  const [downloading, setDownloading] = useState(false);
+  const [favorite, setFavorite] = useState(initialFavorite);
+  const [updatingFavorite, setUpdatingFavorite] = useState(false);
 
   useEffect(() => setTagState(tags), [tags]);
   useEffect(() => setContext(contexts), [contexts]);
+  useEffect(() => {
+    setFavorite(initialFavorite);
+  }, [initialFavorite]);
 
   const displaySrc =
     src && (src.startsWith("/") || src.startsWith("http"))
@@ -91,19 +100,66 @@ export default function PolaroidDetail({
     newCategoryId: number
   ) {
     if (!id) return;
-
-    // 태그/컨텍스트는 아직 API 없음 → 로컬 반영
     setTagState(tags);
     setContext(context);
 
-    // 카테고리 변경
     try {
       await updateFileCategory(id, newCategoryId);
-
-      // 부모에게 변경 사실 알림 → 파일 목록 재조회
       onCategoryUpdated?.();
     } catch {
       alert("카테고리 변경 실패");
+    }
+  }
+
+  async function handleDownload() {
+    if (sharedView && downloadUrl) {
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = "";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      return;
+    }
+
+    if (!id || downloading) return;
+    try {
+      setDownloading(true);
+      const url = await getFileDownloadUrl(id);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (e) {
+      console.error("다운로드 실패:", e);
+      alert("다운로드에 실패했습니다.");
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  async function handleToggleFavorite(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!id || updatingFavorite) return;
+
+    setUpdatingFavorite(true);
+    const prev = favorite;
+    const next = !prev;
+    setFavorite(next);
+    onFavoriteChange?.(next);
+
+    try {
+      if (next) await addFileFavorite(id);
+      else await removeFileFavorite(id);
+    } catch (err) {
+      console.error("즐겨찾기 변경 실패:", err);
+      alert("즐겨찾기 변경 중 오류가 발생했습니다.");
+      setFavorite(prev);
+      onFavoriteChange?.(prev);
+    } finally {
+      setUpdatingFavorite(false);
     }
   }
 
@@ -124,6 +180,24 @@ export default function PolaroidDetail({
             className="relative w-[85%] h-[70%] overflow-hidden rounded-sm border border-[#8B857C] bg-[#FFFEF8]"
             style={{ marginBottom: "14%" }}
           >
+            {!sharedView && (
+              <button
+                onClick={handleToggleFavorite}
+                disabled={updatingFavorite}
+                className="absolute top-2 right-2 z-10 hover:scale-110 transition-transform"
+              >
+                <Star
+                  size={22}
+                  fill={favorite ? "#FFD700" : "transparent"}
+                  stroke="#FFD700"
+                  strokeWidth={1.8}
+                  className={`drop-shadow-sm transition-colors ${
+                    updatingFavorite ? "opacity-60" : "opacity-100"
+                  }`}
+                />
+              </button>
+            )}
+
             <Image
               src={displaySrc}
               alt="selected polaroid"
@@ -144,8 +218,18 @@ export default function PolaroidDetail({
               >
                 <Pencil className="w-5 h-5 text-[#4C3D25] hover:text-black" />
               </button>
-              <button onClick={() => {}}>
-                <Download className="w-5 h-5 text-[#4C3D25] hover:text-black" />
+              <button
+                onClick={handleDownload}
+                disabled={downloading}
+                title="다운로드"
+              >
+                <Download
+                  className={`w-5 h-5 ${
+                    downloading
+                      ? "text-gray-400 animate-pulse"
+                      : "text-[#4C3D25] hover:text-black"
+                  }`}
+                />
               </button>
               {!sharedView && (
                 <button onClick={() => id && setShareOpen(true)}>
@@ -174,16 +258,13 @@ export default function PolaroidDetail({
         >
           <RotateCcw className="w-5 h-5 text-[#4C3D25]" />
         </button>
+        <p className="text-md mt-2">버튼을 눌러서 사진을 뒤집어 보세요</p>
       </div>
 
       {open && <ImageModal src={displaySrc} onClose={() => setOpen(false)} />}
 
       {shareOpen && id && (
-        <ShareModal
-          id={id}
-          username={encodeURIComponent(encrypted)}
-          onClose={() => setShareOpen(false)}
-        />
+        <ShareModal id={id} onClose={() => setShareOpen(false)} />
       )}
 
       {editOpen && (

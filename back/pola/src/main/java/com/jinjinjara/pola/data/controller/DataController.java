@@ -4,6 +4,7 @@ import com.jinjinjara.pola.common.ApiResponse;
 import com.jinjinjara.pola.common.dto.FileResponseDto;
 import com.jinjinjara.pola.common.dto.PageRequestDto;
 import com.jinjinjara.pola.common.dto.PagedResponseDto;
+import com.jinjinjara.pola.data.dto.request.FileShareRequest;
 import com.jinjinjara.pola.data.dto.request.FileUpdateRequest;
 import com.jinjinjara.pola.data.dto.request.FileUploadCompleteRequest;
 import com.jinjinjara.pola.data.dto.response.*;
@@ -36,7 +37,8 @@ public class DataController {
     @Operation(
             summary = "파일 업로드 완료 처리",
             description = "클라이언트에서 Presigned URL로 S3 업로드가 끝난 후, 해당 파일 메타데이터를 DB에 저장합니다.\n" +
-                    "업로드된 URL의 '?' 앞부분을 originUrl로 전달해야 합니다."
+                    "업로드된 URL의 '?' 앞부분을 originUrl로 전달해야 합니다." +
+                    "platform에는 WEB / APP으로 구분하여 입력"
     )
     @PostMapping("/complete")
     public ApiResponse<File> saveUploadedFile(
@@ -151,14 +153,38 @@ public class DataController {
         return ApiResponse.ok(updated, "즐겨찾기 순서 변경 완료");
     }
     // ==========================================
-    // 파일 삭제 (임시)
-    // ==========================================
+// 파일 삭제
+// ==========================================
     @Operation(summary = "데이터 삭제", description = "사용자가 지정한 파일을 제거합니다.")
     @DeleteMapping("/{id}")
-    public ApiResponse<List<Object>> deleteData(@PathVariable("id") Long fileId) {
-        return ApiResponse.okMessage("파일이 성공적으로 삭제되었습니다.");
+    public ApiResponse<Void> deleteData(@PathVariable("id") Long fileId) {
+        dataService.deleteFile(fileId);
+        return ApiResponse.ok(null, "파일이 성공적으로 삭제되었습니다.");
     }
 
+
+    @Operation(
+            summary = "파일 공유 링크 생성",
+            description = """
+    지정된 파일에 대해 공유 링크를 생성합니다.  
+    - 기본 만료 시간은 24시간입니다.  
+    - 이미 공유 중인 파일은 기존 링크를 재사용합니다.  
+    - 로그인된 사용자만 호출할 수 있습니다.
+    """
+    )
+    @PostMapping("/{fileId}/share")
+    public ApiResponse<FileShareResponse> createShareLink(
+            @AuthenticationPrincipal Users user,
+            @Parameter(description = "파일 ID", example = "15") @PathVariable Long fileId,
+            @RequestBody(required = false) FileShareRequest request
+    ) {
+        FileShareResponse response = dataService.createShareLink(
+                user.getId(),
+                fileId,
+                request != null ? request : new FileShareRequest(24) // 기본 24시간
+        );
+        return ApiResponse.ok(response, "공유 링크가 생성되었습니다.");
+    }
 
     @Operation(
             summary = "파일 목록(타임라인) 조회",
@@ -184,7 +210,6 @@ public class DataController {
         ```
         """
     )
-
     @PostMapping("/list")
     public ApiResponse<PagedResponseDto<DataResponse>> getFileList(
             @AuthenticationPrincipal Users user,
@@ -192,7 +217,10 @@ public class DataController {
     ) {
         Page<DataResponse> filePage = dataService.getFiles(user, request);
 
+        String filterName = dataService.getFilterName(request.getFilterType(), request.getFilterId());
+
         PagedResponseDto<DataResponse> response = PagedResponseDto.<DataResponse>builder()
+                .filterName(filterName)
                 .content(filePage.getContent())
                 .page(filePage.getNumber())
                 .size(filePage.getSize())
@@ -203,6 +231,7 @@ public class DataController {
 
         return ApiResponse.ok(response, "파일 목록 조회 성공");
     }
+
 
     @Operation(
             summary = "파일 내용(context) 수정",

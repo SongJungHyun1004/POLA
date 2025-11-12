@@ -3,10 +3,12 @@ package com.jinjinjara.pola.data.service;
 import com.jinjinjara.pola.common.CustomException;
 import com.jinjinjara.pola.common.ErrorCode;
 import com.jinjinjara.pola.common.dto.PageRequestDto;
+import com.jinjinjara.pola.data.dto.request.FileShareRequest;
 import com.jinjinjara.pola.data.dto.request.FileUpdateRequest;
 import com.jinjinjara.pola.data.dto.request.FileUploadCompleteRequest;
 import com.jinjinjara.pola.data.dto.response.DataResponse;
 import com.jinjinjara.pola.data.dto.response.FileDetailResponse;
+import com.jinjinjara.pola.data.dto.response.FileShareResponse;
 import com.jinjinjara.pola.data.dto.response.TagResponse;
 import com.jinjinjara.pola.data.entity.Category;
 import com.jinjinjara.pola.data.entity.File;
@@ -43,6 +45,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -103,6 +107,30 @@ public class DataService {
                 .toList();
     }
 
+    @Transactional
+    public void deleteFile(Long fileId) {
+        File file = fileRepository.findById(fileId)
+                .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
+
+        try {
+            // 1. FileTag 관계 먼저 삭제
+            fileTagRepository.deleteByFile(file);
+            System.out.println("[DataService] Deleted file_tags for fileId=" + fileId);
+
+            // 2. S3에서 원본 + 미리보기 삭제
+            s3Service.deleteFileFromS3(file.getSrc());
+
+            // 3. DB에서 파일 삭제
+            fileRepository.delete(file);
+            System.out.println("[DataService] File deleted successfully: " + fileId);
+
+        } catch (Exception e) {
+            throw new CustomException(ErrorCode.FILE_DELETE_FAIL, e.getMessage());
+        }
+    }
+
+
+
 
     @Transactional
     public FileDetailResponse getFileDetail(Long userId, Long fileId) {
@@ -122,10 +150,12 @@ public class DataService {
                         .build())
                 .toList();
 
-        // presigned URL 생성 (파일 1개용)
-        String presignedUrl = s3Service.generatePreviewUrl(
-                new S3Service.FileMeta(file.getSrc(), file.getType())
+        //원본 미리보기 URL 생성
+        String presignedUrl = s3Service.generateOriginalPreviewUrl(
+                file.getSrc(),
+                file.getType()
         );
+
 
         // 응답 DTO 구성
         return FileDetailResponse.builder()
@@ -160,18 +190,20 @@ public class DataService {
         }
 
         Pageable pageable = request.toPageable();
+        String filterType = request.getFilterType() == null ? "" : request.getFilterType();
+        Long filterId = request.getFilterId();
 
-        Page<File> files = switch (request.getFilterType() == null ? "" : request.getFilterType()) {
+        Page<File> files = switch (filterType) {
             case "category" -> {
-                if (request.getFilterId() == null)
+                if (filterId == null)
                     throw new CustomException(ErrorCode.INVALID_REQUEST, "카테고리 ID가 필요합니다.");
-                yield fileRepository.findAllByUserIdAndCategoryId(user.getId(), request.getFilterId(), pageable);
+                yield fileRepository.findAllByUserIdAndCategoryId(user.getId(), filterId, pageable);
             }
             case "favorite" -> fileRepository.findAllByUserIdAndFavoriteTrue(user.getId(), pageable);
             case "tag" -> {
-                if (request.getFilterId() == null)
+                if (filterId == null)
                     throw new CustomException(ErrorCode.INVALID_REQUEST, "태그 ID가 필요합니다.");
-                yield fileRepository.findAllByUserIdAndTagId(user.getId(), request.getFilterId(), pageable);
+                yield fileRepository.findAllByUserIdAndTagId(user.getId(), filterId, pageable);
             }
             default -> fileRepository.findAllByUserId(user.getId(), pageable);
         };
@@ -185,7 +217,6 @@ public class DataService {
         Map<Long, String> previewUrls = s3Service.generatePreviewUrls(metaMap);
 
         List<Long> fileIds = files.stream().map(File::getId).toList();
-
         List<FileTag> fileTags = fileTagRepository.findAllByFileIds(fileIds);
         Map<Long, List<String>> tagMap = fileTags.stream()
                 .collect(Collectors.groupingBy(
@@ -205,6 +236,30 @@ public class DataService {
     }
 
 
+
+    @Transactional(readOnly = true)
+    public String getFilterName(String filterType, Long filterId) {
+        if (filterType == null || filterType.isEmpty()) {
+            return "all";
+        }
+
+        return switch (filterType) {
+            case "category" -> {
+                if (filterId == null) yield "category";
+                yield categoryRepository.findById(filterId)
+                        .map(Category::getCategoryName)
+                        .orElse("category");
+            }
+            case "tag" -> {
+                if (filterId == null) yield "tag";
+                yield tagRepository.findById(filterId)
+                        .map(Tag::getTagName)
+                        .orElse("tag");
+            }
+            case "favorite" -> "favorite";
+            default -> filterType;
+        };
+    }
 
 
 
@@ -234,7 +289,7 @@ public class DataService {
                 .context("Llava")
                 .fileSize((long) request.getFileSize())
                 .originUrl(request.getOriginUrl())
-                .platform("S3")
+                .platform(request.getPlatform())
                 .shareStatus(false)
                 .favorite(false)
                 .favoriteSort(0)
@@ -365,7 +420,43 @@ public class DataService {
         target.setFavoriteSort(newSort);
         return fileRepository.save(target);
     }
+    public FileShareResponse createShareLink(Long userId, Long fileId, FileShareRequest request) {
+        File file = fileRepository.findByIdAndUserId(fileId, userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
 
+        // 이미 공유 중이면 기존 토큰 재활용 or 덮어쓰기
+        if (Boolean.TRUE.equals(file.getShareStatus()) && file.getShareToken() != null) {
+            return FileShareResponse.builder()
+                    .shareUrl(buildShareUrl(file.getShareToken()))
+                    .expiredAt(String.valueOf(file.getShareExpiredAt()))
+                    .build();
+        }
+
+        String token = UUID.randomUUID().toString();
+        LocalDateTime expiredAt = LocalDateTime.now().plusHours(
+                Optional.ofNullable(request.getExpireHours()).orElse(24)
+        );
+
+        file.setShareStatus(true);
+        file.setShareToken(token);
+        file.setShareExpiredAt(expiredAt);
+
+        fileRepository.save(file);
+
+        return FileShareResponse.builder()
+                .shareUrl(buildShareUrl(token))
+                .expiredAt(expiredAt.toString())
+                .build();
+    }
+//링크수정
+    private String buildShareUrl(String token) {
+        return String.format("%s", token);
+    }
+
+    public File findByShareToken(String token) {
+        return fileRepository.findByShareToken(token)
+                .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
+    }
 
     @Transactional
     public FileDetailResponse updateFileContext(Users user, Long fileId, FileUpdateRequest request) {
@@ -465,6 +556,13 @@ public class DataService {
 
         log.info("[PostProcess] File entity updated (in-memory): fileId={}, vectorId={}",
                 file.getId(), file.getVectorId());
+
+        // ✅ OpenSearch 색인 추가
+        String categoryName = categoryRepository.findById(analyzeResponse.getCategoryId())
+                .map(Category::getCategoryName)
+                .orElse("미분류");
+        indexToOpenSearchAsync(file, categoryName);
+        log.info("[PostProcess] OpenSearch indexing initiated for fileId={}", fileId);
 
         log.info("[PostProcess] Post-processing completed successfully for fileId={}", fileId);
         return file;

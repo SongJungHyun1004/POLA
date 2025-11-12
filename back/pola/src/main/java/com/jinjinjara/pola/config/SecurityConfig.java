@@ -63,7 +63,10 @@ public class SecurityConfig {
                                 // Common paths
                                 "/webjars/**",
                                 "/login/oauth2/success",
-                                "/api/v1/oauth/**"
+                                "/api/v1/oauth/**",
+
+                                // Share API (JWT 인증 불필요)
+                                "/api/v1/share/**"
                         )
                         .permitAll()
                         .requestMatchers("/api/v2/admin/**").hasAuthority("ROLE_ADMIN")

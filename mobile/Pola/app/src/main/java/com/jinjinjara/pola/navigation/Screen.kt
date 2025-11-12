@@ -21,17 +21,17 @@ sealed class Screen(val route: String) {
     data object HomeDetail : Screen("home/detail/{itemId}") {
         fun createRoute(itemId: String) = "home/detail/$itemId"
     }
-    data object Category : Screen("category/{categoryName}") {
-        fun createRoute(categoryName: String) = "category/$categoryName"
+    data object Category : Screen("category/{categoryId}") {
+        fun createRoute(categoryId: Long) = "category/$categoryId"
     }
     data object Tag : Screen("tag/{tagName}") {
         fun createRoute(tagName: String) = "tag/$tagName"
     }
     data object Contents : Screen("contents/{contentId}") {
-        fun createRoute(contentId: String) = "contents/$contentId"
+        fun createRoute(contentId: Long) = "contents/$contentId"
     }
     data object ContentsEdit : Screen("contents/edit/{contentId}") {
-        fun createRoute(contentId: String) = "contents/edit/$contentId"
+        fun createRoute(contentId: Long) = "contents/edit/$contentId"
     }
     data object Favorite : Screen("favorite")
     data object SearchScreen : Screen("search_screen")

@@ -81,8 +81,8 @@ public class GoogleAuthService {
                 token.getRefreshToken()
         );
 
-        // RefreshToken 저장
-        redisUtil.save(user.getEmail(), token.getRefreshToken(), refreshExpireMs);
+        // Refresh Token 저장 (다중 디바이스 지원)
+        redisUtil.saveRefreshToken(token.getRefreshToken(), user.getEmail(), refreshExpireMs);
 
         return new AuthResultResponse(tokenResponse, isNewUser);
     }

@@ -27,15 +27,16 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.jinjinjara.pola.R
 import com.jinjinjara.pola.presentation.ui.component.PolaCard
 import com.jinjinjara.pola.presentation.ui.component.PolaSearchBar
-import com.jinjinjara.pola.presentation.ui.screen.timeline.CategoryChips
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.window.Popup
@@ -44,20 +45,14 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlin.math.roundToInt
 import androidx.compose.ui.zIndex
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
+import com.jinjinjara.pola.presentation.ui.component.CategoryChips
 import com.jinjinjara.pola.presentation.ui.component.DisplayItem
 import com.jinjinjara.pola.presentation.ui.component.ItemGrid2View
 import com.jinjinjara.pola.presentation.ui.component.ItemGrid3View
+import com.jinjinjara.pola.domain.model.UserCategory
 
-
-data class CategoryItem(
-    override val id: String,
-    val name: String,
-    override val imageRes: Int = R.drawable.temp_image,
-    override val imageUrl: String = "",
-    override val tags: List<String> = listOf(name),
-    override val description: String = "",
-    override val isFavorite: Boolean = false
-) : DisplayItem
 
 enum class ViewMode {
     GRID_3, GRID_2
@@ -65,41 +60,70 @@ enum class ViewMode {
 
 @Composable
 fun CategoryScreen(
-    categoryName: String = "카테고리",
+    categoryId: Long = -1L,
     onBackClick: () -> Unit = {},
-    onNavigateToTag: (String) -> Unit = {}
+    onNavigateToFavorite: () -> Unit = {},
+    onNavigateToContents : (Long) -> Unit = {},
+    navController: NavHostController,
+    viewModel: CategoryViewModel = hiltViewModel()
 ) {
-    var selectedTab by remember { mutableStateOf("전체") }
+    val uiState by viewModel.uiState.collectAsState()
+
+    var selectedCategoryId by remember { mutableStateOf(categoryId) }
+    var selectedTab by remember {
+        mutableStateOf(
+            uiState.userCategories.find { it.id == categoryId }?.categoryName ?: "전체"
+        )
+    }
+
+    // SavedStateHandle 값 감시
+    val refreshNeeded = navController
+        .currentBackStackEntryFlow
+        .collectAsState(initial = null)
+
+    LaunchedEffect(refreshNeeded.value) {
+        // SavedStateHandle에 "refreshNeeded"가 true이면 갱신
+        val refresh = navController
+            .currentBackStackEntry
+            ?.savedStateHandle
+            ?.get<Boolean>("refreshNeeded") ?: false
+
+        if (refresh) {
+            viewModel.refresh()
+
+            // 다시 false로 초기화
+            navController
+                .currentBackStackEntry
+                ?.savedStateHandle
+                ?.set("refreshNeeded", false)
+        }
+    }
+
+    // 디버깅 로그 추가
+    LaunchedEffect(uiState.categoryName, uiState.userCategories) {
+        if (selectedCategoryId != null) return@LaunchedEffect
+        android.util.Log.d("CategoryScreen", "categoryName: ${uiState.categoryName}")
+        android.util.Log.d("CategoryScreen", "userCategories: ${uiState.userCategories.map { it.categoryName }}")
+        android.util.Log.d("CategoryScreen", "selectedTab: $selectedTab")
+        if (uiState.userCategories.isNotEmpty()) {
+            val currentCategory = uiState.userCategories.find { it.id == categoryId }
+            selectedCategoryId = currentCategory?.id ?: -1
+            selectedTab = currentCategory?.categoryName ?: "전체"
+        }
+    }
+
+    // uiState.categoryName이 로드되면 selectedTab 업데이트
+    LaunchedEffect(uiState.categoryName) {
+        if (uiState.categoryName.isNotEmpty()) {
+            android.util.Log.d("CategoryScreen", "Updating selectedTab to: ${uiState.categoryName}")
+            selectedTab = uiState.categoryName
+        }
+    }
     var isMenuExpanded by remember { mutableStateOf(false) }
     var selectedSort by remember { mutableStateOf("최신순") }
     var viewMode by remember { mutableStateOf(ViewMode.GRID_3) }
 
-    val categories = listOf(
-        CategoryItem("1", "말차"),
-        CategoryItem("2", "초코"),
-        CategoryItem("3", "딸기"),
-        CategoryItem("1", "말차"),
-        CategoryItem("2", "초코"),
-        CategoryItem("3", "딸기"),
-        CategoryItem("1", "말차"),
-        CategoryItem("2", "초코"),
-        CategoryItem("3", "딸기"),
-        CategoryItem("1", "말차"),
-        CategoryItem("2", "초코"),
-        CategoryItem("3", "딸기"),
-        CategoryItem("1", "말차"),
-        CategoryItem("2", "초코"),
-        CategoryItem("3", "딸기"),
-        CategoryItem("1", "말차"),
-        CategoryItem("2", "초코"),
-        CategoryItem("3", "딸기"),
-        CategoryItem("1", "말차"),
-        CategoryItem("2", "초코"),
-        CategoryItem("3", "딸기"),
-        CategoryItem("1", "말차"),
-        CategoryItem("2", "초코"),
-        CategoryItem("3", "딸기"),
-    )
+    val categories = uiState.files
 
     var searchText by remember { mutableStateOf("") }
 
@@ -162,73 +186,75 @@ fun CategoryScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        when (viewMode) {
-            ViewMode.GRID_3 -> {
-                ItemGrid3View(
-                    items = categories,
-                    onItemClick = { item ->
-                        val tagName = if (item is CategoryItem) item.name else item.tags.firstOrNull() ?: ""
-                        onNavigateToTag(tagName)
-                    },
-                    onFavoriteToggle = { }, // 빈 람다 (기능 없음)
-                    state = gridState,
-                    contentPadding = PaddingValues(
-                        top = headerHeightDp + 8.dp,
-                        start = 16.dp,
-                        end = 16.dp,
-                        bottom = 16.dp
-                    ),
-                    showFavoriteIcon = false,
-                    modifier = Modifier.fillMaxSize()
-                )
+        if (uiState.files.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = headerHeightDp + 48.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.empty),
+                        contentDescription = "Empty Content",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 32.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text(
+                        text = "이 카테고리에 분류된 컨텐츠가 없어요",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
+                }
             }
-            ViewMode.GRID_2 -> {
-                ItemGrid2View(
-                    items = categories,
-                    onItemClick = { item ->
-                        val tagName = if (item is CategoryItem) item.name else item.tags.firstOrNull() ?: ""
-                        onNavigateToTag(tagName)
-                    },
-                    onFavoriteToggle = { }, // 빈 람다 (기능 없음)
-                    state = gridState,
-                    contentPadding = PaddingValues(
-                        top = headerHeightDp + 8.dp,
-                        start = 16.dp,
-                        end = 16.dp,
-                        bottom = 16.dp
-                    ),
-                    showFavoriteIcon = false,
-                    modifier = Modifier.fillMaxSize()
-                )
+        } else {
+            when (viewMode) {
+                ViewMode.GRID_3 -> {
+                    ItemGrid3View(
+                        items = categories,
+                        onItemClick = { item ->
+                            onNavigateToContents(item.fileId)
+                        },
+                        onFavoriteToggle = { }, // 빈 람다 (기능 없음)
+                        state = gridState,
+                        contentPadding = PaddingValues(
+                            top = headerHeightDp + 8.dp,
+                            start = 16.dp,
+                            end = 16.dp,
+                            bottom = 16.dp
+                        ),
+                        showFavoriteIcon = false,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+
+                ViewMode.GRID_2 -> {
+                    ItemGrid2View(
+                        items = categories,
+                        onItemClick = { item ->
+                            onNavigateToContents(item.fileId)
+                        },
+                        onFavoriteToggle = { }, // 빈 람다 (기능 없음)
+                        state = gridState,
+                        contentPadding = PaddingValues(
+                            top = headerHeightDp + 8.dp,
+                            start = 16.dp,
+                            end = 16.dp,
+                            bottom = 16.dp
+                        ),
+                        showFavoriteIcon = false,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
             }
         }
-        // Category Grid
-//        LazyVerticalGrid(
-//            state = gridState,
-//            columns = GridCells.Fixed(3),
-//            contentPadding = PaddingValues(
-//                top = headerHeightDp + 8.dp,
-//                start = 16.dp,
-//                end = 16.dp,
-//                bottom = 16.dp
-//            ),
-//            horizontalArrangement = Arrangement.spacedBy(12.dp),
-//            verticalArrangement = Arrangement.spacedBy(24.dp),
-//            modifier = Modifier.fillMaxSize()
-//        ) {
-//            items(categories) { category ->
-//                PolaCard(
-//                    modifier = Modifier.shadow(elevation = 8.dp),
-//                    ratio = 0.7661f,
-//                    imageRatio = 0.9062f,
-//                    paddingValues = PaddingValues(top = 4.dp, start = 4.dp, end = 4.dp),
-//                    imageResId = R.drawable.temp_image,
-//                    textList = listOf(category.name),
-//                    textSize = 12.sp,
-//                    textSpacing = 8.dp,
-//                )
-//            }
-//        }
 
         Box(
             modifier = Modifier
@@ -272,7 +298,7 @@ fun CategoryScreen(
                     )
 
                     Text(
-                        text = categoryName,
+                        text = uiState.categoryName.ifEmpty { "전체" },
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.tertiary
@@ -287,7 +313,7 @@ fun CategoryScreen(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
                             ) {
-                                // 즐겨찾기 이동
+                                onNavigateToFavorite()
                             }
                             .size(30.dp)
                     )
@@ -308,10 +334,19 @@ fun CategoryScreen(
                 }
 
                 // CategoryChips
+                val categories = remember(uiState.userCategories) {
+                    listOf(UserCategory(-1, "전체")) + uiState.userCategories
+                }
+
                 CategoryChips(
-                    categories = listOf("전체", "말차", "초코", "딸기"),
-                    selectedCategory = selectedTab,
-                    onCategorySelected = { selectedTab = it }
+                    categories = categories.map { it.categoryName },
+                    selectedCategory = categories.find { it.id == selectedCategoryId }?.categoryName ?: "전체",
+                    onCategorySelected = { selectedName ->
+                        val selectedCategory = categories.find { it.categoryName == selectedName }
+                        selectedCategoryId = selectedCategory?.id ?: -1
+                        selectedTab = selectedName
+                        viewModel.selectCategory(selectedCategoryId)
+                    }
                 )
 
                 // Grid Icon and Sort Menu
@@ -334,7 +369,8 @@ fun CategoryScreen(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
                             ) {
-                                viewMode = if (viewMode == ViewMode.GRID_3) ViewMode.GRID_2 else ViewMode.GRID_3
+                                viewMode =
+                                    if (viewMode == ViewMode.GRID_3) ViewMode.GRID_2 else ViewMode.GRID_3
                             }
                     )
                     Box {
@@ -379,7 +415,7 @@ fun CategoryScreen(
                                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                                     )
 
-                                    val sortOptions = listOf("태그순", "최신순", "오래된순")
+                                    val sortOptions = listOf("최신순", "오래된순", "조회순")
                                     sortOptions.forEachIndexed { index, sort ->
                                         Row(
                                             modifier = Modifier
@@ -387,6 +423,14 @@ fun CategoryScreen(
                                                 .clickable {
                                                     selectedSort = sort
                                                     isMenuExpanded = false
+                                                    val (sortBy, direction) = when (sort) {
+                                                        "최신순" -> "createdAt" to "DESC"
+                                                        "오래된순" -> "createdAt" to "ASC"
+                                                        "조회순" -> "views" to "DESC"
+                                                        else -> "createdAt" to "DESC"
+                                                    }
+
+                                                    viewModel.updateSort(sortBy, direction)
                                                 }
                                                 .padding(horizontal = 16.dp, vertical = 10.dp),
                                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -419,8 +463,8 @@ fun CategoryScreen(
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun CategoryScreenPreview() {
-    CategoryScreen()
-}
+//@Preview(showBackground = true)
+//@Composable
+//fun CategoryScreenPreview() {
+//    CategoryScreen()
+//}

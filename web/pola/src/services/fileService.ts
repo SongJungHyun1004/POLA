@@ -1,6 +1,19 @@
 import { apiClient } from "@/api/apiClient";
 import { FileListRequest, FileListResponse } from "@/dtos/file";
 
+export async function getFileDownloadUrl(fileId: number): Promise<string> {
+  const res = await apiClient(`/files/download/${fileId}`, {
+    method: "GET",
+  });
+
+  if (!res || !res.ok) {
+    throw new Error("파일 다운로드 URL 생성 실패");
+  }
+
+  const json = await res.json();
+  return json.data;
+}
+
 export async function getFileList(req: FileListRequest) {
   const body: any = {
     page: req.page,
@@ -85,4 +98,39 @@ export async function getRemindFiles() {
 
   const json = await res.json();
   return json.data as any[];
+}
+
+export async function createFileShareLink(fileId: number) {
+  const res = await apiClient(`/files/${fileId}/share`, {
+    method: "POST",
+  });
+
+  if (!res || !res.ok) {
+    throw new Error("공유 링크 생성 실패");
+  }
+
+  const json = await res.json();
+  return json.data;
+}
+
+export async function addFileFavorite(fileId: number) {
+  const res = await apiClient(`/files/${fileId}/favorite`, {
+    method: "PUT",
+  });
+
+  if (!res.ok) {
+    throw new Error("즐겨찾기 추가 실패");
+  }
+  return true;
+}
+
+export async function removeFileFavorite(fileId: number) {
+  const res = await apiClient(`/files/${fileId}/favorite`, {
+    method: "DELETE",
+  });
+
+  if (!res.ok) {
+    throw new Error("즐겨찾기 해제 실패");
+  }
+  return true;
 }

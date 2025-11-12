@@ -15,5 +15,8 @@ data class FileCompleteRequest(
     val fileSize: Long,
 
     @Json(name = "originUrl")
-    val originUrl: String
+    val originUrl: String,
+
+    @Json(name = "platform")
+    val platform: String,
 )

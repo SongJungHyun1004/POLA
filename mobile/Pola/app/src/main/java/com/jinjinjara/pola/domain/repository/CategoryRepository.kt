@@ -1,6 +1,10 @@
 package com.jinjinjara.pola.domain.repository
 
+import com.jinjinjara.pola.domain.model.Category
 import com.jinjinjara.pola.domain.model.CategoryRecommendation
+import com.jinjinjara.pola.domain.model.FileDetail
+import com.jinjinjara.pola.domain.model.FilesPage
+import com.jinjinjara.pola.domain.model.UserCategory
 import com.jinjinjara.pola.util.Result
 
 /**
@@ -17,4 +21,26 @@ interface CategoryRepository {
      * Initialize user's categories and tags
      */
     suspend fun initCategoryTags(categoriesWithTags: Map<String, List<String>>): Result<Unit>
+
+    /**
+     * Get files list by category
+     */
+    suspend fun getFilesByCategory(
+        categoryId: Long,
+        page: Int = 0,
+        size: Int = 20,
+        sortBy: String,
+        direction: String
+    ): Result<FilesPage>
+
+    /**
+     * Get user's categories
+     */
+    suspend fun getUserCategories(): Result<List<UserCategory>>
+
+    /**
+     * Get user's categories
+     */
+    suspend fun getCategories(): Result<List<Category>>
+
 }

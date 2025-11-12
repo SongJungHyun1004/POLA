@@ -28,7 +28,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.jinjinjara.pola.R
 import com.jinjinjara.pola.presentation.ui.component.PolaCard
 import com.jinjinjara.pola.presentation.ui.component.PolaSearchBar
-import com.jinjinjara.pola.presentation.ui.screen.timeline.CategoryChips
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -52,6 +51,7 @@ import com.jinjinjara.pola.presentation.ui.component.ItemGrid3View
 
 data class ContentsItem(
     override val id: String,
+    override val type: String,
     override val imageRes: Int = R.drawable.temp_image,
     override val imageUrl: String = "",
     override val tags: List<String> = listOf("말차", "라떼", "스타벅스"),
@@ -67,34 +67,16 @@ enum class ViewMode {
 fun TagScreen(
     tagName: String = "태그",
     onBackClick: () -> Unit = {},
-    onNavigateToContents: (String) -> Unit = {},
+    onNavigateToContents: (Long) -> Unit = {},
 ) {
     var isMenuExpanded by remember { mutableStateOf(false) }
     var selectedSort by remember { mutableStateOf("최신순") }
     var viewMode by remember { mutableStateOf(ViewMode.GRID_2) }
 
     val categories = listOf(
-        ContentsItem("1", tags = listOf("말차", "라떼", "스타벅스")),
-        ContentsItem("2", tags = listOf("말차", "과자", "초코송이")),
-        ContentsItem("3", tags = listOf("말차", "라떼", "스타벅스")),
-        ContentsItem("1", tags = listOf("말차", "라떼", "스타벅스")),
-        ContentsItem("2", tags = listOf("말차", "과자", "초코송이")),
-        ContentsItem("3", tags = listOf("말차", "라떼", "스타벅스")),
-        ContentsItem("1", tags = listOf("말차", "라떼", "스타벅스")),
-        ContentsItem("2", tags = listOf("말차", "과자", "초코송이")),
-        ContentsItem("3", tags = listOf("말차", "라떼", "스타벅스")),
-        ContentsItem("1", tags = listOf("말차", "라떼", "스타벅스")),
-        ContentsItem("2", tags = listOf("말차", "과자", "초코송이")),
-        ContentsItem("3", tags = listOf("말차", "라떼", "스타벅스")),
-        ContentsItem("1", tags = listOf("말차", "라떼", "스타벅스")),
-        ContentsItem("2", tags = listOf("말차", "과자", "초코송이")),
-        ContentsItem("3", tags = listOf("말차", "라떼", "스타벅스")),
-        ContentsItem("1", tags = listOf("말차", "라떼", "스타벅스")),
-        ContentsItem("2", tags = listOf("말차", "과자", "초코송이")),
-        ContentsItem("3", tags = listOf("말차", "라떼", "스타벅스")),
-        ContentsItem("1", tags = listOf("말차", "라떼", "스타벅스")),
-        ContentsItem("2", tags = listOf("말차", "과자", "초코송이")),
-        ContentsItem("3", tags = listOf("말차", "라떼", "스타벅스")),
+        ContentsItem("1", type = "image", tags = listOf("말차", "라떼", "스타벅스")),
+        ContentsItem("2", type = "image", tags = listOf("말차", "과자", "초코송이")),
+        ContentsItem("3", type = "image", tags = listOf("말차", "라떼", "스타벅스")),
     )
 
     var searchText by remember { mutableStateOf("") }
@@ -163,7 +145,7 @@ fun TagScreen(
                 ItemGrid3View(
                     items = categories,
                     onFavoriteToggle = { }, // 빈 람다 (기능 없음)
-                    onItemClick = { item -> onNavigateToContents(item.id) },
+                    onItemClick = { item -> onNavigateToContents(item.id.toLong()) },
                     state = gridState,
                     contentPadding = PaddingValues(
                         top = headerHeightDp + 8.dp,
@@ -179,7 +161,7 @@ fun TagScreen(
                 ItemGrid2View(
                     items = categories,
                     onFavoriteToggle = { }, // 빈 람다 (기능 없음)
-                    onItemClick = { item -> onNavigateToContents(item.id) },
+                    onItemClick = { item -> onNavigateToContents(item.id.toLong()) },
                     state = gridState,
                     contentPadding = PaddingValues(
                         top = headerHeightDp + 8.dp,

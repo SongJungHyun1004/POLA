@@ -4,24 +4,6 @@ import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
 @JsonClass(generateAdapter = true)
-data class AuthResponse(
-    @Json(name = "access_token")
-    val accessToken: String,
-
-    @Json(name = "refresh_token")
-    val refreshToken: String,
-
-    @Json(name = "user")
-    val user: UserResponse
-)
-
-@JsonClass(generateAdapter = true)
-data class RefreshTokenResponse(
-    @Json(name = "access_token")
-    val accessToken: String
-)
-
-@JsonClass(generateAdapter = true)
 data class UserResponse(
     @Json(name = "id")
     val id: Long,
@@ -65,5 +47,39 @@ data class OAuthTokenData(
     val refreshToken: String
 )
 
-// OAuth reissue 응답은 data가 String 타입
-typealias OAuthReissueResponse = OAuthApiResponse<String>
+// OAuth verify 응답 데이터
+@JsonClass(generateAdapter = true)
+data class OAuthVerifyData(
+    @Json(name = "valid")
+    val valid: Boolean,
+
+    @Json(name = "userId")
+    val userId: Long,
+
+    @Json(name = "email")
+    val email: String
+)
+
+@JsonClass(generateAdapter = true)
+data class UserCategoryDto(
+    @Json(name = "id")
+    val id: Long,
+
+    @Json(name = "categoryName")
+    val categoryName: String,
+
+    @Json(name = "categorySort")
+    val categorySort: Int,
+
+    @Json(name = "createdAt")
+    val createdAt: String,
+
+    @Json(name = "userEmail")
+    val userEmail: String
+)
+
+// 카테고리 목록 응답
+typealias UserCategoriesResponse = OAuthApiResponse<List<UserCategoryDto>>
+
+// OAuth reissue 응답은 OAuthTokenData 타입
+typealias OAuthReissueResponse = OAuthApiResponse<OAuthTokenData>

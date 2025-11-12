@@ -35,4 +35,6 @@ public class DataResponse {
 
     @JsonProperty("createdAt")
     private LocalDateTime createdAt;
+
+
 }

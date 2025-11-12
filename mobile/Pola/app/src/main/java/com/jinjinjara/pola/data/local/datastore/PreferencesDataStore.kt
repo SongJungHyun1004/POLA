@@ -23,6 +23,7 @@ class PreferencesDataStore @Inject constructor(
         private val USER_ID_KEY = stringPreferencesKey("user_id")
         private val IS_FIRST_LAUNCH_KEY = stringPreferencesKey("is_first_launch")
         private val IS_ONBOARDING_COMPLETED_KEY = booleanPreferencesKey("is_onboarding_completed")
+        private val CATEGORY_CHECKED_ON_LOGIN_KEY = booleanPreferencesKey("category_checked_on_login")
     }
 
     // 토큰 관련
@@ -107,6 +108,18 @@ class PreferencesDataStore @Inject constructor(
         return dataStore.data.map { preferences ->
             preferences[IS_ONBOARDING_COMPLETED_KEY] ?: false
         }
+    }
+
+    // 카테고리 체크 플래그 관련
+
+    suspend fun setCategoryCheckedOnLogin(checked: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[CATEGORY_CHECKED_ON_LOGIN_KEY] = checked
+        }
+    }
+
+    suspend fun isCategoryCheckedOnLogin(): Boolean {
+        return dataStore.data.first()[CATEGORY_CHECKED_ON_LOGIN_KEY] ?: false
     }
 
     // 전체 데이터 삭제

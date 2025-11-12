@@ -1,6 +1,8 @@
 package com.jinjinjara.pola.navigation
 
+import android.util.Log
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,21 +32,48 @@ fun PolaNavHost(
     // 테스트용: 이미지 클릭 시 토큰 없이 메인으로 이동
     var isTestMode by remember { mutableStateOf(false) }
 
-    // 시작 화면 결정 로직:
-    // - 테스트 모드: MAIN으로 이동
-    // - 로그인 완료 && 온보딩 완료: MAIN으로 이동
-    // - 그 외: AUTH로 이동 (로그인 또는 온보딩 필요)
-    val startDestination = if (isTestMode) {
-        NavGraphs.MAIN
-    } else if (isLoggedIn && onboardingCompleted) {
-        NavGraphs.MAIN
-    } else {
-        NavGraphs.AUTH
+    // 로그인 상태와 온보딩 상태에 따라 동적으로 네비게이션
+    LaunchedEffect(isLoggedIn, onboardingCompleted) {
+        Log.d("PolaNavHost", "State changed - isLoggedIn: $isLoggedIn, onboardingCompleted: $onboardingCompleted")
+
+        val currentRoute = navController.currentBackStackEntry?.destination?.route
+        Log.d("PolaNavHost", "Current route: $currentRoute")
+
+        when {
+            isLoggedIn && onboardingCompleted -> {
+                // 로그인 && 온보딩 완료 -> 메인으로 이동
+                if (currentRoute != NavGraphs.MAIN) {
+                    Log.d("PolaNavHost", "Navigating to MAIN")
+                    navController.navigate(NavGraphs.MAIN) {
+                        popUpTo(NavGraphs.AUTH) { inclusive = true }
+                    }
+                }
+            }
+            isLoggedIn && !onboardingCompleted -> {
+                // 로그인 완료 but 온보딩 미완료 -> 카테고리 선택으로
+                if (currentRoute != Screen.CategorySelect.route && currentRoute != Screen.TagSelect.route) {
+                    Log.d("PolaNavHost", "Navigating to CategorySelect")
+                    navController.navigate(Screen.CategorySelect.route) {
+                        popUpTo(NavGraphs.AUTH) { inclusive = false }
+                    }
+                }
+            }
+            !isLoggedIn -> {
+                // 로그인 안됨 -> 시작 화면으로
+                if (currentRoute != Screen.Start.route) {
+                    Log.d("PolaNavHost", "Navigating to Start")
+                    navController.navigate(Screen.Start.route) {
+                        popUpTo(NavGraphs.AUTH) { inclusive = false }
+                    }
+                }
+            }
+        }
     }
 
+    // 항상 AUTH에서 시작 (LaunchedEffect가 적절한 화면으로 이동시킴)
     NavHost(
         navController = navController,
-        startDestination = startDestination,
+        startDestination = NavGraphs.AUTH,
         modifier = modifier
     ) {
         // Auth 네비게이션 그래프
@@ -55,7 +84,7 @@ fun PolaNavHost(
         )
 
         // Main 네비게이션 그래프
-        mainNavGraph()
+        mainNavGraph(navController)
     }
 }
 

@@ -27,6 +27,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.jinjinjara.pola.data.local.datastore.PreferencesDataStore
@@ -35,6 +37,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.jinjinjara.pola.domain.repository.AuthRepository
+import com.jinjinjara.pola.domain.usecase.auth.AutoLoginUseCase
 import com.jinjinjara.pola.navigation.PolaNavHost
 import com.jinjinjara.pola.presentation.ui.theme.PolaTheme
 import com.jinjinjara.pola.util.parcelable
@@ -49,9 +52,11 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var authRepository: AuthRepository
 
-
     @Inject
     lateinit var preferencesDataStore: PreferencesDataStore
+
+    @Inject
+    lateinit var autoLoginUseCase: AutoLoginUseCase
 
     private val shareUploadViewModel: ShareUploadViewModel by viewModels()
 
@@ -63,10 +68,21 @@ class MainActivity : ComponentActivity() {
     private var sharedText: String? = null
     private var sharedContentType: String? = null
 
+    private var hasStartedUpload = false
+    private var isAutoLoginCompleted by mutableStateOf(false)
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d("MainActivity", "onCreate started")
+
+        // 자동 로그인 시도 (백그라운드에서 토큰 검증 및 재발급)
+        lifecycleScope.launch {
+            Log.d("MainActivity", "Starting auto login")
+            val result = autoLoginUseCase()
+            Log.d("MainActivity", "Auto login completed: ${if (result is com.jinjinjara.pola.util.Result.Success) "success" else "failed"}")
+            isAutoLoginCompleted = true
+        }
 
         // 공유 인텐트인지 확인 및 데이터 추출
         if (intent?.action == Intent.ACTION_SEND) {
@@ -97,7 +113,7 @@ class MainActivity : ComponentActivity() {
                 // initial = null로 설정하여 로딩 상태 표시
 
                 val isLoggedIn by authRepository.observeLoginState().collectAsState(initial = null)
-                val onboardingCompleted by preferencesDataStore.observeOnboardingCompleted().collectAsState(initial = false)
+                val onboardingCompleted by preferencesDataStore.observeOnboardingCompleted().collectAsState(initial = null)
 
                 LaunchedEffect(isLoggedIn, onboardingCompleted) {
                     Log.d("MainActivity", "State changed - isLoggedIn: $isLoggedIn, onboardingCompleted: $onboardingCompleted")
@@ -116,7 +132,10 @@ class MainActivity : ComponentActivity() {
                                 modifier = Modifier.fillMaxSize(),
                                 contentAlignment = Alignment.Center
                             ) {
-                                CircularProgressIndicator()
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(48.dp),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
                             }
                         }
                         false -> {
@@ -138,8 +157,11 @@ class MainActivity : ComponentActivity() {
 
                             // 로그인 되어있으면 바로 업로드 시작
                             LaunchedEffect(Unit) {
-                                Log.d("MainActivity", "Logged in, starting upload")
-                                startUpload()
+                                if (!hasStartedUpload) {  // 플래그 체크
+                                    Log.d("MainActivity", "Logged in, starting upload")
+                                    hasStartedUpload = true
+                                    startUpload()
+                                }
                             }
 
                             Box(
@@ -273,23 +295,29 @@ class MainActivity : ComponentActivity() {
 
                 } else {
                     // 일반 실행: 기존 로그인 플로우
-                    when (isLoggedIn) {
-                        null -> {
+                    when {
+                        !isAutoLoginCompleted || isLoggedIn == null || onboardingCompleted == null -> {
+                            // 자동 로그인 미완료 또는 데이터 로딩 중이면 로딩 표시
+                            Log.d("MainActivity", "Loading - autoLogin: $isAutoLoginCompleted, isLoggedIn: $isLoggedIn, onboarding: $onboardingCompleted")
                             Box(
                                 modifier = Modifier.fillMaxSize(),
                                 contentAlignment = Alignment.Center
                             ) {
-                                CircularProgressIndicator()
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(48.dp),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
                             }
                         }
                         else -> {
+                            // 모든 초기화 완료되면 네비게이션 시작
+                            Log.d("MainActivity", "Ready to show UI - isLoggedIn: $isLoggedIn, onboarding: $onboardingCompleted")
                             PolaNavHost(
                                 modifier = Modifier.fillMaxSize(),
                                 isLoggedIn = isLoggedIn ?: false,
-                                onboardingCompleted = onboardingCompleted
+                                onboardingCompleted = onboardingCompleted ?: false
                             )
                         }
-
                     }
                 }
             }
@@ -300,11 +328,12 @@ class MainActivity : ComponentActivity() {
         super.onResume()
 
         // 로그인 화면에서 돌아왔을 때 업로드 시작
-        if (isSharedContent) {
+        if (isSharedContent && !hasStartedUpload) {
             lifecycleScope.launch {
                 val isLoggedIn = authRepository.observeLoginState().first()
                 if (isLoggedIn == true) {
                     Log.d("MainActivity", "Logged in after resume, starting upload")
+                    hasStartedUpload = true
                     startUpload()
                 }
             }

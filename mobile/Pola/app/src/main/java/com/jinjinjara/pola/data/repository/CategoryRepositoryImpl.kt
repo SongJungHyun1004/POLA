@@ -1,13 +1,22 @@
 package com.jinjinjara.pola.data.repository
 
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import com.jinjinjara.pola.data.remote.api.CategoryApi
 import com.jinjinjara.pola.data.remote.dto.request.CategoryTagInitRequest
 import com.jinjinjara.pola.data.remote.dto.request.CategoryWithTags
 import com.jinjinjara.pola.data.mapper.toDomain
+import com.jinjinjara.pola.data.remote.api.AuthApi
+import com.jinjinjara.pola.data.remote.dto.request.FilesListRequest
 import com.jinjinjara.pola.di.IoDispatcher
+import com.jinjinjara.pola.domain.model.Category
 import com.jinjinjara.pola.domain.model.CategoryRecommendation
+import com.jinjinjara.pola.domain.model.FileDetail
+import com.jinjinjara.pola.domain.model.FilesPage
+import com.jinjinjara.pola.domain.model.UserCategory
 import com.jinjinjara.pola.domain.repository.CategoryRepository
+import com.jinjinjara.pola.util.ErrorType
 import com.jinjinjara.pola.util.Result
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
@@ -18,6 +27,7 @@ import javax.inject.Inject
  */
 class CategoryRepositoryImpl @Inject constructor(
     private val categoryApi: CategoryApi,
+    private val authApi: AuthApi,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : CategoryRepository {
 
@@ -117,4 +127,118 @@ class CategoryRepositoryImpl @Inject constructor(
             }
         }
     }
+
+    override suspend fun getFilesByCategory(
+        categoryId: Long,
+        page: Int,
+        size: Int,
+        sortBy: String,
+        direction: String
+    ): Result<FilesPage> {
+        return withContext(ioDispatcher) {
+            try {
+                Log.d("Category:Repo", "Fetching files for category: $categoryId")
+                val request = FilesListRequest(
+                    page = page,
+                    size = size,
+                    sortBy = sortBy,
+                    direction = direction,
+                    filterType = if (categoryId == -1L) null else "category",
+                    filterId = if (categoryId == -1L) null else categoryId
+                )
+
+                val response = categoryApi.getFilesList(request)
+
+                if (response.isSuccessful && response.body() != null) {
+                    val filesPage = response.body()!!.data.toDomain()
+                    Log.d("Category:Repo", "Successfully fetched ${filesPage.content.size} files")
+                    Result.Success(filesPage)
+                } else {
+                    val errorBody = response.errorBody()?.string()
+                    Log.e("Category:Repo", "Failed to fetch files: $errorBody")
+                    Result.Error(
+                        exception = Exception(response.message()),
+                        message = "파일 목록을 가져올 수 없습니다."
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("Category:Repo", "Exception while fetching files", e)
+                Result.Error(
+                    exception = e,
+                    message = e.message ?: "네트워크 오류가 발생했습니다."
+                )
+            }
+        }
+    }
+
+    override suspend fun getUserCategories(): Result<List<UserCategory>> {
+        return withContext(ioDispatcher) {
+            try {
+                Log.d("Auth:Categories", "Fetching user categories")
+                val response = authApi.getUserCategories()
+
+                if (response.isSuccessful && response.body()?.data != null) {
+                    val categories = response.body()!!.data!!.map { it.toDomain() }
+                    Log.d("Auth:Categories", "Successfully fetched ${categories.size} categories")
+                    Result.Success(categories)
+                } else {
+                    val errorBody = response.errorBody()?.string()
+                    Log.e("Auth:Categories", "Failed to fetch categories: $errorBody")
+                    Result.Error(
+                        exception = Exception(response.message()),
+                        message = "카테고리 정보를 가져올 수 없습니다."
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("Auth:Categories", "Exception while fetching categories", e)
+                Result.Error(
+                    exception = e,
+                    message = e.message ?: "네트워크 오류가 발생했습니다."
+
+
+                )
+            }
+        }
+    }
+    override suspend fun getCategories(): Result<List<Category>> {
+        return withContext(ioDispatcher) {
+            try {
+                Log.d("Category:Repo", "Fetching user categories")
+                val response = categoryApi.getCategories()
+
+                Log.d("Category:Repo", "Response code: ${response.code()}")
+                Log.d("Category:Repo", "Is successful: ${response.isSuccessful}")
+
+                if (response.isSuccessful && response.body() != null) {
+                    val body = response.body()!!
+                    Log.d("Category:Repo", "Successfully fetched ${body.data.size} categories")
+
+                    val categories = body.data
+                        .map { it.toDomain() }
+                        .sortedBy { it.sort }
+
+                    Result.Success(categories)
+                } else {
+                    val errorBody = response.errorBody()?.string()
+                    Log.e("Category:Repo", "Failed to fetch categories")
+                    Log.e("Category:Repo", "Error body: $errorBody")
+
+                    Result.Error(
+                        message = "카테고리 목록을 불러올 수 없습니다",
+                        errorType = ErrorType.SERVER
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("Category:Repo", "Exception while fetching categories", e)
+                Result.Error(
+                    exception = e,
+                    message = e.message ?: "알 수 없는 오류가 발생했습니다",
+                    errorType = ErrorType.NETWORK
+                )
+            }
+        }
+
+    }
+
+
 }

@@ -13,3 +13,18 @@ export async function getUserHome() {
 
   return res.json();
 }
+
+export const userService = {
+  getMyCategories: async () => {
+    const res = await apiClient("/users/me/categories", {
+      method: "GET",
+      credentials: "include",
+    });
+
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`Category fetch failed: ${res.status}`);
+
+    const json = await res.json();
+    return json.data;
+  },
+};
