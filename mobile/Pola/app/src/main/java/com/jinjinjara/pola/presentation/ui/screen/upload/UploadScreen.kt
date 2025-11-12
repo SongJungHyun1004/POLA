@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.os.Build
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -69,6 +70,12 @@ fun UploadScreen(
             Manifest.permission.READ_EXTERNAL_STORAGE
         }
         permissionLauncher.launch(permission)
+    }
+
+    BackHandler(enabled = uiState.uploadState is UploadScreenState.Uploading) {
+        Toast
+            .makeText(context, "업로드 중입니다. 잠시만 기다려주세요.", Toast.LENGTH_SHORT)
+            .show()
     }
 
     // 업로드 상태 처리
@@ -216,7 +223,11 @@ fun UploadScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.5f)),
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() }
+                    ) { /* 아무것도 안 함 */ },
                 contentAlignment = Alignment.Center
             ) {
                 Column(
@@ -234,6 +245,37 @@ fun UploadScreen(
                         style = MaterialTheme.typography.titleMedium
                     )
                 }
+            }
+        }
+    }
+    if (uiState.uploadState is UploadScreenState.Uploading) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                // 터치/클릭 모두 차단
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                ) { /* 아무것도 안 함 */ }
+                // 어두운 배경
+                .background(Color.Black.copy(alpha = 0.6f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(64.dp),
+                    color = Color.White,
+                    strokeWidth = 6.dp
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+                Text(
+                    text = "업로드 중입니다...",
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
