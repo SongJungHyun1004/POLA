@@ -21,8 +21,8 @@ import {
   getFileDownloadUrl,
   addFileFavorite,
   removeFileFavorite,
+  fileService,
 } from "@/services/fileService";
-import { fileService } from "@/services/fileService";
 
 interface PolaroidDetailProps {
   id?: number;
@@ -180,7 +180,6 @@ export default function PolaroidDetail({
       setDeleting(true);
       await fileService.deleteFile(id);
       alert("파일이 성공적으로 삭제되었습니다.");
-      // 삭제 후 새로고침 또는 콜백 실행
       onCategoryUpdated?.();
     } catch (err: any) {
       console.error("파일 삭제 실패:", err);
@@ -303,14 +302,15 @@ export default function PolaroidDetail({
       {shareOpen && id && (
         <ShareModal id={id} onClose={() => setShareOpen(false)} />
       )}
-      {editOpen && (
+      {editOpen && id && (
         <EditModal
+          fileId={id}
           defaultTags={tagState}
           defaultContext={context}
           defaultCategoryId={categoryId ?? 0}
           categories={categories}
           onClose={() => setEditOpen(false)}
-          onSave={handleSave}
+          onSave={onCategoryUpdated ?? (() => {})}
         />
       )}
     </div>
