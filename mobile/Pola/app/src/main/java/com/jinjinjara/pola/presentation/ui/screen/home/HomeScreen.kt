@@ -558,6 +558,7 @@ fun CategoryCard(
 
         // 카테고리 이름
         Text(
+            modifier = if (files.isEmpty()) Modifier.alpha(0.4f) else Modifier,
             text = category.name,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
