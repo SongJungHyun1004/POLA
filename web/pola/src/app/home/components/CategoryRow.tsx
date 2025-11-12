@@ -31,7 +31,11 @@ export default function CategoryRow({ files }: CategoryRowProps) {
             className="w-fit"
           >
             <div className="hover:scale-[1.08] transition-transform">
-              <PolaroidCard src={file.src || "/images/dummy_image_1.png"} />{" "}
+              <PolaroidCard
+                src={file.src || "/images/dummy_image_1.png"}
+                type={file.type}
+                ocr_text={file.ocr_text}
+              />{" "}
               {/* file.src로 이미지 경로 전달 */}
             </div>
           </div>

@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useState, useMemo, useEffect } from "react";
 import ImageModal from "./ImageModal";
+import OCRModal from "./OCRModal";
 import EditModal from "./EditModal";
 import ShareModal from "./ShareModal";
 import {
@@ -27,6 +28,8 @@ import {
 interface PolaroidDetailProps {
   id?: number;
   src?: string;
+  type?: string;
+  ocr_text?: string;
   tags: string[];
   date?: string;
   contexts: string;
@@ -41,6 +44,8 @@ interface PolaroidDetailProps {
 export default function PolaroidDetail({
   id,
   src,
+  type,
+  ocr_text,
   tags,
   date,
   contexts,
@@ -63,6 +68,11 @@ export default function PolaroidDetail({
   const [updatingFavorite, setUpdatingFavorite] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  const isTextFile =
+    type?.includes("text/plain") ||
+    (src?.endsWith(".txt") ?? false) ||
+    src?.includes("/text/");
+
   useEffect(() => setTagState(tags), [tags]);
   useEffect(() => setContext(contexts), [contexts]);
   useEffect(() => {
@@ -83,7 +93,7 @@ export default function PolaroidDetail({
     }
   }, [date]);
 
-  if (!src) {
+  if (!src && !ocr_text) {
     return (
       <div className="flex flex-1 items-center justify-center text-[#A89B82]">
         이미지를 선택하세요.
@@ -203,7 +213,7 @@ export default function PolaroidDetail({
           onClick={() => setOpen(true)}
         >
           <div
-            className="relative w-[85%] h-[70%] overflow-hidden rounded-sm border border-[#8B857C] bg-[#FFFEF8]"
+            className="relative w-[85%] h-[70%] overflow-hidden rounded-sm border border-[#8B857C] bg-[#FFFEF8] p-2"
             style={{ marginBottom: "14%" }}
           >
             {!sharedView && (
@@ -224,12 +234,28 @@ export default function PolaroidDetail({
               </button>
             )}
 
-            <Image
-              src={displaySrc}
-              alt="selected polaroid"
-              fill
-              className="object-cover object-center"
-            />
+            {isTextFile ? (
+              <div
+                className="w-full h-full overflow-y-auto text-[11px] leading-tight text-[#4C3D25] whitespace-pre-line break-words scrollbar-none"
+                style={{
+                  WebkitOverflowScrolling: "touch",
+                  overscrollBehavior: "contain",
+                  touchAction: "auto",
+                  msOverflowStyle: "none",
+                  scrollbarWidth: "none",
+                }}
+                onWheel={(e) => e.stopPropagation()}
+              >
+                {ocr_text || "(텍스트 없음)"}
+              </div>
+            ) : (
+              <Image
+                src={displaySrc}
+                alt="selected polaroid"
+                fill
+                className="object-cover object-center"
+              />
+            )}
           </div>
         </div>
 
@@ -298,7 +324,13 @@ export default function PolaroidDetail({
         <p className="text-md mt-2">버튼을 눌러서 사진을 뒤집어 보세요</p>
       </div>
 
-      {open && <ImageModal src={displaySrc} onClose={() => setOpen(false)} />}
+      {open &&
+        (isTextFile ? (
+          <OCRModal text={ocr_text ?? ""} onClose={() => setOpen(false)} />
+        ) : (
+          <ImageModal src={displaySrc} onClose={() => setOpen(false)} />
+        ))}
+
       {shareOpen && id && (
         <ShareModal id={id} onClose={() => setShareOpen(false)} />
       )}

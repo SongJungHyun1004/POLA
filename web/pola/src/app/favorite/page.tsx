@@ -30,6 +30,8 @@ interface SelectedFile {
   created_at: string;
   category_id?: number;
   favorite: boolean;
+  type?: string;
+  ocr_text?: string; // ✅ OCR 필드 추가
 }
 
 interface SortableItemProps {
@@ -53,7 +55,7 @@ const SortableItem = memo(
       transform: CSS.Transform.toString(transform),
       transition: isDragging ? "none" : transition || "transform 0.2s ease",
       transformOrigin: "center bottom",
-      willChange: "transform", // ✅ GPU 가속
+      willChange: "transform",
       zIndex: isDragging ? 50 : 1,
     } as const;
 
@@ -67,7 +69,11 @@ const SortableItem = memo(
             selectedId === file.id ? "opacity-90" : "opacity-100"
           }`}
         >
-          <PolaroidCard src={file.src || "/images/dummy_image_1.png"} />
+          <PolaroidCard
+            src={file.src || "/images/dummy_image_1.png"}
+            type={file.type}
+            ocr_text={file.ocr_text}
+          />
           {file.favorite && (
             <span className="absolute top-2 right-2 text-yellow-500 text-lg">
               ★
@@ -95,35 +101,35 @@ export default function FavoritePage() {
     })
   );
 
-async function loadMore() {
-  if (isFetching || !hasMore) return;
-  try {
-    setIsFetching(true);
-    const newFiles = await getFavoriteFiles(page);
-    if (newFiles.length === 0) {
-      setHasMore(false);
-      return;
+  async function loadMore() {
+    if (isFetching || !hasMore) return;
+    try {
+      setIsFetching(true);
+      const newFiles = await getFavoriteFiles(page);
+      if (newFiles.length === 0) {
+        setHasMore(false);
+        return;
+      }
+
+      const newFilesWithRotation = newFiles.map((f: any) => ({
+        ...f,
+        rotation: `rotate(${Math.random() * 8 - 4}deg)`,
+      }));
+
+      setFiles((prev) => {
+        const merged = [...prev, ...newFilesWithRotation];
+        return merged.filter(
+          (v, i, a) => a.findIndex((t) => t.id === v.id) === i
+        );
+      });
+
+      setPage((prev) => prev + 1);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsFetching(false);
     }
-
-    const newFilesWithRotation = newFiles.map((f: any) => ({
-      ...f,
-      rotation: `rotate(${Math.random() * 8 - 4}deg)`,
-    }));
-
-    setFiles((prev) => {
-      const merged = [...prev, ...newFilesWithRotation];
-      return merged.filter(
-        (v, i, a) => a.findIndex((t) => t.id === v.id) === i
-      );
-    });
-
-    setPage((prev) => prev + 1);
-  } catch (e) {
-    console.error(e);
-  } finally {
-    setIsFetching(false);
   }
-}
 
   useEffect(() => {
     loadMore();
@@ -153,6 +159,8 @@ async function loadMore() {
       tags: [],
       context: "",
       created_at: "",
+      type: file.type,
+      ocr_text: file.ocr_text,
     });
 
     try {
@@ -169,6 +177,8 @@ async function loadMore() {
         created_at: detail.created_at,
         category_id: detail.category_id,
         favorite: detail.favorite,
+        type: detail.type,
+        ocr_text: detail.ocr_text, // ✅ 단건 조회에서도 OCR 반영
       });
     } catch (e) {
       console.error(e);
@@ -239,6 +249,7 @@ async function loadMore() {
         </div>
       </div>
 
+      {/* 우측 상세 */}
       <div className="w-2/7 flex-shrink-0 border-l border-[#E3DCC8] pl-6 flex flex-col items-center justify-center">
         <PolaroidDetail
           id={selectedFile?.id}
@@ -248,6 +259,8 @@ async function loadMore() {
           date={selectedFile?.created_at}
           categoryId={selectedFile?.category_id}
           favorite={selectedFile?.favorite}
+          type={selectedFile?.type}
+          ocr={selectedFile?.ocr_text} // ✅ OCR 텍스트 전달
           onCategoryUpdated={async () => {
             const refreshed = await getFavoriteFiles(0);
             setFiles(
