@@ -440,7 +440,7 @@ async function handleTextCapture(info, tab) {
             const fileName = `text_${timestamp}.txt`;
             
             const presignedResponse = await fetch(
-                `${API_BASE_URL}files/s3/presigned/upload?fileName=${encodeURIComponent(fileName)}`,
+                `${API_BASE_URL}s3/presigned/upload?fileName=${encodeURIComponent(fileName)}`,
                 {
                     method: 'GET',
                     headers: {
@@ -613,7 +613,7 @@ async function handleAreaCapture(area, tab) {
         const fileName = `capture_${timestamp}.png`;
 
         const presignedResponse = await fetch(
-          `${API_BASE_URL}files/s3/presigned/upload?fileName=${encodeURIComponent(fileName)}`,
+          `${API_BASE_URL}s3/presigned/upload?fileName=${encodeURIComponent(fileName)}`,
           {
             method: 'GET',
             headers: {
