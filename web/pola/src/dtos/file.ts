@@ -15,3 +15,15 @@ export interface FileListResponse {
   totalPages: number;
   last: boolean;
 }
+
+export interface FileResult {
+  fileId: number;
+  userId: number;
+  categoryName: string;
+  tags: string;
+  context: string;
+  ocrText: string;
+  imageUrl: string;
+  createdAt: string;
+  favorite: boolean;
+}

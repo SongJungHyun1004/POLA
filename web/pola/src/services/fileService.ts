@@ -1,5 +1,5 @@
 import { apiClient } from "@/api/apiClient";
-import { FileListRequest, FileListResponse } from "@/dtos/file";
+import { FileListRequest, FileListResponse, FileResult } from "@/dtos/file";
 
 export async function getFileDownloadUrl(fileId: number): Promise<string> {
   const res = await apiClient(`/files/download/${fileId}`, {
@@ -195,3 +195,24 @@ export const fileEditService = {
     return await res.json();
   },
 };
+
+export async function searchFiles(query: string): Promise<FileResult[]> {
+  if (!query.trim()) return [];
+
+  const res = await apiClient(
+    `/search/all?keyword=${encodeURIComponent(query)}`,
+    {
+      method: "GET",
+    }
+  );
+
+  if (!res.ok) {
+    console.error("❌ 파일 검색 실패:", res.status);
+    throw new Error(`Search failed with status ${res.status}`);
+  }
+
+  const json = await res.json();
+
+  return json?.data?.results ?? [];
+}
+export type { FileResult };

@@ -2,126 +2,135 @@
 
 import { useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
-import PolaroidCard from "@/app/home/components/PolaroidCard";
 import { Plus, Pencil } from "lucide-react";
+import PolaroidCard from "@/app/home/components/PolaroidCard";
 import PolaroidDetail from "../categories/[id]/components/PolaroidDetail";
+import { searchFiles, FileResult } from "@/services/fileService";
 
 export default function FilesPageContent() {
   const searchParams = useSearchParams();
-
   const search = searchParams.get("search") ?? "";
-  const tags = searchParams.get("tags") ?? "";
-  const category = searchParams.get("category") ?? "";
 
+  const [files, setFiles] = useState<FileResult[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
   const [rotations, setRotations] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const images = Array.from({ length: 30 }, (_, i) => ({
-    id: i + 1,
-    src: "/images/dummy_image_1.png",
-    tags: ["#태그1", "#태그2", "#태그3", "#태그4", "#태그5", "#태그6"],
-    contexts: "내용을 입력하세요...",
-    favorite: i % 4 === 0,
-    date: "2025.10.30",
-  }));
+  /** 검색 API 호출 */
+  useEffect(() => {
+    async function load() {
+      if (!search.trim()) return;
 
-  const selectedImage = images.find((img) => img.id === selected);
+      setLoading(true);
+      try {
+        const results = await searchFiles(search);
+        setFiles(results);
+      } catch (err) {
+        console.error("파일 검색 실패:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [search]);
 
   useEffect(() => {
-    const newRotations = Array.from({ length: images.length }, () => {
-      const deg = Math.random() * 8 - 4;
-      return `rotate(${deg}deg)`;
-    });
-    setRotations(newRotations);
-  }, [images.length]);
+    setRotations(
+      Array.from({ length: files.length }, () => {
+        const deg = Math.random() * 8 - 4;
+        return `rotate(${deg}deg)`;
+      })
+    );
+  }, [files]);
 
-  const buildSearchDescription = (
-    search: string,
-    tags: string,
-    category: string
-  ) => {
-    const tagPhrase = tags ? `"${tags}" 태그` : "";
-    const categoryPhrase = category ? `"${category}" 카테고리` : "";
-    const searchPhrase = search ? `"${search}"` : "";
+  const selectedFile = files.find((f) => f.fileId === selected);
 
-    if (category && tags && search)
-      return `${categoryPhrase}에서 ${tagPhrase}와 ${searchPhrase}로 검색한 결과입니다`;
-    if (tags && search)
-      return `${tagPhrase}와 ${searchPhrase}로 검색한 결과입니다`;
-    if (category && search)
-      return `${categoryPhrase}에서 ${searchPhrase}로 검색한 결과입니다`;
-    if (tags && !search && !category) return `${tagPhrase}로 검색한 결과입니다`;
-    if (category && !tags && !search)
-      return `${categoryPhrase}에서 검색한 결과입니다`;
-    if (search && !tags && !category)
-      return `${searchPhrase}로 검색한 결과입니다`;
-    return "전체 파일 목록입니다";
+  /** favorite 상태 변경 핸들러 (Detail ↔ List 동기화) */
+  const handleFavoriteChange = (newFavorite: boolean) => {
+    if (!selectedFile) return;
+    setFiles((prev) =>
+      prev.map((f) =>
+        f.fileId === selectedFile.fileId ? { ...f, favorite: newFavorite } : f
+      )
+    );
   };
-
-  const description = buildSearchDescription(search, tags, category);
 
   return (
     <div className="flex h-full bg-[#FFFEF8] text-[#4C3D25] px-8 py-6 gap-8">
-      {/* 좌측 */}
+      {/* 좌측 - 결과 리스트 */}
       <div className="flex flex-col flex-1 overflow-hidden">
-        {/* 상단 */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-6xl font-bold mb-2">Search</h1>
-            <p className="text-2xl text-[#7A6A48]">{description}</p>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <button className="p-2 rounded-full hover:bg-[#EDE6D8]">
-              <Plus className="w-5 h-5" />
-            </button>
-            <button className="p-2 rounded-full hover:bg-[#EDE6D8]">
-              <Pencil className="w-5 h-5" />
-            </button>
+            <p className="text-2xl text-[#7A6A48]">
+              {search ? `"${search}" 검색 결과` : "전체 파일 목록"}
+            </p>
           </div>
         </div>
 
-        {/* 폴라로이드 리스트 */}
+        {/* 파일 목록 */}
         <div className="flex-1 overflow-y-auto pr-2">
-          <div className="grid grid-cols-6 gap-6 overflow-visible p-6">
-            {images.map((img, i) => (
-              <div
-                key={img.id}
-                style={{
-                  transform: rotations[i],
-                  transition: "transform 0.2s ease",
-                  transformOrigin: "center bottom",
-                }}
-                className="w-fit overflow-visible"
-              >
-                <button
-                  onClick={() => setSelected(img.id)}
-                  className={`relative hover:scale-[1.08] transition-transform ${
-                    selected === img.id ? "opacity-90" : "opacity-100"
-                  }`}
+          {loading ? (
+            <p className="text-center text-gray-500 mt-20">검색 중...</p>
+          ) : (
+            <div className="grid grid-cols-6 gap-6 overflow-visible p-6">
+              {files.map((f, i) => (
+                <div
+                  key={f.fileId}
+                  style={{
+                    transform: rotations[i],
+                    transition: "transform 0.2s ease",
+                    transformOrigin: "center bottom",
+                  }}
+                  className="w-fit overflow-visible"
                 >
-                  <PolaroidCard src={img.src} />
-                  {img.favorite && (
-                    <span className="absolute top-2 right-2 text-yellow-500 text-lg">
-                      ★
-                    </span>
-                  )}
-                </button>
-              </div>
-            ))}
-          </div>
+                  <button
+                    onClick={() => setSelected(f.fileId)}
+                    className={`relative hover:scale-[1.08] transition-transform ${
+                      selected === f.fileId ? "opacity-90" : "opacity-100"
+                    }`}
+                  >
+                    <PolaroidCard
+                      src={f.imageUrl || "/images/dummy_image_1.png"}
+                      type={f.categoryName}
+                      ocr_text={f.ocrText}
+                    />
+                    {f.favorite && (
+                      <span className="absolute top-2 right-2 text-yellow-500 text-lg">
+                        ★
+                      </span>
+                    )}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
       {/* 우측 상세 */}
       <div className="w-2/7 flex-shrink-0 border-l border-[#E3DCC8] pl-6 flex flex-col items-center justify-center">
-        <PolaroidDetail
-          id={selectedImage?.id}
-          src={selectedImage?.src}
-          tags={selectedImage?.tags ?? []}
-          contexts={selectedImage?.contexts ?? ""}
-          date={selectedImage?.date}
-        />
+        {selectedFile && (
+          <PolaroidDetail
+            id={selectedFile.fileId}
+            src={selectedFile.imageUrl}
+            tags={
+              selectedFile.tags
+                ? selectedFile.tags
+                    .split(",")
+                    .map((t) =>
+                      t.trim().startsWith("#") ? t.trim() : `#${t.trim()}`
+                    )
+                : []
+            }
+            contexts={selectedFile.context}
+            date={selectedFile.createdAt}
+            favorite={selectedFile.favorite ?? false}
+            type={selectedFile.categoryName}
+            ocr_text={selectedFile.ocrText}
+            onFavoriteChange={handleFavoriteChange}
+          />
+        )}
       </div>
     </div>
   );
