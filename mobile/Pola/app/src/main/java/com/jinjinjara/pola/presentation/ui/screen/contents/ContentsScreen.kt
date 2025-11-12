@@ -3,6 +3,7 @@ package com.jinjinjara.pola.presentation.ui.screen.contents
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.os.Build
 import android.widget.Toast
 import androidx.annotation.RequiresApi
@@ -288,27 +289,51 @@ fun ContentsScreen(
                                             color = MaterialTheme.colorScheme.tertiary,
                                             modifier = Modifier.weight(1f)
                                         )
-                                        IconButton(
-                                            onClick = {
-                                                val clipboard =
-                                                    context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                                val clip = ClipData.newPlainText(
-                                                    "공유 링크",
-                                                    shareURL
-                                                )
-                                                clipboard.setPrimaryClip(clip)
-                                                Toast.makeText(
-                                                    context,
-                                                    "링크가 복사되었습니다",
-                                                    Toast.LENGTH_SHORT
-                                                ).show()
-                                            }
+                                        Row(
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
                                         ) {
-                                            Icon(
-                                                imageVector = Icons.Default.ContentCopy,
-                                                contentDescription = "복사",
-                                                tint = MaterialTheme.colorScheme.primary
-                                            )
+                                            // 복사 버튼
+                                            IconButton(
+                                                onClick = {
+                                                    val clipboard =
+                                                        context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                                    val clip = ClipData.newPlainText(
+                                                        "공유 링크",
+                                                        shareURL
+                                                    )
+                                                    clipboard.setPrimaryClip(clip)
+                                                    Toast.makeText(
+                                                        context,
+                                                        "링크가 복사되었습니다",
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
+                                                }
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.ContentCopy,
+                                                    contentDescription = "복사",
+                                                    tint = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
+
+                                            // 공유 버튼
+                                            IconButton(
+                                                onClick = {
+                                                    val sendIntent = Intent().apply {
+                                                        action = Intent.ACTION_SEND
+                                                        putExtra(Intent.EXTRA_TEXT, shareURL)
+                                                        type = "text/plain"
+                                                    }
+                                                    val shareIntent = Intent.createChooser(sendIntent, "공유하기")
+                                                    context.startActivity(shareIntent)
+                                                }
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Share,
+                                                    contentDescription = "공유",
+                                                    tint = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
                                         }
                                     }
                                 }
