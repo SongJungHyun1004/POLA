@@ -1,8 +1,8 @@
 body {
-  width: 360px;
+  width: 400px;
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: #f8f9fa;
+  background: #FFFEF8;
 }
 
 .container {
@@ -263,4 +263,28 @@ li:last-child {
 
 .footer small {
   font-size: 11px;
+}
+
+.title-with-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* 로고와 텍스트 사이 간격 */
+}
+
+.title-logo {   /* 이미지 너비 */
+  height: 36px;     /* 이미지 높이 */
+  object-fit: contain; /* 이미지 비율 유지 */
+  border-radius: 8px;  /* 모서리를 살짝 둥글게 (선택 사항) */
+}
+
+.logo-link {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer; /* 커서를 손 모양으로 변경 */
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.logo-link:hover {
+  transform: scale(1.05); /* 살짝 확대 효과 */
+  opacity: 0.9; /* 약간 어두워지는 효과 */
 }

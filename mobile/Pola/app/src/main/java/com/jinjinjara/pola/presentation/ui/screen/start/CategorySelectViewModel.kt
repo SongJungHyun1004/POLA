@@ -22,6 +22,11 @@ class CategorySelectViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<CategoryUiState>(CategoryUiState.Loading)
     val uiState = _uiState.asStateFlow()
 
+    // 더블 백 프레스를 위한 상태
+    private var backPressedTime: Long = 0
+    private val _showExitToast = MutableStateFlow(false)
+    val showExitToast = _showExitToast.asStateFlow()
+
     // SavedStateHandle을 사용하여 상태 영속성 확보
     val selectedCategories = savedStateHandle.getStateFlow<Set<String>>(
         key = KEY_SELECTED_CATEGORIES,
@@ -78,6 +83,29 @@ class CategorySelectViewModel @Inject constructor(
 
     fun retry() {
         loadCategories()
+    }
+
+    /**
+     * 뒤로가기 처리 - 2초 이내에 두 번 누르면 true 반환 (앱 종료)
+     * 첫 번째 누르면 false 반환 (토스트 표시)
+     */
+    fun onBackPressed(): Boolean {
+        val currentTime = System.currentTimeMillis()
+        val timeDiff = currentTime - backPressedTime
+
+        return if (timeDiff < 2000) {
+            // 2초 이내에 다시 눌렀으면 앱 종료
+            true
+        } else {
+            // 첫 번째 뒤로가기 또는 2초 지났으면 토스트 표시
+            backPressedTime = currentTime
+            _showExitToast.value = true
+            false
+        }
+    }
+
+    fun resetExitToast() {
+        _showExitToast.value = false
     }
 }
 

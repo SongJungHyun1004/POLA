@@ -134,28 +134,6 @@ async function handleLogout() {
   }
 }
 
-/**
- * 통계 업데이트 (선택사항)
- */
-async function updateStats() {
-  try {
-    // chrome.storage에서 통계 가져오기
-    const stats = await chrome.storage.local.get(['captureCount', 'textCount']);
-    
-    const captureCountEl = document.getElementById('captureCount');
-    const textCountEl = document.getElementById('textCount');
-    
-    if (captureCountEl) {
-      captureCountEl.textContent = stats.captureCount || 0;
-    }
-    if (textCountEl) {
-      textCountEl.textContent = stats.textCount || 0;
-    }
-    
-  } catch (error) {
-    console.error('통계 업데이트 실패:', error);
-  }
-}
 
 /**
  * storage 변경 감지하여 UI 자동 업데이트

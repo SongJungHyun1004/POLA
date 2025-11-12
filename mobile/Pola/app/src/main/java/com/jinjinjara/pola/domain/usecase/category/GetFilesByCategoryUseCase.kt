@@ -11,8 +11,10 @@ class GetFilesByCategoryUseCase @Inject constructor(
     suspend operator fun invoke(
         categoryId: Long,
         page: Int = 0,
-        size: Int = 20
+        size: Int = 20,
+        sortBy: String = "createdAt",
+        direction: String = "DESC"
     ): Result<FilesPage> {
-        return categoryRepository.getFilesByCategory(categoryId, page, size)
+        return categoryRepository.getFilesByCategory(categoryId, page, size, sortBy, direction)
     }
 }

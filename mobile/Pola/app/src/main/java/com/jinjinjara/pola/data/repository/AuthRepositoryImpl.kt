@@ -1,10 +1,10 @@
 package com.jinjinjara.pola.data.repository
 
-import android.util.Base64
 import android.util.Log
 import com.jinjinjara.pola.data.local.datastore.PreferencesDataStore
 import com.jinjinjara.pola.data.remote.api.AuthApi
-import com.jinjinjara.pola.data.remote.dto.request.*
+import com.jinjinjara.pola.data.remote.dto.request.CategoryTagInitRequest
+import com.jinjinjara.pola.data.remote.dto.request.OAuthTokenRequest
 import com.jinjinjara.pola.data.mapper.toUser
 import com.jinjinjara.pola.di.IoDispatcher
 import com.jinjinjara.pola.domain.model.User
@@ -26,101 +26,7 @@ class AuthRepositoryImpl @Inject constructor(
     private val authApi: AuthApi,
     private val preferencesManager: PreferencesDataStore,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
-) : AuthRepository {
-
-    override suspend fun login(email: String, password: String): Result<User> {
-        return withContext(ioDispatcher) {
-            try {
-                val response = authApi.login(LoginRequest(email, password))
-
-                if (response.isSuccessful && response.body() != null) {
-                    val loginResponse = response.body()!!
-
-                    saveTokens(
-                        accessToken = loginResponse.accessToken,
-                        refreshToken = loginResponse.refreshToken
-                    )
-
-                    Result.Success(loginResponse.user.toUser())
-                } else {
-                    Result.Error(
-                        exception = Exception(response.message()),
-                        message = "로그인에 실패했습니다."
-                    )
-                }
-            } catch (e: Exception) {
-                Result.Error(
-                    exception = e,
-                    message = e.message ?: "네트워크 오류가 발생했습니다."
-                )
-            }
-        }
-    }
-
-    // Google 로그인
-    override suspend fun loginWithGoogle(idToken: String): Result<User> {
-        return withContext(ioDispatcher) {
-            try {
-                Log.d("AuthRepository", "loginWithGoogle called")
-                val response = authApi.loginWithGoogle(GoogleLoginRequest(idToken))
-
-                if (response.isSuccessful && response.body() != null) {
-                    val googleLoginResponse = response.body()!!
-                    Log.d("AuthRepository", "API response success")
-
-                    // 토큰 저장
-                    saveTokens(
-                        accessToken = googleLoginResponse.accessToken,
-                        refreshToken = googleLoginResponse.refreshToken
-                    )
-                    Log.d("AuthRepository", "Tokens saved")
-
-                    Result.Success(googleLoginResponse.user.toUser())
-                } else {
-                    Log.e("AuthRepository", "API response failed: ${response.code()} ${response.message()}")
-                    Result.Error(
-                        exception = Exception(response.message()),
-                        message = "Google 로그인에 실패했습니다."
-                    )
-                }
-            } catch (e: Exception) {
-                Log.e("AuthRepository", "Exception: ${e.message}", e)
-                Result.Error(
-                    exception = e,
-                    message = e.message ?: "Google 로그인 중 오류가 발생했습니다."
-                )
-            }
-        }
-    }
-
-    override suspend fun signUp(email: String, password: String, name: String): Result<User> {
-        return withContext(ioDispatcher) {
-            try {
-                val response = authApi.signUp(SignUpRequest(email, password, name))
-
-                if (response.isSuccessful && response.body() != null) {
-                    val signUpResponse = response.body()!!
-
-                    saveTokens(
-                        accessToken = signUpResponse.accessToken,
-                        refreshToken = signUpResponse.refreshToken
-                    )
-
-                    Result.Success(signUpResponse.user.toUser())
-                } else {
-                    Result.Error(
-                        exception = Exception(response.message()),
-                        message = "회원가입에 실패했습니다."
-                    )
-                }
-            } catch (e: Exception) {
-                Result.Error(
-                    exception = e,
-                    message = e.message ?: "네트워크 오류가 발생했습니다."
-                )
-            }
-        }
-    }
+)  : AuthRepository {
 
     override suspend fun logout(): Result<Unit> {
         return withContext(ioDispatcher) {
@@ -136,38 +42,14 @@ class AuthRepositoryImpl @Inject constructor(
                     Log.d("Auth:Logout", "No refresh token available, skipping server logout")
                 }
 
-                clearTokens()
-                Log.d("Auth:Logout", "Local tokens cleared")
+                clearTokensAndResetOnboarding()
+                Log.d("Auth:Logout", "Local tokens and onboarding status cleared")
                 Result.Success(Unit)
             } catch (e: Exception) {
                 Log.w("Auth:Logout", "Server logout failed, clearing local tokens anyway", e)
-                clearTokens()
-                Log.d("Auth:Logout", "Local tokens cleared")
+                clearTokensAndResetOnboarding()
+                Log.d("Auth:Logout", "Local tokens and onboarding status cleared")
                 Result.Success(Unit)
-            }
-        }
-    }
-
-    override suspend fun refreshToken(refreshToken: String): Result<String> {
-        return withContext(ioDispatcher) {
-            try {
-                val response = authApi.refreshToken(RefreshTokenRequest(refreshToken))
-
-                if (response.isSuccessful && response.body() != null) {
-                    val newAccessToken = response.body()!!.accessToken
-                    preferencesManager.saveAccessToken(newAccessToken)
-                    Result.Success(newAccessToken)
-                } else {
-                    Result.Error(
-                        exception = Exception(response.message()),
-                        message = "토큰 갱신에 실패했습니다."
-                    )
-                }
-            } catch (e: Exception) {
-                Result.Error(
-                    exception = e,
-                    message = e.message ?: "토큰 갱신 중 오류가 발생했습니다."
-                )
             }
         }
     }
@@ -189,10 +71,11 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun saveTokens(accessToken: String, refreshToken: String) {
         withContext(ioDispatcher) {
-            Log.d("Auth:Token", "Saving access token: ${accessToken.take(20)}...")
+            Log.d("Auth:Token", "Saving access token: $accessToken")
             preferencesManager.saveAccessToken(accessToken)
-            Log.d("Auth:Token", "Saving refresh token: ${refreshToken.take(20)}...")
+            Log.d("Auth:Token", "Saving refresh token: $refreshToken")
             preferencesManager.saveRefreshToken(refreshToken)
+            Log.d("Auth:Token", "Tokens are same? ${accessToken == refreshToken}")
         }
     }
 
@@ -201,6 +84,19 @@ class AuthRepositoryImpl @Inject constructor(
             Log.d("Auth:Token", "Clearing all tokens")
             preferencesManager.clearTokens()
             Log.d("Auth:Token", "All tokens cleared")
+        }
+    }
+
+    /**
+     * 토큰 삭제 + 온보딩 상태 리셋
+     * 로그아웃 시에만 사용 (토큰 재발급 실패 시에는 사용하지 않음)
+     */
+    private suspend fun clearTokensAndResetOnboarding() {
+        withContext(ioDispatcher) {
+            Log.d("Auth:Token", "Clearing all tokens and resetting onboarding status")
+            preferencesManager.clearTokens()
+            preferencesManager.setOnboardingCompleted(false)
+            Log.d("Auth:Token", "All tokens cleared and onboarding status reset")
         }
     }
 
@@ -286,14 +182,12 @@ class AuthRepositoryImpl @Inject constructor(
                 val tokenData = tokenResponse.body()!!.data!!
                 Log.d("Auth:Login", "Step 1 SUCCESS: OAuth token received")
 
-                // Step 2: 최종 토큰 저장
-                Log.d("Auth:Login", "Step 2: Saving tokens")
+                // Step 2: 토큰 임시 저장 (Step 3~4 API 호출을 위해 필요)
+                Log.d("Auth:Login", "Step 2: Saving tokens temporarily for subsequent API calls")
                 saveTokens(
                     accessToken = tokenData.accessToken,
                     refreshToken = tokenData.refreshToken
                 )
-                Log.d("Auth:Token", "Access token saved: ${tokenData.accessToken.take(20)}...")
-                Log.d("Auth:Token", "Refresh token saved: ${tokenData.refreshToken.take(20)}...")
 
                 // Step 3: 사용자 정보 가져오기
                 Log.d("Auth:Login", "Step 3: Getting current user info")
@@ -302,10 +196,14 @@ class AuthRepositoryImpl @Inject constructor(
                 if (!userInfoResponse.isSuccessful || userInfoResponse.body()?.data == null) {
                     val statusCode = userInfoResponse.code()
                     val errorBody = userInfoResponse.errorBody()?.string()
-                    Log.e("Auth:User", "Failed to fetch user info")
-                    Log.e("Auth:User", "Status Code: $statusCode")
-                    Log.e("Auth:User", "Error message: ${userInfoResponse.message()}")
-                    Log.e("Auth:User", "Error body: $errorBody")
+                    Log.e("Auth:Login", "Step 3 FAILED: User info request failed")
+                    Log.e("Auth:Login", "Status Code: $statusCode")
+                    Log.e("Auth:Login", "Error message: ${userInfoResponse.message()}")
+                    Log.e("Auth:Login", "Error body: $errorBody")
+
+                    // 실패 시 토큰 삭제
+                    clearTokens()
+
                     return@withContext Result.Error(
                         exception = Exception(userInfoResponse.message()),
                         message = "사용자 정보를 가져올 수 없습니다."
@@ -315,22 +213,51 @@ class AuthRepositoryImpl @Inject constructor(
                 val userResponse = userInfoResponse.body()!!.data!!
                 Log.d("Auth:Login", "Step 3 SUCCESS: User info retrieved -> ${userResponse.email}")
 
-                // Step 4: 카테고리 존재 여부 확인으로 온보딩 완료 여부 판단
+                // Step 4: 카테고리 확인으로 온보딩 상태 판단
                 Log.d("Auth:Login", "Step 4: Checking user categories for onboarding status")
                 val categoriesResponse = authApi.getUserCategories()
 
-                val onboardingCompleted = if (categoriesResponse.isSuccessful && categoriesResponse.body()?.data != null) {
-                    Log.d("Auth:Login", "Step 4 SUCCESS: User has categories -> onboardingCompleted = true")
-                    true
-                } else {
-                    val categoryErrorBody = categoriesResponse.errorBody()?.string()
-                    Log.d("Auth:Login", "Step 4: No categories found -> onboardingCompleted = false")
-                    Log.d("Auth:Login", "Categories API response: ${categoriesResponse.code()}")
-                    if (categoryErrorBody != null) {
-                        Log.d("Auth:Login", "Error body: $categoryErrorBody")
+                val onboardingCompleted = when {
+                    !categoriesResponse.isSuccessful -> {
+                        val statusCode = categoriesResponse.code()
+                        val errorBody = categoriesResponse.errorBody()?.string()
+                        Log.e("Auth:Login", "Step 4: Categories API FAILED")
+                        Log.e("Auth:Login", "Status Code: $statusCode")
+                        Log.e("Auth:Login", "Error body: $errorBody")
+
+                        // 5xx 서버 오류인 경우 로그인 전체 실패로 처리
+                        if (statusCode in 500..599) {
+                            Log.e("Auth:Login", "Server error detected, rolling back tokens and returning error")
+                            clearTokens() // 저장된 토큰 롤백
+                            return@withContext Result.Error(
+                                message = "서버에 일시적인 문제가 발생했습니다.\n잠시 후 다시 시도해주세요.",
+                                errorType = ErrorType.SERVER
+                            )
+                        }
+
+                        // 404 또는 기타 4xx 에러는 카테고리 없음으로 간주 (온보딩 필요)
+                        Log.d("Auth:Login", "Categories API returned ${statusCode}, treating as no categories (onboarding needed)")
+                        false
                     }
-                    false
+                    categoriesResponse.body()?.data == null || categoriesResponse.body()?.data!!.isEmpty() -> {
+                        Log.d("Auth:Login", "Step 4: User has no categories (onboarding needed)")
+                        false
+                    }
+                    else -> {
+                        val categoryCount = categoriesResponse.body()?.data?.size ?: 0
+                        Log.d("Auth:Login", "Step 4 SUCCESS: User has $categoryCount categories (onboarding completed)")
+                        true
+                    }
                 }
+
+                // Step 5: 온보딩 상태 DataStore에 저장
+                Log.d("Auth:Login", "Step 5: Saving onboarding status to DataStore")
+                preferencesManager.setOnboardingCompleted(onboardingCompleted)
+
+                // Step 6: 완료 (토큰과 온보딩 상태 모두 저장 완료)
+                Log.d("Auth:Login", "Step 6: All verifications complete")
+                Log.d("Auth:Token", "Final state - Access token: ${tokenData.accessToken.take(20)}...")
+                Log.d("Auth:Token", "Final state - Refresh token: ${tokenData.refreshToken.take(20)}...")
 
                 val user = userResponse.toUser(onboardingCompleted = onboardingCompleted)
                 Log.d("Auth:Login", "=== Google OAuth Login SUCCESS === User: ${user.email}, Onboarding: $onboardingCompleted")
@@ -399,9 +326,10 @@ class AuthRepositoryImpl @Inject constructor(
                 Log.d("Auth:Reissue", "=== Access Token Reissue Started ===")
 
                 // Step 1: Refresh Token 가져오기
+                Log.d("Auth:Reissue", "Step 1: Getting refresh token from DataStore")
                 val refreshToken = preferencesManager.getRefreshToken()
                 if (refreshToken.isNullOrEmpty()) {
-                    Log.e("Auth:Reissue", "No refresh token available")
+                    Log.e("Auth:Reissue", "Step 1 FAILED: No refresh token available")
                     return@withContext Result.Error(
                         exception = Exception("No refresh token"),
                         message = "저장된 Refresh Token이 없습니다.",
@@ -409,22 +337,23 @@ class AuthRepositoryImpl @Inject constructor(
                     )
                 }
 
-                Log.d("Auth:Reissue", "Refresh Token: ${refreshToken.take(20)}...")
+                Log.d("Auth:Reissue", "Step 1 SUCCESS: Refresh token found: ${refreshToken.take(20)}...")
 
                 // Step 2: 토큰 재발급 요청
+                Log.d("Auth:Reissue", "Step 2: Requesting new tokens from server")
                 val response = authApi.oauthReissue("Bearer $refreshToken")
 
                 if (!response.isSuccessful || response.body()?.data == null) {
                     val statusCode = response.code()
                     val errorBody = response.errorBody()?.string()
-                    Log.e("Auth:Reissue", "Token reissue failed")
+                    Log.e("Auth:Reissue", "Step 2 FAILED: Token reissue failed")
                     Log.e("Auth:Reissue", "Status Code: $statusCode")
                     Log.e("Auth:Reissue", "Error: ${response.message()}")
                     Log.e("Auth:Reissue", "Body: $errorBody")
 
-                    // Refresh Token도 만료된 경우 토큰 삭제
+                    // Refresh Token도 만료된 경우 토큰 삭제 (온보딩 상태는 유지)
                     if (statusCode == 401) {
-                        Log.d("Auth:Reissue", "Refresh token expired, clearing tokens")
+                        Log.d("Auth:Reissue", "Refresh token expired, clearing tokens only (keeping onboarding status)")
                         clearTokens()
                     }
 
@@ -449,21 +378,22 @@ class AuthRepositoryImpl @Inject constructor(
                 }
 
                 val tokenData = response.body()!!.data!!
-                Log.d("Auth:Reissue", "New tokens received")
+                Log.d("Auth:Reissue", "Step 2 SUCCESS: New tokens received")
 
                 // Step 3: 새 토큰 저장
+                Log.d("Auth:Reissue", "Step 3: Saving new tokens to DataStore")
                 saveTokens(
                     accessToken = tokenData.accessToken,
                     refreshToken = tokenData.refreshToken
                 )
-                Log.d("Auth:Reissue", "New tokens saved")
+                Log.d("Auth:Reissue", "Step 3 SUCCESS: New tokens saved")
 
                 // Step 4: 사용자 정보 가져오기
-                Log.d("Auth:Reissue", "Getting user info with new token")
+                Log.d("Auth:Reissue", "Step 4: Getting current user info")
                 val userInfoResponse = authApi.getUser()
 
                 if (!userInfoResponse.isSuccessful || userInfoResponse.body()?.data == null) {
-                    Log.e("Auth:Reissue", "Failed to get user info after reissue")
+                    Log.e("Auth:Reissue", "Step 4 FAILED: Failed to get user info after reissue")
                     return@withContext Result.Error(
                         exception = Exception(userInfoResponse.message()),
                         message = "사용자 정보를 가져올 수 없습니다."
@@ -471,11 +401,48 @@ class AuthRepositoryImpl @Inject constructor(
                 }
 
                 val userResponse = userInfoResponse.body()!!.data!!
-                Log.d("Auth:Reissue", "User info retrieved: ${userResponse.email}")
+                Log.d("Auth:Reissue", "Step 4 SUCCESS: User info retrieved: ${userResponse.email}")
 
                 // Step 5: 카테고리 확인으로 온보딩 상태 판단
+                Log.d("Auth:Reissue", "Step 5: Checking user categories for onboarding status")
                 val categoriesResponse = authApi.getUserCategories()
-                val onboardingCompleted = categoriesResponse.isSuccessful && categoriesResponse.body()?.data != null
+
+                val onboardingCompleted = when {
+                    !categoriesResponse.isSuccessful -> {
+                        val statusCode = categoriesResponse.code()
+                        val errorBody = categoriesResponse.errorBody()?.string()
+                        Log.e("Auth:Reissue", "Step 5: Categories API FAILED")
+                        Log.e("Auth:Reissue", "Status Code: $statusCode")
+                        Log.e("Auth:Reissue", "Error body: $errorBody")
+
+                        // 5xx 서버 오류인 경우 토큰 재발급 전체 실패로 처리
+                        if (statusCode in 500..599) {
+                            Log.e("Auth:Reissue", "Server error detected, rolling back tokens and returning error")
+                            clearTokens() // 저장된 토큰 롤백
+                            return@withContext Result.Error(
+                                message = "서버에 일시적인 문제가 발생했습니다.\n잠시 후 다시 시도해주세요.",
+                                errorType = ErrorType.SERVER
+                            )
+                        }
+
+                        // 404 또는 기타 4xx 에러는 카테고리 없음으로 간주 (온보딩 필요)
+                        Log.d("Auth:Reissue", "Categories API returned ${statusCode}, treating as no categories (onboarding needed)")
+                        false
+                    }
+                    categoriesResponse.body()?.data == null || categoriesResponse.body()?.data!!.isEmpty() -> {
+                        Log.d("Auth:Reissue", "Step 5: User has no categories (onboarding needed)")
+                        false
+                    }
+                    else -> {
+                        val categoryCount = categoriesResponse.body()?.data?.size ?: 0
+                        Log.d("Auth:Reissue", "Step 5 SUCCESS: User has $categoryCount categories (onboarding completed)")
+                        true
+                    }
+                }
+
+                // Step 6: 온보딩 상태 DataStore에 저장
+                Log.d("Auth:Reissue", "Step 6: Saving onboarding status to DataStore: $onboardingCompleted")
+                preferencesManager.setOnboardingCompleted(onboardingCompleted)
 
                 val user = userResponse.toUser(onboardingCompleted = onboardingCompleted)
                 Log.d("Auth:Reissue", "=== Token Reissue SUCCESS === User: ${user.email}")

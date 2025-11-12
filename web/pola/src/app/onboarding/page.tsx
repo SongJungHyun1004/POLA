@@ -4,7 +4,10 @@ import { useState, useEffect } from "react";
 import CategoryCard from "./components/CategoryCard";
 import CategoryModal from "./components/CategoryModal";
 import Link from "next/link";
-import { getRecommendedCategories } from "@/services/categoryService";
+import {
+  getRecommendedCategories,
+  createInitialCategories,
+} from "@/services/categoryService";
 
 interface Category {
   name: string;
@@ -73,6 +76,21 @@ export default function OnboardingPage() {
     setCategories(categories.filter((_, i) => i !== index));
   };
 
+  const handleSubmit = async () => {
+    try {
+      await createInitialCategories(
+        categories.map((c) => ({
+          categoryName: c.name,
+          tags: c.tags,
+        }))
+      );
+      window.location.href = "/home";
+    } catch (err) {
+      alert("카테고리 저장 중 오류가 발생했습니다.");
+      console.error(err);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#FFFEF8] flex flex-col items-center justify-center relative">
       <h1 className="text-4xl font-semibold text-[#4C3D25] mb-8">
@@ -110,11 +128,12 @@ export default function OnboardingPage() {
         isEditing={editIndex !== null}
       />
 
-      <Link href={"/home"}>
-        <button className="px-6 py-3 bg-[#4C3D25] text-white rounded-md shadow-md hover:bg-[#3a2b1d] transition">
-          POLA 시작하기
-        </button>
-      </Link>
+      <button
+        onClick={handleSubmit}
+        className="px-6 py-3 bg-[#4C3D25] text-white rounded-md shadow-md hover:bg-[#3a2b1d] transition"
+      >
+        POLA 시작하기
+      </button>
 
       <img
         src="/images/POLA_landing_1.png"

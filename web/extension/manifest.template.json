@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Pola 캡처 확장 프로그램",
+  "name": "POLA",
   "version": "1.0.0",
-  "description": "화면 캡처와 Pola 연동",
+  "description": "스크린샷 캡쳐, 텍스트 복사 등 넘쳐나는 정보를 AI가 자동으로 분류하고, 사용자 맞춤으로 정리해 드립니다.",
   
   "permissions": [
     "contextMenus",

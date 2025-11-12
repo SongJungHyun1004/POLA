@@ -28,10 +28,10 @@ sealed class Screen(val route: String) {
         fun createRoute(tagName: String) = "tag/$tagName"
     }
     data object Contents : Screen("contents/{contentId}") {
-        fun createRoute(contentId: String) = "contents/$contentId"
+        fun createRoute(contentId: Long) = "contents/$contentId"
     }
     data object ContentsEdit : Screen("contents/edit/{contentId}") {
-        fun createRoute(contentId: String) = "contents/edit/$contentId"
+        fun createRoute(contentId: Long) = "contents/edit/$contentId"
     }
     data object Favorite : Screen("favorite")
     data object SearchScreen : Screen("search_screen")

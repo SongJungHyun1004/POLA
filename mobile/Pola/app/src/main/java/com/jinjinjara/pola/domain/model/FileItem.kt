@@ -19,6 +19,7 @@ data class FileItem(
 }
 
 data class FilesPage(
+    val fileName: String,
     val content: List<FileItem>,
     val page: Int,
     val size: Int,

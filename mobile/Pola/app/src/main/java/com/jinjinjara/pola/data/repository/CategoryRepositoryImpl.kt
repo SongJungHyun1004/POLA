@@ -1,6 +1,8 @@
 package com.jinjinjara.pola.data.repository
 
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import com.jinjinjara.pola.data.remote.api.CategoryApi
 import com.jinjinjara.pola.data.remote.dto.request.CategoryTagInitRequest
 import com.jinjinjara.pola.data.remote.dto.request.CategoryWithTags
@@ -10,6 +12,7 @@ import com.jinjinjara.pola.data.remote.dto.request.FilesListRequest
 import com.jinjinjara.pola.di.IoDispatcher
 import com.jinjinjara.pola.domain.model.Category
 import com.jinjinjara.pola.domain.model.CategoryRecommendation
+import com.jinjinjara.pola.domain.model.FileDetail
 import com.jinjinjara.pola.domain.model.FilesPage
 import com.jinjinjara.pola.domain.model.UserCategory
 import com.jinjinjara.pola.domain.repository.CategoryRepository
@@ -128,7 +131,9 @@ class CategoryRepositoryImpl @Inject constructor(
     override suspend fun getFilesByCategory(
         categoryId: Long,
         page: Int,
-        size: Int
+        size: Int,
+        sortBy: String,
+        direction: String
     ): Result<FilesPage> {
         return withContext(ioDispatcher) {
             try {
@@ -136,10 +141,10 @@ class CategoryRepositoryImpl @Inject constructor(
                 val request = FilesListRequest(
                     page = page,
                     size = size,
-                    sortBy = "createdAt",
-                    direction = "DESC",
-                    filterType = "category",
-                    filterId = categoryId
+                    sortBy = sortBy,
+                    direction = direction,
+                    filterType = if (categoryId == -1L) null else "category",
+                    filterId = if (categoryId == -1L) null else categoryId
                 )
 
                 val response = categoryApi.getFilesList(request)
@@ -234,5 +239,6 @@ class CategoryRepositoryImpl @Inject constructor(
         }
 
     }
+
 
 }

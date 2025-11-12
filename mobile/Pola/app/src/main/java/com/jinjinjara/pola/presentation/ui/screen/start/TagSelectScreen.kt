@@ -8,8 +8,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,7 +22,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.jinjinjara.pola.util.ErrorType
 
@@ -50,26 +47,13 @@ fun TagSelectScreen(
             .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
     ) {
-        // Top Bar
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onBackClick) {
-                Icon(
-                    imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "뒤로가기"
-                )
-            }
-        }
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 24.dp)
         ) {
+            Spacer(modifier = Modifier.height(24.dp))
+
             // Title
             Text(
                 text = buildAnnotatedString {
@@ -81,7 +65,7 @@ fun TagSelectScreen(
                     ) {
                         append("태그")
                     }
-                    append("를 입력해주세요")
+                    append("를 선택해주세요")
                 },
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
@@ -133,7 +117,9 @@ fun TagSelectScreen(
                         categoriesWithTags = categoriesWithTags,
                         onSubmit = { categories, selectedTags ->
                             viewModel.submitSelectedTags(categories, selectedTags)
-                        }
+                        },
+                        onBackClick = onBackClick,
+                        viewModel = viewModel
                     )
                 }
             }
@@ -144,12 +130,19 @@ fun TagSelectScreen(
 @Composable
 private fun TagSelectContent(
     categoriesWithTags: Map<String, List<String>>,
-    onSubmit: (Map<String, List<String>>, Set<String>) -> Unit
+    onSubmit: (Map<String, List<String>>, Set<String>) -> Unit,
+    onBackClick: () -> Unit = {},
+    viewModel: TagSelectViewModel = hiltViewModel()
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
     var currentCategory by remember { mutableStateOf<TagCategory?>(null) }
-    // rememberSaveable을 사용하여 커스텀 태그 저장 (재구성 시에도 유지)
-    var customTagsMap by rememberSaveable { mutableStateOf<Map<String, List<String>>>(emptyMap()) }
+
+    // ViewModel에서 상태 가져오기
+    val selectedTagsList by viewModel.selectedTags.collectAsState()
+    val customTagsMap by viewModel.customTagsMap.collectAsState()
+
+    // List를 Set으로 변환
+    val selectedTags = remember(selectedTagsList) { selectedTagsList.toSet() }
 
     // 선택된 카테고리를 TagCategory로 변환
     val categories = remember(categoriesWithTags, customTagsMap) {
@@ -160,14 +153,6 @@ private fun TagSelectContent(
                 tags = (tags + (customTagsMap[categoryName] ?: emptyList())).distinct()
             )
         }
-    }
-
-    // 모든 태그를 초기 선택 상태로 설정
-    val allTags = remember(categories) { categories.flatMap { it.tags }.toSet() }
-    var selectedTags by remember { mutableStateOf(allTags) }
-
-    LaunchedEffect(categories) {
-        selectedTags = selectedTags + categories.flatMap { it.tags }.toSet()
     }
 
     Column {
@@ -182,18 +167,14 @@ private fun TagSelectContent(
                     category = category,
                     selectedTags = selectedTags,
                     onTagClick = { tag ->
-                        selectedTags = if (selectedTags.contains(tag)) {
-                            selectedTags - tag
-                        } else {
-                            selectedTags + tag
-                        }
+                        viewModel.toggleTag(tag)
                     },
                     onClearAll = {
                         val count = category.tags.count { selectedTags.contains(it) }
-                        selectedTags = if (count == 0) {
-                            selectedTags + category.tags.toSet()  // 모두 선택
+                        if (count == 0) {
+                            viewModel.selectAllTagsInCategory(category.tags)  // 모두 선택
                         } else {
-                            selectedTags - category.tags.toSet()  // 모두 해제
+                            viewModel.deselectAllTagsInCategory(category.tags)  // 모두 해제
                         }
                     },
                     onAddClick = {
@@ -214,30 +195,58 @@ private fun TagSelectContent(
             }
         }
 
-        // Next Button
-        Button(
-            onClick = {
-                // ViewModel을 통해 선택된 태그 전송
-                val finalCategoriesWithTags = (categoriesWithTags.keys + customTagsMap.keys).associateWith { key ->
-                    ((categoriesWithTags[key] ?: emptyList()) + (customTagsMap[key] ?: emptyList())).distinct()
-                }
-                onSubmit(finalCategoriesWithTags, selectedTags)
-            },
-            enabled = allCategoriesMeetRequirement,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary
-            ),
-            shape = RoundedCornerShape(100.dp)
+        // Buttons Row (이전, 다음)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = "다음",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White
-            )
+            // 이전 버튼
+            OutlinedButton(
+                onClick = onBackClick,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(48.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.primary
+                ),
+                border = androidx.compose.foundation.BorderStroke(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.primary
+                ),
+                shape = RoundedCornerShape(100.dp)
+            ) {
+                Text(
+                    text = "이전",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            // 다음 버튼
+            Button(
+                onClick = {
+                    // ViewModel을 통해 선택된 태그 전송
+                    val finalCategoriesWithTags = (categoriesWithTags.keys + customTagsMap.keys).associateWith { key ->
+                        ((categoriesWithTags[key] ?: emptyList()) + (customTagsMap[key] ?: emptyList())).distinct()
+                    }
+                    onSubmit(finalCategoriesWithTags, selectedTags)
+                },
+                enabled = allCategoriesMeetRequirement,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(48.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                ),
+                shape = RoundedCornerShape(100.dp)
+            ) {
+                Text(
+                    text = "다음",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White
+                )
+            }
         }
         Spacer(modifier = Modifier.height(40.dp))
     }
@@ -248,9 +257,8 @@ private fun TagSelectContent(
             existingTags = currentCategory?.tags ?: emptyList(),
             onDismiss = { showAddDialog = false },
             onConfirm = { newTags ->
-                customTagsMap = customTagsMap + (currentCategory!!.title to
-                        ((customTagsMap[currentCategory!!.title] ?: emptyList()) + newTags))
-                selectedTags = selectedTags + newTags.toSet()
+                // ViewModel을 통해 커스텀 태그 추가 (자동으로 선택됨)
+                viewModel.addCustomTags(currentCategory!!.title, newTags)
                 showAddDialog = false
             }
         )
@@ -276,19 +284,19 @@ private fun TagCategorySection(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 12.dp),
+                .padding(bottom = 6.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = category.title,
-                fontSize = 16.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Color.Black
             )
             Text(
                 text = buttonText,
-                fontSize = 12.sp,
+                fontSize = 16.sp,
                 color = Color.Gray,
                 modifier = Modifier.clickable(
                     interactionSource = remember { MutableInteractionSource() },
@@ -319,11 +327,20 @@ private fun TagCategorySection(
         if (selectedCount < minimumTags) {
             Text(
                 text = "4개 이상 선택해주세요.",
-                fontSize = 12.sp,
+                fontSize = 14.sp,
                 color = Color.Red,
                 modifier = Modifier.padding(top = 8.dp)
             )
         }
+        else {
+            Text(
+                text = " ",
+                fontSize = 14.sp,
+                color = Color.Red,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
+
     }
 }
 
@@ -413,7 +430,8 @@ fun AddTagDialog(
                 OutlinedTextField(
                     value = text,
                     onValueChange = { newValue ->
-                        if (newValue.endsWith(" ") && text.isNotBlank()) {
+                        // 스페이스바 또는 엔터 키 감지
+                        if ((newValue.endsWith(" ") || newValue.endsWith("\n")) && text.isNotBlank()) {
                             val newTag = text.trim()
                             when {
                                 newTag.isEmpty() -> {
@@ -442,7 +460,7 @@ fun AddTagDialog(
                     },
                     placeholder = {
                         Text(
-                            text = "태그 입력 후 스페이스바 입력",
+                            text = "태그 입력 후 스페이스바",
                             fontSize = 12.sp,
                             color = Color.Gray
                         )
@@ -459,7 +477,8 @@ fun AddTagDialog(
                         focusedBorderColor = Color.Transparent,
                         unfocusedBorderColor = Color.Transparent,
                     ),
-                    isError = errorMessage != null
+                    isError = errorMessage != null,
+                    singleLine = true
                 )
 
                 if (errorMessage != null) {
