@@ -19,6 +19,7 @@ fun FileItemDto.toDomain(): FileItem {
 
 fun FilesPageData.toDomain(): FilesPage {
     return FilesPage(
+        fileName = categoryName,
         content = content.map { it.toDomain() },
         page = page,
         size = size,

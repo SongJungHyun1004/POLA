@@ -32,9 +32,11 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.window.Popup
@@ -44,10 +46,12 @@ import kotlinx.coroutines.flow.map
 import kotlin.math.roundToInt
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
 import com.jinjinjara.pola.presentation.ui.component.CategoryChips
 import com.jinjinjara.pola.presentation.ui.component.DisplayItem
 import com.jinjinjara.pola.presentation.ui.component.ItemGrid2View
 import com.jinjinjara.pola.presentation.ui.component.ItemGrid3View
+import com.jinjinjara.pola.domain.model.UserCategory
 
 
 enum class ViewMode {
@@ -58,18 +62,54 @@ enum class ViewMode {
 fun CategoryScreen(
     categoryId: Long = -1L,
     onBackClick: () -> Unit = {},
-    onNavigateToContents : (String) -> Unit = {},
+    onNavigateToFavorite: () -> Unit = {},
+    onNavigateToContents : (Long) -> Unit = {},
+    navController: NavHostController,
     viewModel: CategoryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    var selectedTab by remember { mutableStateOf("전체") }
+    var selectedCategoryId by remember { mutableStateOf(categoryId) }
+    var selectedTab by remember {
+        mutableStateOf(
+            uiState.userCategories.find { it.id == categoryId }?.categoryName ?: "전체"
+        )
+    }
+
+    // SavedStateHandle 값 감시
+    val refreshNeeded = navController
+        .currentBackStackEntryFlow
+        .collectAsState(initial = null)
+
+    LaunchedEffect(refreshNeeded.value) {
+        // SavedStateHandle에 "refreshNeeded"가 true이면 갱신
+        val refresh = navController
+            .currentBackStackEntry
+            ?.savedStateHandle
+            ?.get<Boolean>("refreshNeeded") ?: false
+
+        if (refresh) {
+            viewModel.refresh()
+
+            // 다시 false로 초기화
+            navController
+                .currentBackStackEntry
+                ?.savedStateHandle
+                ?.set("refreshNeeded", false)
+        }
+    }
 
     // 디버깅 로그 추가
     LaunchedEffect(uiState.categoryName, uiState.userCategories) {
+        if (selectedCategoryId != null) return@LaunchedEffect
         android.util.Log.d("CategoryScreen", "categoryName: ${uiState.categoryName}")
         android.util.Log.d("CategoryScreen", "userCategories: ${uiState.userCategories.map { it.categoryName }}")
         android.util.Log.d("CategoryScreen", "selectedTab: $selectedTab")
+        if (uiState.userCategories.isNotEmpty()) {
+            val currentCategory = uiState.userCategories.find { it.id == categoryId }
+            selectedCategoryId = currentCategory?.id ?: -1
+            selectedTab = currentCategory?.categoryName ?: "전체"
+        }
     }
 
     // uiState.categoryName이 로드되면 selectedTab 업데이트
@@ -146,42 +186,73 @@ fun CategoryScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        when (viewMode) {
-            ViewMode.GRID_3 -> {
-                ItemGrid3View(
-                    items = categories,
-                    onItemClick = { item ->
-                        onNavigateToContents(item.id)
-                    },
-                    onFavoriteToggle = { }, // 빈 람다 (기능 없음)
-                    state = gridState,
-                    contentPadding = PaddingValues(
-                        top = headerHeightDp + 8.dp,
-                        start = 16.dp,
-                        end = 16.dp,
-                        bottom = 16.dp
-                    ),
-                    showFavoriteIcon = false,
-                    modifier = Modifier.fillMaxSize()
-                )
+        if (uiState.files.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = headerHeightDp + 48.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.empty),
+                        contentDescription = "Empty Content",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 32.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text(
+                        text = "이 카테고리에 분류된 컨텐츠가 없어요",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
+                }
             }
-            ViewMode.GRID_2 -> {
-                ItemGrid2View(
-                    items = categories,
-                    onItemClick = { item ->
-                        onNavigateToContents(item.id)
-                    },
-                    onFavoriteToggle = { }, // 빈 람다 (기능 없음)
-                    state = gridState,
-                    contentPadding = PaddingValues(
-                        top = headerHeightDp + 8.dp,
-                        start = 16.dp,
-                        end = 16.dp,
-                        bottom = 16.dp
-                    ),
-                    showFavoriteIcon = false,
-                    modifier = Modifier.fillMaxSize()
-                )
+        } else {
+            when (viewMode) {
+                ViewMode.GRID_3 -> {
+                    ItemGrid3View(
+                        items = categories,
+                        onItemClick = { item ->
+                            onNavigateToContents(item.fileId)
+                        },
+                        onFavoriteToggle = { }, // 빈 람다 (기능 없음)
+                        state = gridState,
+                        contentPadding = PaddingValues(
+                            top = headerHeightDp + 8.dp,
+                            start = 16.dp,
+                            end = 16.dp,
+                            bottom = 16.dp
+                        ),
+                        showFavoriteIcon = false,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+
+                ViewMode.GRID_2 -> {
+                    ItemGrid2View(
+                        items = categories,
+                        onItemClick = { item ->
+                            onNavigateToContents(item.fileId)
+                        },
+                        onFavoriteToggle = { }, // 빈 람다 (기능 없음)
+                        state = gridState,
+                        contentPadding = PaddingValues(
+                            top = headerHeightDp + 8.dp,
+                            start = 16.dp,
+                            end = 16.dp,
+                            bottom = 16.dp
+                        ),
+                        showFavoriteIcon = false,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
             }
         }
 
@@ -227,7 +298,7 @@ fun CategoryScreen(
                     )
 
                     Text(
-                        text = categoryId.toString(), // id로 name 알아내기
+                        text = uiState.categoryName.ifEmpty { "전체" },
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.tertiary
@@ -242,7 +313,7 @@ fun CategoryScreen(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
                             ) {
-                                // 즐겨찾기 이동
+                                onNavigateToFavorite()
                             }
                             .size(30.dp)
                     )
@@ -263,14 +334,19 @@ fun CategoryScreen(
                 }
 
                 // CategoryChips
-                val categoryNames = remember(uiState.userCategories) {
-                    listOf("전체") + uiState.userCategories.map { it.categoryName }
+                val categories = remember(uiState.userCategories) {
+                    listOf(UserCategory(-1, "전체")) + uiState.userCategories
                 }
 
                 CategoryChips(
-                    categories = categoryNames,
-                    selectedCategory = selectedTab,
-                    onCategorySelected = { selectedTab = it }
+                    categories = categories.map { it.categoryName },
+                    selectedCategory = categories.find { it.id == selectedCategoryId }?.categoryName ?: "전체",
+                    onCategorySelected = { selectedName ->
+                        val selectedCategory = categories.find { it.categoryName == selectedName }
+                        selectedCategoryId = selectedCategory?.id ?: -1
+                        selectedTab = selectedName
+                        viewModel.selectCategory(selectedCategoryId)
+                    }
                 )
 
                 // Grid Icon and Sort Menu
@@ -293,7 +369,8 @@ fun CategoryScreen(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
                             ) {
-                                viewMode = if (viewMode == ViewMode.GRID_3) ViewMode.GRID_2 else ViewMode.GRID_3
+                                viewMode =
+                                    if (viewMode == ViewMode.GRID_3) ViewMode.GRID_2 else ViewMode.GRID_3
                             }
                     )
                     Box {
@@ -338,7 +415,7 @@ fun CategoryScreen(
                                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                                     )
 
-                                    val sortOptions = listOf("태그순", "최신순", "오래된순")
+                                    val sortOptions = listOf("최신순", "오래된순", "조회순")
                                     sortOptions.forEachIndexed { index, sort ->
                                         Row(
                                             modifier = Modifier
@@ -346,6 +423,14 @@ fun CategoryScreen(
                                                 .clickable {
                                                     selectedSort = sort
                                                     isMenuExpanded = false
+                                                    val (sortBy, direction) = when (sort) {
+                                                        "최신순" -> "createdAt" to "DESC"
+                                                        "오래된순" -> "createdAt" to "ASC"
+                                                        "조회순" -> "views" to "DESC"
+                                                        else -> "createdAt" to "DESC"
+                                                    }
+
+                                                    viewModel.updateSort(sortBy, direction)
                                                 }
                                                 .padding(horizontal = 16.dp, vertical = 10.dp),
                                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -378,8 +463,8 @@ fun CategoryScreen(
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun CategoryScreenPreview() {
-    CategoryScreen()
-}
+//@Preview(showBackground = true)
+//@Composable
+//fun CategoryScreenPreview() {
+//    CategoryScreen()
+//}

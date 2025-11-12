@@ -27,6 +27,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.jinjinjara.pola.data.local.datastore.PreferencesDataStore
@@ -67,6 +69,7 @@ class MainActivity : ComponentActivity() {
     private var sharedContentType: String? = null
 
     private var hasStartedUpload = false
+    private var isAutoLoginCompleted by mutableStateOf(false)
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -78,6 +81,7 @@ class MainActivity : ComponentActivity() {
             Log.d("MainActivity", "Starting auto login")
             val result = autoLoginUseCase()
             Log.d("MainActivity", "Auto login completed: ${if (result is com.jinjinjara.pola.util.Result.Success) "success" else "failed"}")
+            isAutoLoginCompleted = true
         }
 
         // 공유 인텐트인지 확인 및 데이터 추출
@@ -128,7 +132,10 @@ class MainActivity : ComponentActivity() {
                                 modifier = Modifier.fillMaxSize(),
                                 contentAlignment = Alignment.Center
                             ) {
-                                CircularProgressIndicator()
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(48.dp),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
                             }
                         }
                         false -> {
@@ -289,17 +296,22 @@ class MainActivity : ComponentActivity() {
                 } else {
                     // 일반 실행: 기존 로그인 플로우
                     when {
-                        isLoggedIn == null || onboardingCompleted == null -> {
-                            // 둘 중 하나라도 로딩 중이면 로딩 표시
+                        !isAutoLoginCompleted || isLoggedIn == null || onboardingCompleted == null -> {
+                            // 자동 로그인 미완료 또는 데이터 로딩 중이면 로딩 표시
+                            Log.d("MainActivity", "Loading - autoLogin: $isAutoLoginCompleted, isLoggedIn: $isLoggedIn, onboarding: $onboardingCompleted")
                             Box(
                                 modifier = Modifier.fillMaxSize(),
                                 contentAlignment = Alignment.Center
                             ) {
-                                CircularProgressIndicator()
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(48.dp),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
                             }
                         }
                         else -> {
-                            // 둘 다 로드 완료되면 네비게이션 시작
+                            // 모든 초기화 완료되면 네비게이션 시작
+                            Log.d("MainActivity", "Ready to show UI - isLoggedIn: $isLoggedIn, onboarding: $onboardingCompleted")
                             PolaNavHost(
                                 modifier = Modifier.fillMaxSize(),
                                 isLoggedIn = isLoggedIn ?: false,

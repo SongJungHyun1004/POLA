@@ -25,6 +25,7 @@ public interface FileTagRepository extends JpaRepository<FileTag, Long> {
     void deleteByFileAndTag(File file, Tag tag);
 
     boolean existsByFileAndTag(File file, Tag tag);
+    void deleteByFile(File file);
 
     @Query("SELECT new com.jinjinjara.pola.data.dto.response.TagWithLatestFileDto(" +
             "t.id, t.tagName, COUNT(ft.file.id), MAX(f.createdAt)) " +

@@ -5,13 +5,24 @@ import { useState, useMemo, useEffect } from "react";
 import ImageModal from "./ImageModal";
 import EditModal from "./EditModal";
 import ShareModal from "./ShareModal";
-import { RotateCcw, Download, Share2, Pencil } from "lucide-react";
+import {
+  RotateCcw,
+  Download,
+  Share2,
+  Pencil,
+  Star,
+  Trash2,
+} from "lucide-react";
 import {
   getMyCategories,
   updateFileCategory,
 } from "@/services/categoryService";
-import { getFileDownloadUrl } from "@/services/fileService";
-import useAuthStore from "@/store/useAuthStore";
+import {
+  getFileDownloadUrl,
+  addFileFavorite,
+  removeFileFavorite,
+  fileService,
+} from "@/services/fileService";
 
 interface PolaroidDetailProps {
   id?: number;
@@ -23,6 +34,8 @@ interface PolaroidDetailProps {
   onCategoryUpdated?: () => void;
   sharedView?: boolean;
   downloadUrl?: string;
+  favorite?: boolean;
+  onFavoriteChange?: (newState: boolean) => void;
 }
 
 export default function PolaroidDetail({
@@ -35,19 +48,26 @@ export default function PolaroidDetail({
   onCategoryUpdated,
   sharedView,
   downloadUrl,
+  favorite: initialFavorite = false,
+  onFavoriteChange,
 }: PolaroidDetailProps) {
   const [open, setOpen] = useState(false);
   const [flipped, setFlipped] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
-
   const [context, setContext] = useState(contexts);
   const [tagState, setTagState] = useState(tags);
   const [categories, setCategories] = useState<any[]>([]);
   const [downloading, setDownloading] = useState(false);
+  const [favorite, setFavorite] = useState(initialFavorite);
+  const [updatingFavorite, setUpdatingFavorite] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => setTagState(tags), [tags]);
   useEffect(() => setContext(contexts), [contexts]);
+  useEffect(() => {
+    setFavorite(initialFavorite);
+  }, [initialFavorite]);
 
   const displaySrc =
     src && (src.startsWith("/") || src.startsWith("http"))
@@ -88,7 +108,6 @@ export default function PolaroidDetail({
     newCategoryId: number
   ) {
     if (!id) return;
-
     setTagState(tags);
     setContext(context);
 
@@ -129,6 +148,47 @@ export default function PolaroidDetail({
     }
   }
 
+  async function handleToggleFavorite(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!id || updatingFavorite) return;
+
+    setUpdatingFavorite(true);
+    const prev = favorite;
+    const next = !prev;
+    setFavorite(next);
+    onFavoriteChange?.(next);
+
+    try {
+      if (next) await addFileFavorite(id);
+      else await removeFileFavorite(id);
+    } catch (err) {
+      console.error("즐겨찾기 변경 실패:", err);
+      alert("즐겨찾기 변경 중 오류가 발생했습니다.");
+      setFavorite(prev);
+      onFavoriteChange?.(prev);
+    } finally {
+      setUpdatingFavorite(false);
+    }
+  }
+
+  /** 🔹 파일 삭제 처리 */
+  async function handleDelete() {
+    if (!id || deleting) return;
+    if (!confirm("정말 이 파일을 삭제하시겠습니까?")) return;
+
+    try {
+      setDeleting(true);
+      await fileService.deleteFile(id);
+      alert("파일이 성공적으로 삭제되었습니다.");
+      onCategoryUpdated?.();
+    } catch (err: any) {
+      console.error("파일 삭제 실패:", err);
+      alert(err.message || "파일 삭제 중 오류가 발생했습니다.");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   return (
     <div className="flex flex-col items-center w-full">
       {/* 카드 */}
@@ -146,6 +206,24 @@ export default function PolaroidDetail({
             className="relative w-[85%] h-[70%] overflow-hidden rounded-sm border border-[#8B857C] bg-[#FFFEF8]"
             style={{ marginBottom: "14%" }}
           >
+            {!sharedView && (
+              <button
+                onClick={handleToggleFavorite}
+                disabled={updatingFavorite}
+                className="absolute top-2 right-2 z-10 hover:scale-110 transition-transform"
+              >
+                <Star
+                  size={22}
+                  fill={favorite ? "#FFD700" : "transparent"}
+                  stroke="#FFD700"
+                  strokeWidth={1.8}
+                  className={`drop-shadow-sm transition-colors ${
+                    updatingFavorite ? "opacity-60" : "opacity-100"
+                  }`}
+                />
+              </button>
+            )}
+
             <Image
               src={displaySrc}
               alt="selected polaroid"
@@ -180,9 +258,20 @@ export default function PolaroidDetail({
                 />
               </button>
               {!sharedView && (
-                <button onClick={() => id && setShareOpen(true)}>
-                  <Share2 className="w-5 h-5 text-[#4C3D25] hover:text-black" />
-                </button>
+                <>
+                  <button onClick={() => id && setShareOpen(true)}>
+                    <Share2 className="w-5 h-5 text-[#4C3D25] hover:text-black" />
+                  </button>
+                  <button onClick={handleDelete} disabled={deleting}>
+                    <Trash2
+                      className={`w-5 h-5 ${
+                        deleting
+                          ? "text-gray-400 animate-pulse"
+                          : "text-red-500 hover:text-red-600"
+                      }`}
+                    />
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -206,22 +295,22 @@ export default function PolaroidDetail({
         >
           <RotateCcw className="w-5 h-5 text-[#4C3D25]" />
         </button>
+        <p className="text-md mt-2">버튼을 눌러서 사진을 뒤집어 보세요</p>
       </div>
 
       {open && <ImageModal src={displaySrc} onClose={() => setOpen(false)} />}
-
       {shareOpen && id && (
         <ShareModal id={id} onClose={() => setShareOpen(false)} />
       )}
-
-      {editOpen && (
+      {editOpen && id && (
         <EditModal
+          fileId={id}
           defaultTags={tagState}
           defaultContext={context}
           defaultCategoryId={categoryId ?? 0}
           categories={categories}
           onClose={() => setEditOpen(false)}
-          onSave={handleSave}
+          onSave={onCategoryUpdated ?? (() => {})}
         />
       )}
     </div>

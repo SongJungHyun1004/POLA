@@ -2,6 +2,7 @@ package com.jinjinjara.pola.domain.repository
 
 import com.jinjinjara.pola.domain.model.Category
 import com.jinjinjara.pola.domain.model.CategoryRecommendation
+import com.jinjinjara.pola.domain.model.FileDetail
 import com.jinjinjara.pola.domain.model.FilesPage
 import com.jinjinjara.pola.domain.model.UserCategory
 import com.jinjinjara.pola.util.Result
@@ -27,7 +28,9 @@ interface CategoryRepository {
     suspend fun getFilesByCategory(
         categoryId: Long,
         page: Int = 0,
-        size: Int = 20
+        size: Int = 20,
+        sortBy: String,
+        direction: String
     ): Result<FilesPage>
 
     /**
@@ -39,4 +42,5 @@ interface CategoryRepository {
      * Get user's categories
      */
     suspend fun getCategories(): Result<List<Category>>
+
 }
