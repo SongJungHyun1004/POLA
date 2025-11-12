@@ -1,24 +1,30 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <meta charset="UTF-8">
   <link rel="stylesheet" href="popup.css">
 </head>
+
 <body>
   <div class="container">
-    <h2>📸 POLA 캡처</h2>
-    
+    <h2 class="title-with-logo">
+      <img src="icons/icon128.png" alt="POLA 로고" class="title-logo">
+      POLA 캡처
+    </h2>
+
     <!-- 로그인 전 화면 -->
     <div id="login-section" class="section">
       <div class="login-prompt">
         <p>POLA에 로그인하여 캡처 기능을 사용하세요</p>
         <button id="loginBtn" class="button button-primary">
-          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style="width: 18px; height: 18px; margin-right: 8px;">
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google"
+            style="width: 18px; height: 18px; margin-right: 8px;">
           Google로 로그인
         </button>
       </div>
     </div>
-    
+
     <!-- 로그인 후 화면 -->
     <div id="authenticated-section" style="display: none;">
       <!-- 사용자 정보 -->
@@ -32,7 +38,7 @@
         </div>
         <button id="logoutBtn" class="button-text">로그아웃</button>
       </div>
-      
+
       <!-- 사용 방법 -->
       <div class="section">
         <h3>사용 방법</h3>
@@ -41,7 +47,7 @@
           <li>텍스트 드래그 → 우클릭 → "선택한 텍스트 가져오기"</li>
         </ul>
       </div>
-      
+
       <!-- 상태 -->
       <div class="section">
         <h3>상태</h3>
@@ -50,34 +56,23 @@
           <span>POLA와 연결됨</span>
         </div>
       </div>
-      
-      <!-- 통계 (선택사항) -->
-      <div class="section stats">
-        <h3>캡처 통계</h3>
-        <div class="stat-grid">
-          <div class="stat-item">
-            <div class="stat-value" id="captureCount">0</div>
-            <div class="stat-label">이미지 캡처</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-value" id="textCount">0</div>
-            <div class="stat-label">텍스트 저장</div>
-          </div>
-        </div>
+
+      <!-- 로딩 인디케이터 -->
+      <div id="loading" style="display: none;">
+        <div class="loading-spinner"></div>
+        <p class="loading-text">로그인 중...</p>
+      </div>
+
+      <div class="footer">
+        <small>
+          © 2025 POLA. All rights reserved.
+          | 버전 1.0.0
+          | <a href="mailto:starforce.mozzi@gmail.com">문의하기</a>
+        </small>
       </div>
     </div>
-    
-    <!-- 로딩 인디케이터 -->
-    <div id="loading" style="display: none;">
-      <div class="loading-spinner"></div>
-      <p class="loading-text">로그인 중...</p>
-    </div>
-    
-    <div class="footer">
-      <small>개발자 콘솔에서 로그를 확인하세요</small>
-    </div>
-  </div>
-  
-  <script src="popup.js"></script>
+
+    <script src="popup.js"></script>
 </body>
+
 </html>

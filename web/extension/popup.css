@@ -2,7 +2,7 @@ body {
   width: 360px;
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: #f8f9fa;
+  background: #FFFEF8;
 }
 
 .container {
@@ -263,4 +263,18 @@ li:last-child {
 
 .footer small {
   font-size: 11px;
+}
+
+.title-with-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px; /* 로고와 텍스트 간격 */
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.title-logo {
+  width: 28px;   /* 로고 크기 조절 */
+  height: 28px;
+  border-radius: 6px; /* 필요하면 둥글게 */
 }
