@@ -13,7 +13,9 @@ import com.jinjinjara.pola.data.repository.CategoryRepository;
 import com.jinjinjara.pola.data.repository.TagRepository;
 import com.jinjinjara.pola.data.repository.CategoryTagRepository;
 import com.jinjinjara.pola.user.entity.Users;
+import com.jinjinjara.pola.vision.dto.common.CategoryChangedEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +33,7 @@ public class CategoryTagService {
     private final TagRepository tagRepository;
     private final CategoryTagRepository categoryTagRepository;
     private final YamlRecommendedCatalogService yamlCatalog;
+    private final ApplicationEventPublisher publisher;
 
     // 카테고리에 태그 추가
     public CategoryTagResponse addTagToCategory(Long categoryId, Long tagId) {
@@ -51,6 +54,7 @@ public class CategoryTagService {
                     .build();
 
             CategoryTag saved = categoryTagRepository.save(categoryTag);
+            publisher.publishEvent(new CategoryChangedEvent(category.getUser().getId()));
             return CategoryTagResponse.fromEntity(saved);
         } catch (Exception e) {
             throw new CustomException(ErrorCode.TAG_CREATE_FAIL, e.getMessage());
@@ -66,6 +70,7 @@ public class CategoryTagService {
 
         try {
             categoryTagRepository.deleteByCategoryAndTag(category, tag);
+            publisher.publishEvent(new CategoryChangedEvent(category.getUser().getId()));
         } catch (Exception e) {
             throw new CustomException(ErrorCode.DATA_DELETE_FAIL, e.getMessage());
         }
@@ -169,6 +174,7 @@ public class CategoryTagService {
                 }
             });
         });
+        publisher.publishEvent(new CategoryChangedEvent(user.getId()));
     }
 
 
@@ -243,8 +249,7 @@ public class CategoryTagService {
                 .filter(ct -> ct != null)
                 .toList();
 
+        publisher.publishEvent(new CategoryChangedEvent(category.getUser().getId()));
         return results;
     }
-
-
 }
