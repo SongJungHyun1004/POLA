@@ -54,6 +54,12 @@ public enum ErrorCode {
     INVALID_REQUEST("COMMON-001", "잘못된 요청입니다.", HttpStatus.BAD_REQUEST),
     VALIDATION_ERROR("COMMON-002", "요청 데이터가 유효하지 않습니다.", HttpStatus.BAD_REQUEST),
 
+    /* ------------------------- [리포트 관련] ------------------------- */
+    REPORT_NOT_FOUND("REPORT-001", "리포트를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+    REPORT_ALREADY_EXISTS("REPORT-002", "해당 주차의 리포트가 이미 존재합니다.", HttpStatus.CONFLICT),
+    REPORT_GENERATION_FAIL("REPORT-003", "리포트 생성 중 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
+    REPORT_INSUFFICIENT_DATA("REPORT-004", "리포트 생성을 위한 데이터가 부족합니다.", HttpStatus.BAD_REQUEST),
+
     /* ------------------------- [서버 공통 / 내부 오류] ------------------------- */
     INTERNAL_SERVER_ERROR("SERVER-001", "서버 내부 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
     SHARE_EXPIRED("SHARE-001", "공유 링크가 만료되었습니다.", HttpStatus.GONE),
