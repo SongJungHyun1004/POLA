@@ -43,6 +43,7 @@ import com.jinjinjara.pola.R
 import com.jinjinjara.pola.domain.model.FileDetail
 import com.jinjinjara.pola.presentation.ui.component.PolaCard
 import com.jinjinjara.pola.presentation.ui.screen.category.CategoryScreen
+import com.jinjinjara.pola.util.Constants.SHARE_URL
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.URL
@@ -197,7 +198,12 @@ fun ContentsScreen(
                     AlertDialog(
                         containerColor = MaterialTheme.colorScheme.background,
                         onDismissRequest = { },
-                        title = { Text("공유 링크 생성 중...", color = MaterialTheme.colorScheme.tertiary) },
+                        title = {
+                            Text(
+                                "공유 링크 생성 중...",
+                                color = MaterialTheme.colorScheme.tertiary
+                            )
+                        },
                         text = {
                             Box(
                                 modifier = Modifier.fillMaxWidth(),
@@ -209,6 +215,7 @@ fun ContentsScreen(
                         confirmButton = { }
                     )
                 }
+
                 is ContentsViewModel.ShareState.Error -> {
                     AlertDialog(
                         containerColor = MaterialTheme.colorScheme.background,
@@ -230,6 +237,7 @@ fun ContentsScreen(
                         }
                     )
                 }
+
                 is ContentsViewModel.ShareState.Success -> {
                     AlertDialog(
                         containerColor = MaterialTheme.colorScheme.background,
@@ -271,8 +279,9 @@ fun ContentsScreen(
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
+                                        val shareURL = SHARE_URL + state.shareLink.shareUrl
                                         Text(
-                                            text = state.shareLink.shareUrl,
+                                            text = shareURL,
                                             style = MaterialTheme.typography.bodySmall,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis,
@@ -283,9 +292,16 @@ fun ContentsScreen(
                                             onClick = {
                                                 val clipboard =
                                                     context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                                val clip = ClipData.newPlainText("공유 링크", state.shareLink.shareUrl)
+                                                val clip = ClipData.newPlainText(
+                                                    "공유 링크",
+                                                    shareURL
+                                                )
                                                 clipboard.setPrimaryClip(clip)
-                                                Toast.makeText(context, "링크가 복사되었습니다", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(
+                                                    context,
+                                                    "링크가 복사되었습니다",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
                                             }
                                         ) {
                                             Icon(
@@ -316,6 +332,7 @@ fun ContentsScreen(
                     )
 
                 }
+
                 else -> {}
             }
         }
