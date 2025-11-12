@@ -260,7 +260,7 @@ export default function FavoritePage() {
           categoryId={selectedFile?.category_id}
           favorite={selectedFile?.favorite}
           type={selectedFile?.type}
-          ocr={selectedFile?.ocr_text} // ✅ OCR 텍스트 전달
+          ocr_text={selectedFile?.ocr_text} // ✅ OCR 텍스트 전달
           onCategoryUpdated={async () => {
             const refreshed = await getFavoriteFiles(0);
             setFiles(
