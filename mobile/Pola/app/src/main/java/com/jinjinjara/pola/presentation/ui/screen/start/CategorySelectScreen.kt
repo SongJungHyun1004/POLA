@@ -12,15 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.BakeryDining
-import androidx.compose.material.icons.outlined.Category
-import androidx.compose.material.icons.outlined.FitnessCenter
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Place
-import androidx.compose.material.icons.outlined.Restaurant
-import androidx.compose.material.icons.outlined.School
-import androidx.compose.material.icons.outlined.ShoppingBag
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -52,18 +44,73 @@ data class Category(
 // Icon mapping function
 private fun getCategoryIcon(categoryName: String): ImageVector {
     return when (categoryName.lowercase()) {
-        "쇼핑", "shopping" -> Icons.Outlined.ShoppingBag
-        "장소", "place", "위치" -> Icons.Outlined.Place
-        "인물", "person", "사람" -> Icons.Outlined.Person
-        "간식", "snack", "디저트" -> Icons.Outlined.BakeryDining
-        "운동", "exercise", "피트니스" -> Icons.Outlined.FitnessCenter
-        "정보", "info" -> Icons.Outlined.Info
-        "학습", "study", "교육" -> Icons.Outlined.School
-        "음식", "food", "한식", "야식" -> Icons.Outlined.Restaurant
+        // 필수 카테고리
+        "맛집", "restaurant", "레스토랑" -> Icons.Default.Restaurant
         "여행", "travel" -> Icons.Default.Flight
+        "운동", "exercise", "피트니스", "헬스", "fitness" -> Icons.Default.FitnessCenter
+        "뷰티", "beauty", "화장품", "미용" -> Icons.Default.Face
+        "취미", "hobby" -> Icons.Default.Palette
+        "간식", "snack", "디저트", "dessert" -> Icons.Default.BakeryDining
+        "학습", "study", "교육", "공부" -> Icons.Default.School
+        "사회", "society", "소셜", "모임" -> Icons.Default.Groups
+
+        // 음식/식사 관련
+        "음식", "food", "한식", "야식" -> Icons.Outlined.Restaurant
+        "카페", "cafe", "coffee" -> Icons.Default.Coffee
+        "술", "주점", "bar" -> Icons.Default.LocalBar
+
+        // 쇼핑/패션
+        "쇼핑", "shopping" -> Icons.Outlined.ShoppingBag
+        "패션", "fashion", "옷" -> Icons.Default.Checkroom
+
+        // 장소/위치
+        "장소", "place", "위치" -> Icons.Outlined.Place
+        "집", "home", "인테리어" -> Icons.Default.Home
+
+        // 사람/관계
+        "인물", "person", "사람" -> Icons.Outlined.Person
         "가족", "family" -> Icons.Default.FamilyRestroom
-        "사진", "photo" -> Icons.Default.PhotoCamera
-        "취미", "hobby" -> Icons.Default.SportsEsports
+        "연애", "데이트", "couple" -> Icons.Default.Favorite
+
+        // 엔터테인먼트
+        "영화", "movie", "시네마" -> Icons.Default.Movie
+        "음악", "music" -> Icons.Default.MusicNote
+        "게임", "game" -> Icons.Default.SportsEsports
+        "책", "독서", "book" -> Icons.Default.MenuBook
+        "사진", "photo", "사진촬영" -> Icons.Default.PhotoCamera
+
+        // 건강/의료
+        "건강", "health", "병원" -> Icons.Default.HealthAndSafety
+        "의료", "medical" -> Icons.Default.LocalHospital
+
+        // 차/교통
+        "차", "자동차", "car" -> Icons.Default.DirectionsCar
+        "교통", "transport" -> Icons.Default.Train
+
+        // 반려동물
+        "반려동물", "pet", "애완동물" -> Icons.Default.Pets
+
+        // 업무/금융
+        "일", "업무", "work", "비즈니스" -> Icons.Default.Work
+        "금융", "돈", "money", "finance" -> Icons.Default.AccountBalance
+
+        // 기술/IT
+        "기술", "tech", "컴퓨터" -> Icons.Default.Computer
+        "it", "개발" -> Icons.Default.Code
+        "폰", "phone", "스마트폰" -> Icons.Default.PhoneAndroid
+
+        // 자연/환경
+        "자연", "nature", "공원" -> Icons.Default.Park
+        "환경", "eco" -> Icons.Default.Eco
+        "꽃", "식물", "plant" -> Icons.Default.LocalFlorist
+
+        // 기타
+        "정보", "info" -> Icons.Outlined.Info
+        "이벤트", "event" -> Icons.Default.Event
+        "선물", "gift" -> Icons.Default.CardGiftcard
+        "스포츠", "sport" -> Icons.Default.SportsSoccer
+        "예술", "art" -> Icons.Default.Brush
+
         else -> Icons.Outlined.Category // Default icon
     }
 }
@@ -79,6 +126,14 @@ fun CategorySelectScreen(
 
     val context = LocalContext.current
     val activity = context as? Activity
+
+    // 초기 로딩 상태 (0.5초 대기)
+    var isInitialLoading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(500)
+        isInitialLoading = false
+    }
 
     // 뒤로가기 처리
     BackHandler {
@@ -99,6 +154,20 @@ fun CategorySelectScreen(
             ).show()
             viewModel.resetExitToast()
         }
+    }
+
+    // 초기 로딩 화면
+    if (isInitialLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(48.dp),
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+        return
     }
 
     Column(

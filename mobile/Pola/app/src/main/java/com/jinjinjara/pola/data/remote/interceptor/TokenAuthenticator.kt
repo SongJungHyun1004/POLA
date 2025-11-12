@@ -7,7 +7,6 @@ import android.util.Log
 import android.widget.Toast
 import com.jinjinjara.pola.data.local.datastore.PreferencesDataStore
 import com.jinjinjara.pola.data.remote.api.AuthApi
-import com.jinjinjara.pola.data.remote.dto.request.RefreshTokenRequest
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
@@ -41,9 +40,9 @@ class TokenAuthenticator @Inject constructor(
             return null
         }
 
-        // refresh 엔드포인트 자체가 실패한 경우 null 반환
-        if (response.request.url.encodedPath.contains("/auth/refresh")) {
-            Log.e("Auth:Token", "Refresh token endpoint failed, logging out")
+        // reissue 엔드포인트 자체가 실패한 경우 null 반환
+        if (response.request.url.encodedPath.contains("/oauth/reissue")) {
+            Log.e("Auth:Token", "Reissue token endpoint failed, logging out")
             clearTokensAndLogout()
             return null
         }
@@ -80,20 +79,24 @@ class TokenAuthenticator @Inject constructor(
                 Log.d("Auth:Token", "Refresh token found: ${refreshToken.take(20)}...")
 
                 try {
-                    // 2. 새 Access Token 발급 요청
-                    Log.d("Auth:Token", "Requesting new access token from server")
-                    val tokenResponse = authApi.get().refreshToken(
-                        RefreshTokenRequest(refreshToken)
+                    // 2. 새 Access Token 발급 요청 (OAuth reissue 사용)
+                    Log.d("Auth:Token", "Requesting new tokens from OAuth reissue endpoint")
+                    val tokenResponse = authApi.get().oauthReissue(
+                        "Bearer $refreshToken"
                     )
 
-                    if (tokenResponse.isSuccessful && tokenResponse.body() != null) {
-                        val newAccessToken = tokenResponse.body()!!.accessToken
+                    if (tokenResponse.isSuccessful && tokenResponse.body()?.data != null) {
+                        val tokenData = tokenResponse.body()!!.data!!
+                        val newAccessToken = tokenData.accessToken
+                        val newRefreshToken = tokenData.refreshToken
 
                         Log.d("Auth:Token", "=== Token Refresh SUCCESS ===")
                         Log.d("Auth:Token", "New access token: ${newAccessToken.take(20)}...")
+                        Log.d("Auth:Token", "New refresh token: ${newRefreshToken.take(20)}...")
 
-                        // 3. 새 토큰 저장
+                        // 3. 새 토큰 저장 (access token과 refresh token 모두)
                         preferencesDataStore.saveAccessToken(newAccessToken)
+                        preferencesDataStore.saveRefreshToken(newRefreshToken)
 
                         // 4. 실패한 요청을 새 토큰으로 재시도
                         Log.d("Auth:Token", "Retrying original request with new token")

@@ -1,6 +1,7 @@
 package com.jinjinjara.pola.presentation.ui.screen.start
 
 import android.util.Log
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jinjinjara.pola.domain.usecase.category.InitCategoryTagsUseCase
@@ -14,11 +15,62 @@ import javax.inject.Inject
 
 @HiltViewModel
 class TagSelectViewModel @Inject constructor(
-    private val initCategoryTagsUseCase: InitCategoryTagsUseCase
+    private val initCategoryTagsUseCase: InitCategoryTagsUseCase,
+    private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<TagSelectUiState>(TagSelectUiState.Idle)
     val uiState = _uiState.asStateFlow()
+
+    // SavedStateHandle을 사용하여 선택된 태그와 커스텀 태그 영속화
+    companion object {
+        private const val KEY_SELECTED_TAGS = "selected_tags"
+        private const val KEY_CUSTOM_TAGS = "custom_tags"
+    }
+
+    // 선택된 태그 (Set<String>을 List로 변환하여 저장)
+    val selectedTags = savedStateHandle.getStateFlow<List<String>>(
+        key = KEY_SELECTED_TAGS,
+        initialValue = emptyList()
+    )
+
+    // 커스텀 태그 맵
+    val customTagsMap = savedStateHandle.getStateFlow<Map<String, List<String>>>(
+        key = KEY_CUSTOM_TAGS,
+        initialValue = emptyMap()
+    )
+
+    fun toggleTag(tag: String) {
+        val currentTags = selectedTags.value.toSet()
+        val newTags = if (currentTags.contains(tag)) {
+            currentTags - tag
+        } else {
+            currentTags + tag
+        }
+        savedStateHandle[KEY_SELECTED_TAGS] = newTags.toList()
+    }
+
+    fun selectAllTagsInCategory(tags: List<String>) {
+        val currentTags = selectedTags.value.toSet()
+        val newTags = currentTags + tags.toSet()
+        savedStateHandle[KEY_SELECTED_TAGS] = newTags.toList()
+    }
+
+    fun deselectAllTagsInCategory(tags: List<String>) {
+        val currentTags = selectedTags.value.toSet()
+        val newTags = currentTags - tags.toSet()
+        savedStateHandle[KEY_SELECTED_TAGS] = newTags.toList()
+    }
+
+    fun addCustomTags(categoryName: String, newTags: List<String>) {
+        val currentCustomTags = customTagsMap.value
+        val updatedTags = (currentCustomTags[categoryName] ?: emptyList()) + newTags
+        savedStateHandle[KEY_CUSTOM_TAGS] = currentCustomTags + (categoryName to updatedTags)
+
+        // 추가된 커스텀 태그를 자동으로 선택
+        val currentSelected = selectedTags.value.toSet()
+        savedStateHandle[KEY_SELECTED_TAGS] = (currentSelected + newTags.toSet()).toList()
+    }
 
     /**
      * 선택된 태그를 서버로 전송

@@ -3,7 +3,8 @@ package com.jinjinjara.pola.data.repository
 import android.util.Log
 import com.jinjinjara.pola.data.local.datastore.PreferencesDataStore
 import com.jinjinjara.pola.data.remote.api.AuthApi
-import com.jinjinjara.pola.data.remote.dto.request.*
+import com.jinjinjara.pola.data.remote.dto.request.CategoryTagInitRequest
+import com.jinjinjara.pola.data.remote.dto.request.OAuthTokenRequest
 import com.jinjinjara.pola.data.mapper.toUser
 import com.jinjinjara.pola.di.IoDispatcher
 import com.jinjinjara.pola.domain.model.User
@@ -25,103 +26,7 @@ class AuthRepositoryImpl @Inject constructor(
     private val authApi: AuthApi,
     private val preferencesManager: PreferencesDataStore,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
-) : AuthRepository {
-
-    override suspend fun login(email: String, password: String): Result<User> {
-        return withContext(ioDispatcher) {
-            try {
-                val response = authApi.login(LoginRequest(email, password))
-
-                if (response.isSuccessful && response.body() != null) {
-                    val loginResponse = response.body()!!
-
-                    saveTokens(
-                        accessToken = loginResponse.accessToken,
-                        refreshToken = loginResponse.refreshToken
-                    )
-
-                    Result.Success(loginResponse.user.toUser())
-                } else {
-                    Result.Error(
-                        exception = Exception(response.message()),
-                        message = "로그인에 실패했습니다."
-                    )
-                }
-            } catch (e: Exception) {
-                Log.e("Auth:Login", "Login failed with exception: ${e.message}", e)
-                Result.Error(
-                    exception = e,
-                    message = e.message ?: "네트워크 오류가 발생했습니다."
-                )
-            }
-        }
-    }
-
-    // Google 로그인
-    override suspend fun loginWithGoogle(idToken: String): Result<User> {
-        return withContext(ioDispatcher) {
-            try {
-                Log.d("AuthRepository", "loginWithGoogle called")
-                val response = authApi.loginWithGoogle(GoogleLoginRequest(idToken))
-
-                if (response.isSuccessful && response.body() != null) {
-                    val googleLoginResponse = response.body()!!
-                    Log.d("AuthRepository", "API response success")
-
-                    // 토큰 저장
-                    saveTokens(
-                        accessToken = googleLoginResponse.accessToken,
-                        refreshToken = googleLoginResponse.refreshToken
-                    )
-                    Log.d("AuthRepository", "Tokens saved")
-
-                    Result.Success(googleLoginResponse.user.toUser())
-                } else {
-                    Log.e("AuthRepository", "API response failed: ${response.code()} ${response.message()}")
-                    Result.Error(
-                        exception = Exception(response.message()),
-                        message = "Google 로그인에 실패했습니다."
-                    )
-                }
-            } catch (e: Exception) {
-                Log.e("AuthRepository", "Exception: ${e.message}", e)
-                Result.Error(
-                    exception = e,
-                    message = e.message ?: "Google 로그인 중 오류가 발생했습니다."
-                )
-            }
-        }
-    }
-
-    override suspend fun signUp(email: String, password: String, name: String): Result<User> {
-        return withContext(ioDispatcher) {
-            try {
-                val response = authApi.signUp(SignUpRequest(email, password, name))
-
-                if (response.isSuccessful && response.body() != null) {
-                    val signUpResponse = response.body()!!
-
-                    saveTokens(
-                        accessToken = signUpResponse.accessToken,
-                        refreshToken = signUpResponse.refreshToken
-                    )
-
-                    Result.Success(signUpResponse.user.toUser())
-                } else {
-                    Result.Error(
-                        exception = Exception(response.message()),
-                        message = "회원가입에 실패했습니다."
-                    )
-                }
-            } catch (e: Exception) {
-                Log.e("Auth:SignUp", "Sign up failed with exception: ${e.message}", e)
-                Result.Error(
-                    exception = e,
-                    message = e.message ?: "네트워크 오류가 발생했습니다."
-                )
-            }
-        }
-    }
+)  : AuthRepository {
 
     override suspend fun logout(): Result<Unit> {
         return withContext(ioDispatcher) {
@@ -145,31 +50,6 @@ class AuthRepositoryImpl @Inject constructor(
                 clearTokensAndResetOnboarding()
                 Log.d("Auth:Logout", "Local tokens and onboarding status cleared")
                 Result.Success(Unit)
-            }
-        }
-    }
-
-    override suspend fun refreshToken(refreshToken: String): Result<String> {
-        return withContext(ioDispatcher) {
-            try {
-                val response = authApi.refreshToken(RefreshTokenRequest(refreshToken))
-
-                if (response.isSuccessful && response.body() != null) {
-                    val newAccessToken = response.body()!!.accessToken
-                    preferencesManager.saveAccessToken(newAccessToken)
-                    Result.Success(newAccessToken)
-                } else {
-                    Result.Error(
-                        exception = Exception(response.message()),
-                        message = "토큰 갱신에 실패했습니다."
-                    )
-                }
-            } catch (e: Exception) {
-                Log.e("Auth:Refresh", "Token refresh failed with exception: ${e.message}", e)
-                Result.Error(
-                    exception = e,
-                    message = e.message ?: "토큰 갱신 중 오류가 발생했습니다."
-                )
             }
         }
     }
