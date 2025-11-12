@@ -145,6 +145,7 @@ fun NavGraphBuilder.authNavGraph(
 /**
  * Main 네비게이션 그래프
  */
+@RequiresApi(Build.VERSION_CODES.O)
 fun NavGraphBuilder.mainNavGraph(navController: NavHostController) {
     composable(route = NavGraphs.MAIN) {
         MainScreen()
@@ -261,7 +262,7 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
                 navController = navController,
                 fileId = contentId,
                 onBackClick = { navController.popBackStack() },
-                onShareClick = { /* TODO: 공유 기능 */ },
+                onShareClick = { /* 내부 공유 기능 구현 */ },
                 onEditClick = {
                     navController.navigate(Screen.ContentsEdit.createRoute(contentId))
                 },
@@ -272,7 +273,7 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
         composable(
             route = Screen.ContentsEdit.route,
             arguments = listOf(
-                navArgument("contentId") { type = NavType.StringType }
+                navArgument("contentId") { type = NavType.LongType }
             )
         ) { backStackEntry ->
             val contentId = backStackEntry.arguments?.getLong("contentId") ?: -1L
@@ -280,7 +281,7 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
                 contentId = contentId,
                 onBackClick = { navController.popBackStack() },
                 onSaveClick = {
-                    // TODO: 저장 로직
+                    // 저장 성공 시 이전 화면으로 돌아감
                     navController.popBackStack()
                 }
             )

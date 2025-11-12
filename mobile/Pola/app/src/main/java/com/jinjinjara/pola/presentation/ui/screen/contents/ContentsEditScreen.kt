@@ -1,5 +1,7 @@
 package com.jinjinjara.pola.presentation.ui.screen.contents
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -22,23 +24,55 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.jinjinjara.pola.R
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ContentsEditScreen(
     contentId: Long = -1L,
     onBackClick: () -> Unit = {},
-    onSaveClick: () -> Unit = {}
+    onSaveClick: () -> Unit = {},
+    viewModel: ContentsEditViewModel = hiltViewModel(),
 ) {
-    var tags by remember { mutableStateOf(listOf("보조배터리", "봉어빵", "컴팩트")) }
-    var contentText by remember {
-        mutableStateOf("봉어빵 모양의 보조 배터리로, 아기자기하고 독특한 디자인이 특징이며 무게는 약 130g으로 휴대하기에 부담이 없습니다. 한 손에 쏙 들어오는 크기로 주머니나 가방에 넣어 다니기 편리하며, 귀여운 외형 덕분에 실용성과 함께 소장 가치도 높은 제품입니다. 일상 속 작은 포인트 아이템으로, 충전할 때마다 기분까지 만족해지는 매력을 지닙습니다.")
+
+    // ViewModel에서 상태 가져오기
+    val uiState by viewModel.uiState.collectAsState()
+
+    // 초기 데이터 로드
+    LaunchedEffect(contentId) {
+        if (contentId != -1L) {
+            viewModel.loadFileData(contentId)
+        }
     }
+
+    // 저장 성공 시 처리
+    LaunchedEffect(uiState.saveSuccess) {
+        if (uiState.saveSuccess) {
+            onSaveClick()
+            viewModel.resetSaveSuccess()
+        }
+    }
+
+    // 에러 표시를 위한 Snackbar
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let { error ->
+            snackbarHostState.showSnackbar(
+                message = error,
+                duration = SnackbarDuration.Short
+            )
+            viewModel.clearError()
+        }
+    }
+
     var showAddDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0.dp),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
@@ -69,131 +103,156 @@ fun ContentsEditScreen(
             )
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp)
-        ) {
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 태그 섹션
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+        // 로딩 표시
+        if (uiState.isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.shoppingmode_24px),
-                    contentDescription = "태그",
-                    tint = MaterialTheme.colorScheme.tertiary,
-                    modifier = Modifier.size(24.dp)
-                )
-                Text(
-                    text = "태그",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.tertiary
+                CircularProgressIndicator(
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
+        } else {
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // 태그 리스트
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp)
             ) {
-                tags.forEach { tag ->
-                    EditableTagChip(
-                        text = tag,
-                        onRemove = {
-                            tags = tags.filter { it != tag }
-                        }
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 태그 섹션
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.shoppingmode_24px),
+                        contentDescription = "태그",
+                        tint = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text(
+                        text = "태그",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.tertiary
                     )
                 }
 
-                // + 버튼
-                AddButton(onClick = {
-                    showAddDialog = true
-                })
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // 태그 리스트
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    uiState.tags.forEach { tag ->
+                        EditableTagChip(
+                            text = tag.tagName,
+                            onRemove = {
+                                viewModel.removeTag(tag)
+                            }
+                        )
+                    }
+
+                    // + 버튼
+                    AddButton(onClick = {
+                        showAddDialog = true
+                    })
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                // 내용 섹션
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.note_stack_24px),
+                        contentDescription = "내용",
+                        tint = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text(
+                        text = "내용",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // 내용 입력 필드
+                OutlinedTextField(
+                    value = uiState.contentText,
+                    onValueChange = { viewModel.updateContentText(it) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.tertiary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.tertiary,
+                        focusedTextColor = MaterialTheme.colorScheme.tertiary,
+                        unfocusedTextColor = MaterialTheme.colorScheme.tertiary,
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    textStyle = LocalTextStyle.current.copy(
+                        fontSize = 14.sp,
+                        lineHeight = 20.sp
+                    )
+                )
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                // 저장하기 버튼
+                Button(
+                    onClick = {
+                        if (contentId != -1L) {
+                            viewModel.saveChanges(contentId, onSaveClick)
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    ),
+                    shape = RoundedCornerShape(100.dp),
+                    enabled = !uiState.isLoading
+                ) {
+                    if (uiState.isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = Color.White
+                        )
+                    } else {
+                        Text(
+                            text = "저장하기",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(40.dp))
             }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // 내용 섹션
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.note_stack_24px),
-                    contentDescription = "내용",
-                    tint = MaterialTheme.colorScheme.tertiary,
-                    modifier = Modifier.size(24.dp)
-                )
-                Text(
-                    text = "내용",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.tertiary
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // 내용 입력 필드
-            OutlinedTextField(
-                value = contentText,
-                onValueChange = { contentText = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.tertiary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.tertiary,
-                    focusedTextColor = MaterialTheme.colorScheme.tertiary,
-                    unfocusedTextColor = MaterialTheme.colorScheme.tertiary,
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White
-                ),
-                shape = RoundedCornerShape(12.dp),
-                textStyle = LocalTextStyle.current.copy(
-                    fontSize = 14.sp,
-                    lineHeight = 20.sp
-                )
-            )
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            // 저장하기 버튼
-            Button(
-                onClick = onSaveClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                ),
-                shape = RoundedCornerShape(100.dp)
-            ) {
-                Text(
-                    text = "저장하기",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-            }
-            Spacer(modifier = Modifier.height(40.dp))
         }
     }
     if (showAddDialog) {
         AddTagDialog(
-            existingTags = tags,
+            existingTags = uiState.tags.map { it.tagName },
             onDismiss = { showAddDialog = false },
             onConfirm = { newTags ->
-                tags = tags + newTags
+                viewModel.addTags(newTags)
                 showAddDialog = false
             }
         )
@@ -360,6 +419,8 @@ fun AddTagDialog(
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.tertiary,
                         unfocusedBorderColor = MaterialTheme.colorScheme.tertiary,
+                        focusedTextColor = MaterialTheme.colorScheme.tertiary,
+                        unfocusedTextColor = MaterialTheme.colorScheme.tertiary,
                     ),
                     isError = errorMessage != null
                 )
@@ -436,8 +497,8 @@ fun AddTagDialog(
     )
 }
 
-@Preview(showBackground = true)
-@Composable
-fun ContentsEditScreenPreview() {
-    ContentsEditScreen()
-}
+//@Preview(showBackground = true)
+//@Composable
+//fun ContentsEditScreenPreview() {
+//    ContentsEditScreen()
+//}

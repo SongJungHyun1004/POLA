@@ -164,8 +164,8 @@ fun ContentsScreen(
             AlertDialog(
                 containerColor = MaterialTheme.colorScheme.background,
                 onDismissRequest = { showDeleteDialog = false },
-                title = { Text("컨텐츠 삭제") },
-                text = { Text("이 컨텐츠를 삭제하시겠습니까?") },
+                title = { Text("컨텐츠 삭제", color = MaterialTheme.colorScheme.tertiary) },
+                text = { Text("이 컨텐츠를 삭제하시겠습니까?", color = MaterialTheme.colorScheme.tertiary) },
                 confirmButton = {
                     TextButton(
                         onClick = {
@@ -324,7 +324,8 @@ fun ContentsScreen(
                                                         putExtra(Intent.EXTRA_TEXT, shareURL)
                                                         type = "text/plain"
                                                     }
-                                                    val shareIntent = Intent.createChooser(sendIntent, "공유하기")
+                                                    val shareIntent =
+                                                        Intent.createChooser(sendIntent, "공유하기")
                                                     context.startActivity(shareIntent)
                                                 }
                                             ) {
