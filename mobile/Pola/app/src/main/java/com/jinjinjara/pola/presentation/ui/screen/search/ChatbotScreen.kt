@@ -30,33 +30,30 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.jinjinjara.pola.R
 import com.jinjinjara.pola.presentation.ui.component.PolaCard
 import com.jinjinjara.pola.presentation.ui.component.PolaSearchBar
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-// 메시지 타입 정의
-sealed class ChatMessage {
-    data class User(val text: String) : ChatMessage()
-    data class Bot(val text: String) : ChatMessage()
-    object BotLoading : ChatMessage()
-    data class BotImage(val imageRes: Int, val tags: List<String>) : ChatMessage()
-}
-
 @Composable
 fun ChatbotScreen(
+    viewModel: ChatbotViewModel = hiltViewModel(),
     onBackClick: () -> Unit = {}
 ) {
     var userInput by remember { mutableStateOf("") }
-    val messages = remember {
-        mutableStateListOf<ChatMessage>(
-            ChatMessage.Bot("안녕하세요. 무엇을 도와드릴까요?")
-        )
-    }
+    val messages by viewModel.messages.collectAsState()
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
+
+    // messages 변경 시 스크롤을 맨 아래로
+    LaunchedEffect(messages.size) {
+        if (messages.isNotEmpty()) {
+            listState.animateScrollToItem(messages.size - 1)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -86,7 +83,7 @@ fun ChatbotScreen(
             )
 
             Text(
-                text = "챗봇",
+                text = "AI 챗봇",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.tertiary,
@@ -104,7 +101,8 @@ fun ChatbotScreen(
             contentPadding = PaddingValues(vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(messages) { message ->
+            items(messages.size) { index ->
+                val message = messages[index]
                 when (message) {
                     is ChatMessage.User -> {
                         // 사용자 메시지
@@ -114,7 +112,7 @@ fun ChatbotScreen(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .padding(start = 60.dp)
+                                    .padding(start = 70.dp)
                                     .shadow(4.dp, RoundedCornerShape(16.dp))
                                     .clip(RoundedCornerShape(16.dp))
                                     .background(MaterialTheme.colorScheme.primary)
@@ -148,7 +146,7 @@ fun ChatbotScreen(
 
                             Column(
                                 modifier = Modifier
-                                    .padding(end = 60.dp)
+                                    .padding(end = 30.dp)
                                     .padding(horizontal = 4.dp)
                             ) {
                                 Text(
@@ -179,7 +177,7 @@ fun ChatbotScreen(
 
                             Column(
                                 modifier = Modifier
-                                    .padding(end = 60.dp)
+                                    .padding(end = 30.dp)
                                     .shadow(4.dp, RoundedCornerShape(16.dp))
                                     .clip(RoundedCornerShape(16.dp))
                                     .background(Color.White)
@@ -196,7 +194,7 @@ fun ChatbotScreen(
                     }
 
                     is ChatMessage.BotImage -> {
-                        // PolaCard 이미지
+                        // PolaCard 이미지 (URL) - 단일
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.Start
@@ -205,9 +203,9 @@ fun ChatbotScreen(
 
                             PolaCard(
                                 modifier = Modifier
-                                    .padding(end = 60.dp)
+                                    .padding(end = 30.dp)
                                     .shadow(4.dp, RoundedCornerShape(5.dp)),
-                                imageResId = message.imageRes,
+                                imageUrl = message.imageUrl,
                                 textList = message.tags,
                                 textSize = 20.sp,
                                 textSpacing = 4.dp,
@@ -220,6 +218,56 @@ fun ChatbotScreen(
                                     end = 12.dp
                                 )
                             )
+                        }
+                    }
+
+                    is ChatMessage.BotImageGrid -> {
+                        // PolaCard 이미지 그리드 (2열)
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            // 2개씩 묶어서 Row로 표시
+                            message.images.chunked(2).forEach { rowImages ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.Start
+                                ) {
+                                    Spacer(Modifier.width(44.dp))
+
+                                    Row(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .padding(end = 30.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        rowImages.forEach { imageData ->
+                                            PolaCard(
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .shadow(4.dp, RoundedCornerShape(5.dp)),
+                                                imageUrl = imageData.imageUrl,
+                                                textList = imageData.tags,
+                                                textSize = 14.sp,
+                                                textSpacing = 3.dp,
+                                                clipTags = true,
+                                                ratio = 0.7661f,
+                                                imageRatio = 0.9062f,
+                                                paddingValues = PaddingValues(
+                                                    top = 8.dp,
+                                                    start = 8.dp,
+                                                    end = 8.dp
+                                                )
+                                            )
+                                        }
+
+                                        // 홀수개일 경우 빈 공간 추가
+                                        if (rowImages.size == 1) {
+                                            Spacer(Modifier.weight(1f))
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -250,41 +298,21 @@ fun ChatbotScreen(
                 onSearchClick = {
                     if (userInput.isNotEmpty()) {
                         val messageText = userInput
-                        // 사용자 메시지 추가
-                        messages.add(ChatMessage.User(messageText))
-                        userInput = ""
 
                         // 키보드 내리기
                         focusManager.clearFocus()
 
-                        // 로딩 메시지 추가
-                        messages.add(ChatMessage.BotLoading)
+                        // ViewModel을 통해 메시지 추가 및 검색 실행
+                        viewModel.addUserMessage(messageText)
+                        viewModel.addLoadingMessage()
+                        viewModel.search(messageText)
 
-                        // 스크롤을 맨 아래로
-                        coroutineScope.launch {
-                            listState.animateScrollToItem(messages.size - 1)
-                        }
-
-                        // 3초 후 답변 표시
-                        coroutineScope.launch {
-                            delay(3000)
-
-                            // 로딩 메시지 제거
-                            messages.removeAll { it is ChatMessage.BotLoading }
-
-                            // 챗봇 답변 추가
-                            messages.add(ChatMessage.Bot("2시간 전 업로드한 이미지에 의하면 붕어빵 모양 보조배터리의 무게는 약 130g 입니다."))
-
-                            // PolaCard 이미지 추가
-                            messages.add(ChatMessage.BotImage(R.drawable.temp_image, listOf("보조배터리", "붕어빵")))
-
-                            // 스크롤을 맨 아래로
-                            listState.animateScrollToItem(messages.size - 1)
-                        }
+                        // 입력창 초기화
+                        userInput = ""
                     }
                 },
                 iconRes = R.drawable.send,
-                placeholder = "메시지를 입력하세요",
+                placeholder = "메시지를 입력하세요.",
                 modifier = Modifier.fillMaxWidth()
             )
         }

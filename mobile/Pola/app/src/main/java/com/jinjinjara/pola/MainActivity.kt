@@ -37,6 +37,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.jinjinjara.pola.domain.repository.AuthRepository
+import com.jinjinjara.pola.domain.repository.ChatRepository
 import com.jinjinjara.pola.domain.usecase.auth.AutoLoginUseCase
 import com.jinjinjara.pola.navigation.PolaNavHost
 import com.jinjinjara.pola.presentation.ui.theme.PolaTheme
@@ -58,6 +59,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var autoLoginUseCase: AutoLoginUseCase
 
+    @Inject
+    lateinit var chatRepository: ChatRepository
+
     private val shareUploadViewModel: ShareUploadViewModel by viewModels()
 
     // 공유하기로 들어왔는지 확인
@@ -75,6 +79,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d("MainActivity", "onCreate started")
+
+        // 앱 재시작 시 채팅 메시지 삭제
+        lifecycleScope.launch {
+            Log.d("MainActivity", "Clearing chat messages on app restart")
+            chatRepository.clearAllMessages()
+        }
 
         // 자동 로그인 시도 (백그라운드에서 토큰 검증 및 재발급)
         lifecycleScope.launch {
