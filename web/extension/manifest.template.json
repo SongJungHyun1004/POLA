@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Pola 캡처 확장 프로그램",
+  "name": "POLA 캡처 확장 프로그램",
   "version": "1.0.0",
-  "description": "화면 캡처와 Pola 연동",
+  "description": "화면 캡처와 POLA 연동",
   
   "permissions": [
     "contextMenus",

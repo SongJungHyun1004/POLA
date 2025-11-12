@@ -35,7 +35,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (!authStatus.isAuthenticated) {
     showNotification(
       '로그인 필요',
-      'Pola에 로그인한 후 사용해주세요.'
+      'POLA에 로그인한 후 사용해주세요.'
     );
     return;
   }
@@ -419,7 +419,7 @@ async function handleTextCapture(info, tab) {
     });
 
     try {
-            showNotification('저장 중...', '텍스트를 Pola에 저장하고 있습니다.');
+            showNotification('저장 중...', '텍스트를 POLA에 저장하고 있습니다.');
             
             // 텍스트를 Blob으로 변환
             const textBlob = new Blob([selectedText], { type: 'text/plain; charset=utf-8' });
@@ -517,7 +517,7 @@ async function handleTextCapture(info, tab) {
                 
             showNotification(
                 '✨ 저장 완료!',
-                `"${preview}" 가 Pola에 저장되었습니다.`
+                `"${preview}" 가 POLA에 저장되었습니다.`
             );
             
             console.log('🎉 전체 업로드 플로우 완료!');
@@ -583,7 +583,7 @@ async function handleAreaCapture(area, tab) {
       });
 
       try {
-        showNotification('업로드 중...', '이미지를 Pola에 업로드하고 있습니다.');
+        showNotification('업로드 중...', '이미지를 POLA에 업로드하고 있습니다.');
 
         // Base64를 Blob으로 변환
         const base64Data = response.croppedImage.split(',')[1];
@@ -686,7 +686,7 @@ async function handleAreaCapture(area, tab) {
         // 업로드 성공!
         showNotification(
           '✨ 업로드 완료!',
-          '이미지가 Pola에 성공적으로 저장되었습니다.'
+          '이미지가 POLA에 성공적으로 저장되었습니다.'
         );
 
         console.log('🎉 전체 업로드 플로우 완료!');
