@@ -22,28 +22,41 @@ public class RagProperties {
 
     @Valid
     private Similarity similarity = new Similarity();
+
     @Valid
     private Context context = new Context();
 
+    // ---------- similarity ----------
     @Getter @Setter
     public static class Similarity {
         @DecimalMin("0.0") @DecimalMax("1.0")
         private double min = 0.2;
+
         @DecimalMin("0.0") @DecimalMax("1.0")
         private double keepRatio = 0.6;
+
+        private List<Double> backoff;
+
         private Map<QueryType, TypePolicy> perType = new HashMap<>();
     }
-    @Getter @Setter public static class TypePolicy {
+
+    @Getter @Setter
+    public static class TypePolicy {
         private Double min;
         private Double keepRatio;
-        private List<Double> backoff; // 없으면 코드에서 기본값 사용
+        private List<Double> backoff;
     }
-    @Getter @Setter public static class Context {
+
+    // ---------- context ----------
+    @Getter @Setter
+    public static class Context {
         private int maxDocs = 6;
         private int maxChars = 3000;
         private Map<QueryType, CtxPolicy> perType = new HashMap<>();
     }
-    @Getter @Setter public static class CtxPolicy {
+
+    @Getter @Setter
+    public static class CtxPolicy {
         private Integer maxDocs;
         private Integer maxChars;
     }

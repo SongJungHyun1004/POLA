@@ -1,11 +1,9 @@
 package com.jinjinjara.pola.rag.service;
 
-import com.jinjinjara.pola.data.repository.FileTagRepository;
 import com.jinjinjara.pola.data.service.FileTagService;
 import com.jinjinjara.pola.rag.dto.common.QueryPreprocessResult;
 import com.jinjinjara.pola.rag.dto.common.RagSearchSource;
 import com.jinjinjara.pola.rag.dto.common.SearchRow;
-import com.jinjinjara.pola.rag.dto.common.TagRow;
 import com.jinjinjara.pola.rag.dto.response.RagSearchResponse;
 import com.jinjinjara.pola.rag.util.QueryPreprocessor;
 import com.jinjinjara.pola.rag.util.RagPostProcessor;
@@ -14,12 +12,12 @@ import com.jinjinjara.pola.s3.service.S3Service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.beans.factory.annotation.Value;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-
 
 @Service
 @RequiredArgsConstructor
@@ -67,37 +65,62 @@ public class RagSearchService {
                 })
                 .toList();
 
-        // 4) perType 정책 결정
+        // 4) perType 정책 결정 (perType → 전역)
         var sim = ragProperties.getSimilarity();
-        var tp  = sim.getPerType().get(type); // 없으면 전역으로
+        var tp  = sim.getPerType().get(type); // 없으면 전역 사용
         double minSim    = (tp != null && tp.getMin() != null) ? tp.getMin() : sim.getMin();
         double keepRatio = (tp != null && tp.getKeepRatio() != null) ? tp.getKeepRatio() : sim.getKeepRatio();
+
         List<Double> backoff = (tp != null && tp.getBackoff() != null && !tp.getBackoff().isEmpty())
                 ? tp.getBackoff()
-                : List.of(0.25, 0.10, 0.0); // 기본 단계
+                : (sim.getBackoff() != null ? sim.getBackoff() : Collections.emptyList());
 
         double top1  = sources.get(0).getRelevanceScore() == null ? 0.0 : sources.get(0).getRelevanceScore();
         double relCut = Math.max(minSim, top1 * keepRatio);
-        log.debug("[RagSearch] type={}, top1={}, min={}, keep={}, relCut={}", type, top1, minSim, keepRatio, relCut);
+        log.debug("[RagSearch] type={}, top1={}, min={}, keep={}, relCut={}, backoff={}",
+                type, top1, minSim, keepRatio, relCut, backoff);
 
-        // 5) 1차 컷
+        // 5) 1차 컷 (2위 이하에 적용되는 기본 기준)
         List<RagSearchSource> filtered = sources.stream()
                 .filter(s -> s.getRelevanceScore() != null && s.getRelevanceScore() >= relCut)
                 .toList();
 
-        // 6) 결과 0개면 backoff 단계적으로 완화
-        if (filtered.isEmpty()) {
-            // 6-1) 비율 완화: top1 * b
+        // 6) 결과가 limit보다 부족하면 backoff로 보강
+        if (filtered.size() < limit && !backoff.isEmpty()) {
             for (double b : backoff) {
-                double cut = Math.max(minSim, top1 * b);
-                filtered = sources.stream()
+                double cut = Math.min(minSim, top1 * b);
+                List<RagSearchSource> candidates = sources.stream()
                         .filter(s -> s.getRelevanceScore() != null && s.getRelevanceScore() >= cut)
                         .toList();
-                log.debug("[RagSearch] backoff(ratio)={} → cut={}, remained={}", b, cut, filtered.size());
-                if (!filtered.isEmpty()) break;
+
+                int need = Math.max(0, limit - filtered.size());
+                if (need == 0) break;
+
+
+                List<RagSearchSource> current = filtered;
+
+                // 새 후보 중 기존 filtered에 없는 것만 추가
+                List<RagSearchSource> newOnes = candidates.stream()
+                        .filter(c -> current.stream().noneMatch(f -> Objects.equals(f.getId(), c.getId())))
+                        .sorted((a, b2) -> Double.compare(
+                                b2.getRelevanceScore() == null ? 0.0 : b2.getRelevanceScore(),
+                                a.getRelevanceScore() == null ? 0.0 : a.getRelevanceScore()))
+                        .limit(need)
+                        .toList();
+
+                if (!newOnes.isEmpty()) {
+                    List<RagSearchSource> merged = new ArrayList<>(filtered);
+                    merged.addAll(newOnes);
+                    filtered = merged;
+                }
+
+                log.debug("[RagSearch] backoff(ratio)={} → cut={} → added={} / total={}",
+                        b, cut, newOnes.size(), filtered.size());
+
+                if (filtered.size() >= limit) break;
             }
 
-            // 6-2) 절대 바닥 완화: floor 로 직접 설정 (b가 minSim보다 작은 항목만 사용)
+            // 6-2) (옵션) 절대 바닥 완화: 여전히 비었을 때만
             if (filtered.isEmpty()) {
                 for (double floor : backoff) {
                     if (floor >= minSim) continue;

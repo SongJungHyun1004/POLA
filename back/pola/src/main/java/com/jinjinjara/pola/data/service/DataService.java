@@ -523,7 +523,7 @@ public class DataService {
         fileTagService.addTagsToFile(fileId, analyzeResponse.getTags());
         log.info("[PostProcess] Tags saved for fileId={}", fileId);
 
-        float[] embedding = embeddingService.embedOcrAndContext(file.getOcrText(), file.getContext());
+        float[] embedding = embeddingService.embedOcrAndContext(ocrText, analyzeResponse.getDescription());
         log.info("[PostProcess] Embedding generated: dimension={}",
                 embedding != null ? embedding.length : 0);
 
@@ -532,7 +532,7 @@ public class DataService {
                 .file(file)
                 .ocrText(ocrText)
                 .context(analyzeResponse.getDescription())
-                .embedding(embeddingService.embedOcrAndContext(ocrText, analyzeResponse.getDescription()))
+                .embedding(embedding)
                 .build();
 
         log.info("[PostProcess] FileEmbeddings entity created (pre-save)");
