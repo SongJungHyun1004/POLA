@@ -236,7 +236,7 @@ export default function PolaroidDetail({
 
             {isTextFile ? (
               <div
-                className="w-full h-full overflow-y-auto text-[11px] leading-tight text-[#4C3D25] whitespace-pre-line break-words scrollbar-none"
+                className="w-full h-full overflow-y-auto text-sm leading-tight text-[#4C3D25] whitespace-pre-line break-words scrollbar-none"
                 style={{
                   WebkitOverflowScrolling: "touch",
                   overscrollBehavior: "contain",
