@@ -87,13 +87,27 @@ public class RagSearchService {
 
         // 6) 결과 0개면 backoff 단계적으로 완화
         if (filtered.isEmpty()) {
+            // 6-1) 비율 완화: top1 * b
             for (double b : backoff) {
                 double cut = Math.max(minSim, top1 * b);
                 filtered = sources.stream()
                         .filter(s -> s.getRelevanceScore() != null && s.getRelevanceScore() >= cut)
                         .toList();
-                log.debug("[RagSearch] backoff={} → cut={}, remained={}", b, cut, filtered.size());
+                log.debug("[RagSearch] backoff(ratio)={} → cut={}, remained={}", b, cut, filtered.size());
                 if (!filtered.isEmpty()) break;
+            }
+
+            // 6-2) 절대 바닥 완화: floor 로 직접 설정 (b가 minSim보다 작은 항목만 사용)
+            if (filtered.isEmpty()) {
+                for (double floor : backoff) {
+                    if (floor >= minSim) continue;
+                    double cut = floor;
+                    filtered = sources.stream()
+                            .filter(s -> s.getRelevanceScore() != null && s.getRelevanceScore() >= cut)
+                            .toList();
+                    log.debug("[RagSearch] backoff(abs)={} → cut={}, remained={}", floor, cut, filtered.size());
+                    if (!filtered.isEmpty()) break;
+                }
             }
         }
 

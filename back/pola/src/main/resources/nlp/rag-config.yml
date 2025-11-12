@@ -1,7 +1,8 @@
 rag:
   similarity:
-    min: 0.2
+    min: 0.3
     keepRatio: 0.6
+    backoff: [0.25, 0.10, 0.0]
     perType:
       QA:
         min: 0.35
