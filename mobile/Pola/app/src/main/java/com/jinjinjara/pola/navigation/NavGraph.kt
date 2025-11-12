@@ -160,6 +160,9 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
     ) {
         composable(Screen.Home.route) {
             HomeScreen(
+                onNavigateToContents = { contentId ->
+                    navController.navigate(Screen.Contents.createRoute(contentId))
+                },
                 onNavigateToCategory = { categoryId ->
                     navController.navigate(Screen.Category.createRoute(categoryId))
                 },

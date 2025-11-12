@@ -67,6 +67,7 @@ data class Category(
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
+    onNavigateToContents: (Long) -> Unit = {},
     onNavigateToCategory: (Long) -> Unit = {},
     onNavigateToFavorite: () -> Unit = {},
     onNavigateToSearch: () -> Unit = {},
@@ -107,6 +108,7 @@ fun HomeScreen(
         is HomeUiState.Success -> {
             HomeContent(
                 homeData = state.data,
+                onNavigateToContents = onNavigateToContents,
                 onNavigateToCategory = onNavigateToCategory,
                 onNavigateToFavorite = onNavigateToFavorite,
                 onNavigateToSearch = onNavigateToSearch,
@@ -120,6 +122,7 @@ fun HomeScreen(
 @Composable
 private fun HomeContent(
     homeData: HomeScreenData,
+    onNavigateToContents: (Long) -> Unit = {},
     onNavigateToCategory: (Long) -> Unit,
     onNavigateToFavorite: () -> Unit,
     onNavigateToSearch: () -> Unit,
@@ -301,6 +304,12 @@ private fun HomeContent(
                                         .size(88.dp)
                                         .clip(RoundedCornerShape(5.dp))
                                         .align(Alignment.Center)
+                                        .clickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = null
+                                        ) {
+                                            onNavigateToContents(fileInfo.id)
+                                        }
                                 ) {
                                     when {
                                         it.type.startsWith("image") == true -> {
