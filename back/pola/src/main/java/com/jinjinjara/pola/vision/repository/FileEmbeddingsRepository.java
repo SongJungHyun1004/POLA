@@ -62,7 +62,7 @@ public interface FileEmbeddingsRepository extends JpaRepository<FileEmbeddings, 
 
     @Query(value = """
       SELECT
-        fe.id AS id,
+        f.id AS id,
         f.src AS src,
         fe.context AS context,
         1 - (fe.embedding <-> CAST(:vec AS vector(768))) AS relevance_score
@@ -77,21 +77,24 @@ public interface FileEmbeddingsRepository extends JpaRepository<FileEmbeddings, 
                                               @Param("limit") int limit);
 
     @Query(value = """
-    SELECT f.id AS id, f.src AS src, f.context AS context,
-           1 - (embedding <=> CAST(:vector AS vector)) AS relevanceScore
-    FROM file_embeddings f
-    WHERE f.user_id = :userId
-      AND f.created_at BETWEEN :startTs AND :endTs
-    ORDER BY f.embedding <=> CAST(:vector AS vector)
+    SELECT
+      f.id AS id,
+      f.src AS src,
+      fe.context AS context,
+      1 - (fe.embedding <-> CAST(:vec AS vector(768))) AS relevance_score
+    FROM file_embeddings fe
+    JOIN files f ON f.id = fe.file_id
+    WHERE fe.user_id = :userId
+      AND fe.created_at BETWEEN :startTs AND :endTs
+    ORDER BY fe.embedding <-> CAST(:vec AS vector(768))
     LIMIT :limit
     """, nativeQuery = true)
     List<SearchRow> findSimilarFilesWithScoreAndDate(
             @Param("userId") Long userId,
-            @Param("vector") String vector,
+            @Param("vec") String vectorLiteral,
             @Param("limit") int limit,
             @Param("startTs") LocalDateTime startTs,
             @Param("endTs") LocalDateTime endTs
     );
-
 }
 

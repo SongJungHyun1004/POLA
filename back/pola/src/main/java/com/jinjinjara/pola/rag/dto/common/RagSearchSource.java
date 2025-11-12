@@ -2,6 +2,8 @@ package com.jinjinjara.pola.rag.dto.common;
 
 import lombok.*;
 
+import java.util.List;
+
 @Getter
 @AllArgsConstructor
 @NoArgsConstructor
@@ -12,4 +14,5 @@ public class RagSearchSource {
     private java.net.URL src;
     private String context;
     private Double relevanceScore;
+    private List<String> tags;
 }

@@ -25,13 +25,6 @@ timeTokens:
 
 
 queryTypes:
-  extraction:
-    - 가격
-    - 얼마
-    - 쿠폰
-    - 코드
-    - 할인
-    - 세일
   comparison:
     - 비교
     - 많았
@@ -40,8 +33,6 @@ queryTypes:
     - 감소
     - 변화
     - 추세
-    - 지난달
-    - 저번달
   report:
     - 리포트
     - 보고서

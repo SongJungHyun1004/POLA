@@ -2,13 +2,19 @@ package com.jinjinjara.pola.rag.util;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jinjinjara.pola.rag.dto.common.QueryType;
 import com.jinjinjara.pola.rag.dto.common.RagSearchSource;
 import com.jinjinjara.pola.vision.service.VertexService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -16,30 +22,46 @@ import java.util.List;
 public class RagPostProcessor {
 
     private final VertexService vertexService;
+    private final QueryClassifier classifier;
+    private final PromptFactory promptFactory;
     private final ObjectMapper om = new ObjectMapper();
 
-    public String generateAnswer(String query, List<RagSearchSource> sources) {
+    // 컨텍스트 제한 (LLM 입력 보호)
+    private static final int MAX_CONTEXT_DOCS  = 6;
+    private static final int MAX_CONTEXT_CHARS = 3000;
+
+
+    public String generateAnswer(String userQuery, List<RagSearchSource> sources) {
         try {
-            String joinedContexts = sources.stream()
-                    .map(RagSearchSource::getContext)
-                    .filter(c -> c != null && !c.isBlank())
-                    .limit(6)
-                    .reduce((a, b) -> a + "\n---\n" + b)
-                    .orElse("(검색 결과 없음)");
+            if (sources == null || sources.isEmpty()) {
+                return "검색 결과가 없습니다.";
+            }
 
-            String prompt = """
-            너는 한국어 콘텐츠 분석기야.
-            사용자의 질문과 관련된 문맥을 요약하거나 답변을 만들어.
-            질문 유형에 맞게 자연스럽게 한두 문장으로 응답해.
+            // 1) 질의 유형 분류
+            QueryType type = classifier.classify(userQuery);
 
-            [사용자 질문]
-            %s
+            // 2) 상위 스코어 우선 정렬 + 상위 N개만 사용
+            List<RagSearchSource> top = sources.stream()
+                    .sorted(Comparator.comparing(
+                            RagSearchSource::getRelevanceScore,
+                            Comparator.nullsLast(Comparator.reverseOrder())
+                    ))
+                    .limit(MAX_CONTEXT_DOCS)
+                    .collect(Collectors.toList());
 
-            [검색 결과]
-            %s
-            """.formatted(query, joinedContexts);
+            // 3) 컨텍스트 조인 (길이 3,000자 컷)
+            String contexts = buildContexts(top);
 
-            String res = vertexService.generateTagsFromText(prompt); // Vertex LLM 호출
+            // 5) 유형별 프롬프트 생성 → LLM 호출
+            String prompt = promptFactory.make(type, userQuery, top);
+
+            // (선택) 프롬프트/컨텍스트 길이 로깅
+            if (log.isDebugEnabled()) {
+                log.debug("[RAG:Post] type={} ctxLen={} promptLen={}",
+                        type, contexts.length(), prompt.length());
+            }
+
+            String res = vertexService.generateText(prompt,0.2, 512);
             JsonNode node = om.readTree(res);
 
             if (node.has("candidates")) {
@@ -53,4 +75,20 @@ public class RagPostProcessor {
             return "결과를 생성하는 중 오류가 발생했습니다.";
         }
     }
+
+    /** 상위 스코어 우선, null/공백 제거, 길이 컷 후 조인 */
+    private String buildContexts(List<RagSearchSource> sources) {
+        String joined = sources.stream()
+                .map(RagSearchSource::getContext)
+                .filter(Objects::nonNull)
+                .map(String::strip)
+                .filter(s -> !s.isBlank())
+                .collect(Collectors.joining("\n---\n"));
+
+        if (joined.length() > MAX_CONTEXT_CHARS) {
+            joined = joined.substring(0, MAX_CONTEXT_CHARS) + " …";
+        }
+        return joined.isEmpty() ? "(검색 결과 없음)" : joined;
+    }
+
 }

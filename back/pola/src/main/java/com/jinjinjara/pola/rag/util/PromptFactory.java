@@ -18,18 +18,6 @@ public class PromptFactory {
                 .collect(Collectors.joining("\n---\n"));
 
         return switch (type) {
-            case EXTRACTION -> """
-                너는 한국어 정보 추출기야.
-                사용자 질문에 해당하는 **숫자/코드**만 간결히 출력해.
-                다른 말은 금지하고, 모르겠으면 '찾을 수 없음'만.
-
-                [질문]
-                %s
-
-                [문맥]
-                %s
-                """.formatted(userQuery, contexts);
-
             case QA -> """
                 너는 한국어 요약형 QA 어시스턴트야.
                 문맥을 근거로 한두 문장으로 답해. 과장/추측 금지.

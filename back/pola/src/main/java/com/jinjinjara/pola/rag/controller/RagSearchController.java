@@ -24,7 +24,7 @@ public class RagSearchController {
             @AuthenticationPrincipal(expression = "id") Long userId,
             @RequestBody RagSearchRequest req
     ) {
-        RagSearchResponse data = ragSearchService.search(userId, req.query(), 1);
+        RagSearchResponse data = ragSearchService.search(userId, req.query(), 4);
         return ApiResponse.ok(data, "RAG 검색에 성공했습니다.");
     }
 }

@@ -4,10 +4,12 @@ import com.jinjinjara.pola.data.entity.FileTag;
 import com.jinjinjara.pola.data.entity.File;
 import com.jinjinjara.pola.data.entity.Tag;
 import com.jinjinjara.pola.data.dto.response.TagWithLatestFileDto;
+import com.jinjinjara.pola.rag.dto.common.TagRow;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
