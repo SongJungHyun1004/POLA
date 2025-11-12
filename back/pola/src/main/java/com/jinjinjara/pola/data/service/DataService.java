@@ -101,6 +101,7 @@ public class DataService {
                         .src(previewUrls.get(file.getId())) // presigned URL 반환
                         .type(file.getType())
                         .context(file.getContext())
+                        .ocr(file.getOcrText())
                         .favorite(file.getFavorite())
                         .tags(tagMap.getOrDefault(file.getId(), List.of())) // 파일별 태그 리스트
                         .build())
