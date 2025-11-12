@@ -46,6 +46,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun RemindScreen(
     modifier: Modifier = Modifier,
+    onNavigateToContents: (Long) -> Unit = {},
     viewModel: RemindViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -70,6 +71,7 @@ fun RemindScreen(
             }
             return
         }
+
         is RemindUiState.Error -> {
             Log.e(TAG, "UI State: Error - ${state.message}")
             Box(
@@ -86,6 +88,7 @@ fun RemindScreen(
             }
             return
         }
+
         is RemindUiState.Success -> {
             val imageList = state.data
             Log.d(TAG, "UI State: Success - 이미지 개수: ${imageList.size}")
@@ -148,6 +151,7 @@ fun RemindScreen(
             RemindScreenContent(
                 modifier = modifier,
                 imageList = imageList,
+                onNavigateToContents = onNavigateToContents,
                 viewModel = viewModel
             )
         }
@@ -161,6 +165,7 @@ private const val TAG = "RemindScreen"
 private fun RemindScreenContent(
     modifier: Modifier = Modifier,
     imageList: List<com.jinjinjara.pola.domain.model.RemindData>,
+    onNavigateToContents: (Long) -> Unit = {},
     viewModel: RemindViewModel
 ) {
     Log.d(TAG, "RemindScreenContent 시작 - 이미지 개수: ${imageList.size}")
@@ -437,6 +442,7 @@ private fun RemindScreenContent(
                                 )
                         } else {
                             RemindPolaCard(
+                                onNavigateToContents = { onNavigateToContents(imageList[frontIndex].id) },
                                 imageUrl = imageList[frontIndex].imageUrl,
                                 tags = imageList[frontIndex].tags,
                                 translationX = frontOffsetX.value,
@@ -454,7 +460,9 @@ private fun RemindScreenContent(
                     Box(
                         modifier = Modifier
                             .padding(bottom = 24.dp)
-                            .onGloballyPositioned { coords -> viewportWidthPx = coords.size.width.toFloat() }
+                            .onGloballyPositioned { coords ->
+                                viewportWidthPx = coords.size.width.toFloat()
+                            }
                     ) {
                         Row(
                             modifier = Modifier.horizontalScroll(scrollState),
@@ -562,6 +570,7 @@ private fun RemindScreenContent(
 // PolaCard Wrapper
 @Composable
 private fun RemindPolaCard(
+    onNavigateToContents: () -> Unit = {},
     imageUrl: String,
     tags: List<String>,
     translationX: Float,
@@ -588,7 +597,7 @@ private fun RemindPolaCard(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() }
             ) {
-                Toast.makeText(context, "상세화면 이동", Toast.LENGTH_SHORT).show()
+                onNavigateToContents()
             },
         ratio = 0.7523f,
         imageRatio = 0.8352f,

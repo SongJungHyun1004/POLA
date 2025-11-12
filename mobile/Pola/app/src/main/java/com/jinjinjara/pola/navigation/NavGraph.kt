@@ -397,8 +397,12 @@ fun NavGraphBuilder.uploadScreen(navController: NavHostController) {
 /**
  * Remind 화면 (단일 화면)
  */
-fun NavGraphBuilder.remindScreen() {
+fun NavGraphBuilder.remindScreen(navController: NavHostController) {
     composable(Screen.Remind.route) {
-        RemindScreen()
+        RemindScreen(
+            onNavigateToContents = { contentId ->
+                navController.navigate(Screen.Contents.createRoute(contentId))
+            },
+        )
     }
 }
