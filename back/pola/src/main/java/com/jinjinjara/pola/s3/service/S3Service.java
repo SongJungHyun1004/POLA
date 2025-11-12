@@ -77,9 +77,7 @@ public class S3Service {
         return generateDownloadUrl(file.getSrc());
     }
 
-    import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
-import software.amazon.awssdk.services.s3.model.S3Exception;
-import software.amazon.awssdk.services.s3.S3Client;
+
 
     public URL generatePreviewUrl(String key, String contentType) {
         boolean isImage = contentType != null && (
