@@ -139,7 +139,7 @@ private fun HomeContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 16.dp),
-                color = MaterialTheme.colorScheme.surface,
+                color = MaterialTheme.colorScheme.background,
             ) {
                 Row(
                     modifier = Modifier
@@ -216,7 +216,7 @@ private fun HomeContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 16.dp),
-            color = MaterialTheme.colorScheme.surface,
+            color = MaterialTheme.colorScheme.background,
         ) {
             Row(
                 modifier = Modifier

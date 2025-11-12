@@ -129,7 +129,7 @@ fun ContentsScreen(
                     ) {
                         Text(
                             text = state.message,
-                            color = MaterialTheme.colorScheme.error
+                            color = MaterialTheme.colorScheme.tertiary
                         )
                         Button(onClick = { viewModel.loadFileDetail(fileId) }) {
                             Text("다시 시도")
@@ -197,7 +197,7 @@ fun ContentsScreen(
                     AlertDialog(
                         containerColor = MaterialTheme.colorScheme.background,
                         onDismissRequest = { },
-                        title = { Text("공유 링크 생성 중...") },
+                        title = { Text("공유 링크 생성 중...", color = MaterialTheme.colorScheme.tertiary) },
                         text = {
                             Box(
                                 modifier = Modifier.fillMaxWidth(),
@@ -276,7 +276,7 @@ fun ContentsScreen(
                                             style = MaterialTheme.typography.bodySmall,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            color = MaterialTheme.colorScheme.tertiary,
                                             modifier = Modifier.weight(1f)
                                         )
                                         IconButton(
@@ -532,7 +532,7 @@ private fun ContentsScreenContent(
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface
+                        containerColor = MaterialTheme.colorScheme.background
                     ),
                     windowInsets = WindowInsets(0.dp)
                 )
