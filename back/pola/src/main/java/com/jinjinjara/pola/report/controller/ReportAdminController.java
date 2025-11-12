@@ -133,19 +133,19 @@ public class ReportAdminController {
     public ApiResponse<Void> deleteCurrentWeekReport(
             @Parameter(hidden = true) @AuthenticationPrincipal Users user) {
 
-        log.info("🗑️ [관리자 API] 이번주 리포트 삭제 요청: 사용자 ID {}", user.getId());
+        log.info("[관리자 API] 이번주 리포트 삭제 요청: 사용자 ID {}", user.getId());
 
         try {
             reportService.deleteCurrentWeekReport(user);
             String message = "이번주 리포트가 삭제되었습니다.";
-            log.info("✅ [관리자 API] {}", message);
+            log.info("[관리자 API] {}", message);
             return ApiResponse.ok(null, message);
 
         } catch (CustomException e) {
-            log.error("⚠️ [관리자 API] 리포트 삭제 실패: {}", e.getMessage());
+            log.error("[관리자 API] 리포트 삭제 실패: {}", e.getMessage());
             throw e;
         } catch (Exception e) {
-            log.error("❌ [관리자 API] 리포트 삭제 중 오류 발생: {}", e.getMessage(), e);
+            log.error("[관리자 API] 리포트 삭제 중 오류 발생: {}", e.getMessage(), e);
             throw new CustomException(ErrorCode.DATA_DELETE_FAIL, e.getMessage());
         }
     }
@@ -208,20 +208,20 @@ public class ReportAdminController {
             @Valid @RequestBody GenerateWithTypeRequest request,
             @Parameter(hidden = true) @AuthenticationPrincipal Users user) {
 
-        log.info("🎯 [관리자 API] 특정 타입으로 리포트 생성 요청: 사용자 ID {}, 타입: {}",
+        log.info("[관리자 API] 특정 타입으로 리포트 생성 요청: 사용자 ID {}, 타입: {}",
                 user.getId(), request.getReportType());
 
         try {
             reportService.generateReportWithType(user, request.getReportType());
             String message = String.format("%s 타입으로 리포트가 생성되었습니다.", request.getReportType());
-            log.info("✅ [관리자 API] {}", message);
+            log.info("[관리자 API] {}", message);
             return ApiResponse.ok(null, message);
 
         } catch (CustomException e) {
-            log.error("⚠️ [관리자 API] 리포트 생성 실패: {}", e.getMessage());
+            log.error("[관리자 API] 리포트 생성 실패: {}", e.getMessage());
             throw e;
         } catch (Exception e) {
-            log.error("❌ [관리자 API] 리포트 생성 중 오류 발생: {}", e.getMessage(), e);
+            log.error(" [관리자 API] 리포트 생성 중 오류 발생: {}", e.getMessage(), e);
             throw new CustomException(ErrorCode.REPORT_GENERATION_FAIL, e.getMessage());
         }
     }
