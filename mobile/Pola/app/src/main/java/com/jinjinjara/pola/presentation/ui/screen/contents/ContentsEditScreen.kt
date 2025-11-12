@@ -1,6 +1,7 @@
 package com.jinjinjara.pola.presentation.ui.screen.contents
 
 import android.os.Build
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -39,6 +41,7 @@ fun ContentsEditScreen(
 
     // ViewModel에서 상태 가져오기
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
 
     // 초기 데이터 로드
     LaunchedEffect(contentId) {
@@ -47,11 +50,16 @@ fun ContentsEditScreen(
         }
     }
 
-    // 저장 성공 시 처리
+    // 저장 성공 시 처리 (토스트 + 뒤로가기)
     LaunchedEffect(uiState.saveSuccess) {
         if (uiState.saveSuccess) {
-            onSaveClick()
+            Toast.makeText(
+                context,
+                "수정이 완료되었습니다",
+                Toast.LENGTH_SHORT
+            ).show()
             viewModel.resetSaveSuccess()
+            onSaveClick()
         }
     }
 

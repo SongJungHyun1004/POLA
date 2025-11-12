@@ -184,7 +184,6 @@ class ContentsEditViewModel @Inject constructor(
                     )
                 }
                 Log.d("ContentsEdit", "All changes saved successfully")
-                onSuccess()
             }
         }
     }
