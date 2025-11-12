@@ -1,6 +1,8 @@
 package com.jinjinjara.pola.navigation
 
 import android.content.Context
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -154,6 +156,7 @@ fun NavGraphBuilder.mainNavGraph(navController: NavHostController) {
 /**
  * Home 탭 네비게이션 그래프
  */
+@RequiresApi(Build.VERSION_CODES.O)
 fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
     navigation(
         startDestination = Screen.Home.route,
@@ -302,10 +305,9 @@ fun NavGraphBuilder.timelineTabGraph(navController: NavHostController) {
     ) {
         composable(Screen.Timeline.route) {
             TimelineScreen(
-                // 필요한 네비게이션 콜백 추가
-                // onNavigateToDetail = { postId ->
-                //     navController.navigate(Screen.TimelineDetail.createRoute(postId))
-                // }
+                onNavigateToContents = { contentId ->
+                    navController.navigate(Screen.Contents.createRoute(contentId))
+                },
             )
         }
 
