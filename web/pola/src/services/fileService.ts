@@ -134,3 +134,23 @@ export async function removeFileFavorite(fileId: number) {
   }
   return true;
 }
+
+export const fileService = {
+  /** 파일 삭제 */
+  deleteFile: async (fileId: number): Promise<void> => {
+    const res = await apiClient(`/files/${fileId}`, {
+      method: "DELETE",
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      const message = errorData?.message || "파일 삭제 중 오류가 발생했습니다.";
+      throw new Error(message);
+    }
+
+    const data = await res.json();
+    if (data.status !== "SUCCESS") {
+      throw new Error(data.message || "파일 삭제 실패");
+    }
+  },
+};
