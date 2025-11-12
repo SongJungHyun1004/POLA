@@ -2,6 +2,7 @@ package com.jinjinjara.pola.presentation.ui.screen.upload
 
 import android.Manifest
 import android.content.Context
+import android.net.Uri
 import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -25,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,9 +38,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import java.io.File
 
 @Composable
 fun UploadScreen(
@@ -78,6 +82,29 @@ fun UploadScreen(
             .show()
     }
 
+    val imageUri = remember { mutableStateOf<Uri?>(null) }
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success && imageUri.value != null) {
+            viewModel.selectCameraImage(imageUri.value!!)
+            Toast.makeText(context, "사진을 촬영했습니다.", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(context, "사진 촬영이 취소되었습니다.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun launchCamera() {
+        val photoFile = File.createTempFile("photo_", ".jpg", context.cacheDir)
+        val uri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            photoFile
+        )
+        imageUri.value = uri
+        cameraLauncher.launch(uri)
+    }
+
     // 업로드 상태 처리
     LaunchedEffect(uiState.uploadState) {
         when (val state = uiState.uploadState) {
@@ -91,6 +118,7 @@ fun UploadScreen(
                 viewModel.clearSelection()
                 onUploadSuccess()
             }
+
             is UploadScreenState.Error -> {
                 Toast.makeText(
                     context,
@@ -99,6 +127,7 @@ fun UploadScreen(
                 ).show()
                 viewModel.resetUploadState()
             }
+
             else -> {}
         }
     }
@@ -200,7 +229,7 @@ fun UploadScreen(
             ) {
                 // 카메라 아이콘 셀 (첫 번째)
                 item {
-                    CameraCell(onClick = onCameraClick)
+                    CameraCell(onClick = { launchCamera() })
                 }
 
                 // 갤러리 이미지들
