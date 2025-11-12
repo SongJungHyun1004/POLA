@@ -1,6 +1,10 @@
 package com.jinjinjara.pola.presentation.ui.screen.contents
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.os.Build
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -23,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -32,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.jinjinjara.pola.R
 import com.jinjinjara.pola.domain.model.FileDetail
@@ -55,6 +61,7 @@ fun ContentsScreen(
     onShareClick: () -> Unit = {},
     onEditClick: () -> Unit = {},
     onDeleteClick: () -> Unit = {},
+    navController: NavHostController,
     viewModel: ContentsViewModel = hiltViewModel()
 ) {
 
@@ -63,9 +70,41 @@ fun ContentsScreen(
     var showMenu by remember { mutableStateOf(false) }
     var isExpanded by remember { mutableStateOf(false) }
     var showFullImage by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    val deleteState by viewModel.deleteState.collectAsState()
+    var showShareDialog by remember { mutableStateOf(false) }
+    val shareState by viewModel.shareState.collectAsState()
+    val context = LocalContext.current
 
     LaunchedEffect(fileId) {
         viewModel.loadFileDetail(fileId)
+    }
+
+    LaunchedEffect(shareState) {
+        if (shareState is ContentsViewModel.ShareState.Success) {
+            val shareLink = (shareState as ContentsViewModel.ShareState.Success).shareLink
+
+            // 클립보드에 복사
+//            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+//            val clip = ClipData.newPlainText("공유 링크", shareLink.shareUrl)
+//            clipboard.setPrimaryClip(clip)
+//
+//            Toast.makeText(context, "공유 링크가 클립보드에 복사되었습니다", Toast.LENGTH_SHORT).show()
+//
+//            showShareDialog = false
+//            viewModel.resetShareState()
+        }
+    }
+
+    LaunchedEffect(deleteState) {
+        if (deleteState is DeleteState.Success) {
+            navController.previousBackStackEntry
+                ?.savedStateHandle
+                ?.set("refreshNeeded", true)
+
+            onBackClick()
+            viewModel.resetDeleteState()
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -107,15 +146,177 @@ fun ContentsScreen(
                     isExpanded = isExpanded,
                     showFullImage = showFullImage,
                     onBackClick = onBackClick,
-                    onShareClick = onShareClick,
+                    onShareClick = { showShareDialog = true },
                     onEditClick = onEditClick,
-                    onDeleteClick = onDeleteClick,
+                    onDeleteClick = { showDeleteDialog = true },
                     onMenuToggle = { showMenu = !showMenu },
                     onMenuDismiss = { showMenu = false },
                     onExpandToggle = { isExpanded = !isExpanded },
                     onBookmarkToggle = { viewModel.toggleBookmark() },
                     onImageClick = { showFullImage = !showFullImage }
                 )
+            }
+        }
+
+        if (showDeleteDialog) {
+            AlertDialog(
+                containerColor = MaterialTheme.colorScheme.background,
+                onDismissRequest = { showDeleteDialog = false },
+                title = { Text("컨텐츠 삭제") },
+                text = { Text("이 컨텐츠를 삭제하시겠습니까?") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showDeleteDialog = false
+                            viewModel.deleteFile()
+                        }
+                    ) {
+                        Text("확인")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { showDeleteDialog = false }
+                    ) {
+                        Text("취소")
+                    }
+                }
+            )
+        }
+
+        if (showShareDialog) {
+            LaunchedEffect(key1 = showShareDialog) {
+                if (shareState !is ContentsViewModel.ShareState.Success &&
+                    shareState !is ContentsViewModel.ShareState.Loading
+                ) {
+                    viewModel.createShareLink()
+                }
+            }
+            when (val state = shareState) {
+                is ContentsViewModel.ShareState.Loading -> {
+                    AlertDialog(
+                        containerColor = MaterialTheme.colorScheme.background,
+                        onDismissRequest = { },
+                        title = { Text("공유 링크 생성 중...") },
+                        text = {
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
+                        },
+                        confirmButton = { }
+                    )
+                }
+                is ContentsViewModel.ShareState.Error -> {
+                    AlertDialog(
+                        containerColor = MaterialTheme.colorScheme.background,
+                        onDismissRequest = {
+                            showShareDialog = false
+                            viewModel.resetShareState()
+                        },
+                        title = { Text("공유 실패") },
+                        text = { Text(state.message) },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    showShareDialog = false
+                                    viewModel.resetShareState()
+                                }
+                            ) {
+                                Text("확인")
+                            }
+                        }
+                    )
+                }
+                is ContentsViewModel.ShareState.Success -> {
+                    AlertDialog(
+                        containerColor = MaterialTheme.colorScheme.background,
+                        shape = RoundedCornerShape(16.dp),
+                        onDismissRequest = { showShareDialog = false },
+                        title = {
+                            Text(
+                                text = "공유 링크",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.tertiary
+                                )
+                            )
+                        },
+                        text = {
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                Text(
+                                    text = "아래 링크를 복사해 다른 사람과 공유할 수 있습니다.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Color.Black
+                                )
+
+                                // 링크 박스
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .border(
+                                            width = 1.dp,
+                                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                                            shape = RoundedCornerShape(10.dp)
+                                        )
+                                        .background(Color.White, RoundedCornerShape(10.dp))
+                                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(
+                                            text = state.shareLink.shareUrl,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        IconButton(
+                                            onClick = {
+                                                val clipboard =
+                                                    context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                                val clip = ClipData.newPlainText("공유 링크", state.shareLink.shareUrl)
+                                                clipboard.setPrimaryClip(clip)
+                                                Toast.makeText(context, "링크가 복사되었습니다", Toast.LENGTH_SHORT).show()
+                                            }
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.ContentCopy,
+                                                contentDescription = "복사",
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    showShareDialog = false
+                                    viewModel.resetShareState()
+                                }
+                            ) {
+                                Text(
+                                    text = "닫기",
+                                    style = MaterialTheme.typography.labelLarge.copy(
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                )
+                            }
+                        }
+                    )
+
+                }
+                else -> {}
             }
         }
     }

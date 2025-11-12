@@ -31,15 +31,19 @@ class CategoryViewModel @Inject constructor(
 
     data class UiState(
         val isLoading: Boolean = false,
+        val categoryId: Long = -1L,
         val categoryName: String = "",
         val files: List<FileItem> = emptyList(),
         val userCategories: List<UserCategory> = emptyList(),
         val errorMessage: String? = null,
         val currentPage: Int = 0,
-        val hasMorePages: Boolean = true
+        val hasMorePages: Boolean = true,
+        val sortBy: String = "createdAt",
+        val direction: String = "DESC"
     )
 
     init {
+        _uiState.update { it.copy(categoryId = savedStateHandle.get<Long>("categoryId") ?: -1L) }
         loadUserCategories()
         loadCategoryFiles()
     }
@@ -75,11 +79,16 @@ class CategoryViewModel @Inject constructor(
         }
     }
 
-    fun loadCategoryFiles(page: Int = 0, targetCategoryId: Long = categoryId) {
+    fun loadCategoryFiles(
+        page: Int = 0,
+        targetCategoryId: Long = _uiState.value.categoryId,
+        sortBy: String = _uiState.value.sortBy,
+        direction: String = _uiState.value.direction
+    ) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
-            when (val result = getFilesByCategoryUseCase(targetCategoryId, page)) {
+            when (val result = getFilesByCategoryUseCase(targetCategoryId, page, 20, sortBy, direction)) {
                 is Result.Success -> {
                     _uiState.update {
                         it.copy(
@@ -108,6 +117,18 @@ class CategoryViewModel @Inject constructor(
             }
         }
     }
+
+    fun updateSort(sortBy: String, direction: String) {
+        _uiState.update { it.copy(sortBy = sortBy, direction = direction) }
+        loadCategoryFiles(0, sortBy = sortBy, direction = direction)
+    }
+
+    fun selectCategory(newCategoryId: Long) {
+        _uiState.update { it.copy(categoryId = newCategoryId) }
+        loadCategoryFiles(0, targetCategoryId = newCategoryId)
+    }
+
+
 
     fun loadMoreFiles() {
         if (!_uiState.value.isLoading && _uiState.value.hasMorePages) {
