@@ -1,0 +1,30 @@
+rag:
+  similarity:
+    min: 0.2
+    keepRatio: 0.6
+    perType:
+      QA:
+        min: 0.35
+        keepRatio: 0.7
+        backoff: [0.35, 0.25, 0.1, 0.0]
+      COMPARISON:
+        min: 0.3
+        keepRatio: 0.65
+        backoff: [0.3, 0.2, 0.1, 0.0]
+      COMPOSITE:
+        min: 0.15
+        keepRatio: 0.6
+        backoff: [0.15, 0.1, 0.0]
+      REPORT:
+        min: 0.0
+        keepRatio: 0.5
+        backoff: [0.0]
+
+  context:
+    maxDocs: 6
+    maxChars: 3000
+    perType:
+      QA: { maxDocs: 6,  maxChars: 2500 }
+      COMPARISON: { maxDocs: 6,  maxChars: 2500 }
+      COMPOSITE: { maxDocs: 8,  maxChars: 4000 }
+      REPORT: { maxDocs: 10, maxChars: 5000 }

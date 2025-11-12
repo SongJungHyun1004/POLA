@@ -287,7 +287,7 @@ public class DataService {
                 .categoryId(uncategorized.getId())
                 .src(request.getKey())                     // S3 key
                 .type(request.getType())                   // MIME type
-                .context("Llava")
+                .context("AI가 파일을 해석 중입니다.")
                 .fileSize((long) request.getFileSize())
                 .originUrl(request.getOriginUrl())
                 .platform(request.getPlatform())

@@ -51,7 +51,7 @@ public class QueryPreprocessor {
 
     public QueryPreprocessResult preprocess(String rawQuery) {
         if (rawQuery == null || rawQuery.isBlank()) {
-            return new QueryPreprocessResult("", null, null);
+            return new QueryPreprocessResult("", null, null, null);
         }
 
         String q = rawQuery.strip();
@@ -84,6 +84,6 @@ public class QueryPreprocessor {
         q = q.replaceAll("\\s+", " ").trim();
 
         log.info("[Preprocessor] '{}' → '{}' (range: {} ~ {})", rawQuery, q, start, end);
-        return new QueryPreprocessResult(q, start, end);
+        return new QueryPreprocessResult(q, start, end, null);
     }
 }
