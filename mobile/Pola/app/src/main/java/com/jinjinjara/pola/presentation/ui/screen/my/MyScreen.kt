@@ -3,27 +3,41 @@ package com.jinjinjara.pola.presentation.ui.screen.my
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.jinjinjara.pola.R
 import com.jinjinjara.pola.util.parcelable
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyScreen(
     modifier: Modifier = Modifier,
@@ -36,147 +50,156 @@ fun MyScreen(
     val userInfoState by viewModel.userInfoState.collectAsState()
     var showLogoutDialog by remember { mutableStateOf(false) }
 
-    // 공유받은 데이터 상태 추가
-    var sharedText by remember { mutableStateOf<String?>(null) }
-    var sharedImageUri by remember { mutableStateOf<Uri?>(null) }
-    var showSharedContent by remember { mutableStateOf(true) }
 
-    // Intent에서 공유 데이터 읽기
-    LaunchedEffect(Unit) {
-        activity?.intent?.let { intent ->
-            if (intent.action == Intent.ACTION_SEND) {
-                when {
-                    intent.type?.startsWith("text/") == true -> {
-                        sharedText = intent.getStringExtra(Intent.EXTRA_TEXT)
-                    }
-                    intent.type?.startsWith("image/") == true -> {
-                        sharedImageUri = intent.parcelable(Intent.EXTRA_STREAM)
-                    }
-                }
-            }
-        }
-    }
-
-    Box(
+    Scaffold(
         modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
+        contentWindowInsets = WindowInsets(0.dp),
+        topBar = {
+            TopAppBar(
+                title = {
+                    Box(Modifier.fillMaxHeight(), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "Mypage",
+                            color = MaterialTheme.colorScheme.tertiary,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                    }
+                },
+                windowInsets = WindowInsets(0.dp),
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                )
+            )
+        }
+    ) { paddingValues ->
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(24.dp),
             modifier = Modifier
-                .padding(24.dp)
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 24.dp, vertical = 16.dp)
                 .verticalScroll(rememberScrollState()) // 스크롤 추가
         ) {
-            Text(
-                text = "마이 화면",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-
-            // 공유받은 내용 표시
-            if (showSharedContent && (sharedText != null || sharedImageUri != null)) {
-                SharedContentCard(
-                    sharedText = sharedText,
-                    sharedImageUri = sharedImageUri,
-                    onClose = { showSharedContent = false }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 사용자 정보 표시
-            when (val state = userInfoState) {
-                is UserInfoUiState.Loading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(40.dp),
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = "사용자 정보 로딩 중...",
-                        fontSize = 14.sp,
-                        color = Color.Gray
-                    )
-                }
-                is UserInfoUiState.Success -> {
-                    Column(
-                        horizontalAlignment = Alignment.Start,
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+            // 첫 번째 카드 - 사용자 정보
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White
+                ),
+                elevation = CardDefaults.cardElevation(2.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // username 행
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 24.dp)
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
+                        // 프로필 이미지
+                        when (val state = userInfoState) {
+                            is UserInfoUiState.Success -> {
+                                AsyncImage(
+                                    model = state.user.profileImageUrl,
+                                    contentDescription = "프로필 이미지",
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(RoundedCornerShape(20.dp)),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+                            else -> {
+                                // 로딩 중이거나 에러일 때 기본 아이콘
+                                Icon(
+                                    imageVector = Icons.Default.Person,
+                                    contentDescription = "사용자",
+                                    modifier = Modifier.size(40.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = "사용자 정보",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "ID: ${state.user.id}",
+                            text = when (val state = userInfoState) {
+                                is UserInfoUiState.Success -> state.user.displayName
+                                else -> "username"
+                            },
+                            color = MaterialTheme.colorScheme.tertiary,
                             fontSize = 16.sp,
-                            color = Color.Black
-                        )
-                        Text(
-                            text = "이메일: ${state.user.email}",
-                            fontSize = 16.sp,
-                            color = Color.Black
-                        )
-                        Text(
-                            text = "이름: ${state.user.displayName}",
-                            fontSize = 16.sp,
-                            color = Color.Black
-                        )
-                        Text(
-                            text = "생성일: ${state.user.createdAt}",
-                            fontSize = 16.sp,
-                            color = Color.Black
+                            fontWeight = FontWeight.Medium
                         )
                     }
-                }
-                is UserInfoUiState.Error -> {
-                    Text(
-                        text = "오류: ${state.message}",
-                        fontSize = 14.sp,
-                        color = Color.Red
+
+                    // 내 타입
+                    MenuItemRow(
+                        icon = Icons.Default.Bookmark,
+                        title = "내 타입",
+                        subtitle = "태그 한 우물",
+                        onClick = { /* 내 타입 화면으로 이동 */ }
+                    )
+
+                    // 즐거찾기
+                    MenuItemRow(
+                        icon = Icons.Default.Star,
+                        title = "즐거찾기",
+                        onClick = { /* 즐거찾기 화면으로 이동 */ }
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // 로그아웃 버튼
-            Button(
-                onClick = { showLogoutDialog = true },
-                enabled = uiState !is MyUiState.LogoutLoading,
-                modifier = Modifier
-                    .padding(horizontal = 48.dp)
-                    .fillMaxWidth()
-                    .height(48.dp),
-                shape = RoundedCornerShape(24.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error
-                )
+            // 두 번째 카드 - 기타
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White
+                ),
+                elevation = CardDefaults.cardElevation(2.dp)
             ) {
-                if (uiState is MyUiState.LogoutLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = Color.White,
-                        strokeWidth = 2.dp
-                    )
-                } else {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                     Text(
-                        text = "로그아웃",
-                        fontSize = 16.sp,
+                        text = "기타",
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = Color.Gray,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+
+                    // 카테고리/태그 수정
+                    MenuItemRow(
+                        icon = Icons.Default.Edit,
+                        title = "카테고리/태그 수정",
+                        onClick = { /* 카테고리 수정 화면으로 이동 */ }
+                    )
+
+                    // 이용약관
+                    MenuItemRow(
+                        icon = Icons.Default.Description,
+                        title = "이용약관",
+                        onClick = { /* 이용약관 화면으로 이동 */ }
+                    )
+
+                    // 로그아웃
+                    MenuItemRow(
+                        icon = Icons.Default.Logout,
+                        title = "로그아웃",
+                        onClick = { showLogoutDialog = true }
                     )
                 }
             }
         }
     }
+
+
+
+
 
     // 로그아웃 확인 다이얼로그
     if (showLogoutDialog) {
@@ -232,75 +255,61 @@ fun MyScreen(
     }
 }
 
-// 공유 컨텐츠 카드
 @Composable
-private fun SharedContentCard(
-    sharedText: String?,
-    sharedImageUri: Uri?,
-    onClose: () -> Unit
+private fun MenuItemRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String? = null,
+    onClick: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        ),
-        elevation = CardDefaults.cardElevation(4.dp)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "📤 공유받은 내용",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-                IconButton(
-                    onClick = onClose,
-                    modifier = Modifier.size(24.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "닫기",
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            sharedText?.let { text ->
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    )
+            Icon(
+                imageVector = icon,
+                contentDescription = title,
+                modifier = Modifier.size(24.dp),
+                tint = Color.DarkGray
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            if (subtitle != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = text,
-                        fontSize = 14.sp,
-                        color = Color.Black,
-                        modifier = Modifier.padding(12.dp)
+                        text = title,
+                        fontSize = 16.sp,
+                        color = Color.Black
+                    )
+                    Text(
+                        text = subtitle,
+                        fontSize = 12.sp,
+                        color = Color.Gray
                     )
                 }
-            }
-
-            sharedImageUri?.let { uri ->
-                Spacer(modifier = Modifier.height(8.dp))
-                AsyncImage(
-                    model = uri,
-                    contentDescription = "공유받은 이미지",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 200.dp)
-                        .clip(RoundedCornerShape(8.dp)),
-                    contentScale = ContentScale.Fit
+            } else {
+                Text(
+                    text = title,
+                    fontSize = 16.sp,
+                    color = Color.Black
                 )
             }
         }
+        Icon(
+            imageVector = Icons.Default.KeyboardArrowRight,
+            contentDescription = "이동",
+            tint = Color.Gray
+        )
     }
 }
