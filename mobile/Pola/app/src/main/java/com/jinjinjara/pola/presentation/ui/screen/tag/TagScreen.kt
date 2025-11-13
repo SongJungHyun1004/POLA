@@ -1,6 +1,7 @@
 package com.jinjinjara.pola.presentation.ui.screen.tag
 
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.jinjinjara.pola.R
 import com.jinjinjara.pola.presentation.ui.component.PolaCard
 import com.jinjinjara.pola.presentation.ui.component.PolaSearchBar
@@ -52,9 +54,9 @@ import com.jinjinjara.pola.presentation.ui.component.ItemGrid3View
 data class ContentsItem(
     override val id: String,
     override val type: String,
-    override val imageRes: Int = R.drawable.temp_image,
+    override val imageRes: Int = 0,
     override val imageUrl: String = "",
-    override val tags: List<String> = listOf("말차", "라떼", "스타벅스"),
+    override val tags: List<String> = emptyList(),
     override val description: String = "",
     override val isFavorite: Boolean = false
 ) : DisplayItem
@@ -66,20 +68,49 @@ enum class ViewMode {
 @Composable
 fun TagScreen(
     tagName: String = "태그",
+    searchType: String = "tag",  // "tag" 또는 "all"
+    viewModel: TagViewModel = hiltViewModel(),
     onBackClick: () -> Unit = {},
+    onSearchBarClick: () -> Unit = {},
     onNavigateToContents: (Long) -> Unit = {},
 ) {
     var isMenuExpanded by remember { mutableStateOf(false) }
-    var selectedSort by remember { mutableStateOf("최신순") }
     var viewMode by remember { mutableStateOf(ViewMode.GRID_2) }
 
-    val categories = listOf(
-        ContentsItem("1", type = "image", tags = listOf("말차", "라떼", "스타벅스")),
-        ContentsItem("2", type = "image", tags = listOf("말차", "과자", "초코송이")),
-        ContentsItem("3", type = "image", tags = listOf("말차", "라떼", "스타벅스")),
-    )
+    val uiState by viewModel.uiState.collectAsState()
+    val files by viewModel.files.collectAsState()
+    val selectedSort by viewModel.sortOrder.collectAsState()
 
-    var searchText by remember { mutableStateOf("") }
+    // 화면 제목 결정
+    val displayTitle = if (searchType == "all") "통합 검색 결과" else "태그 검색 결과"
+
+    // 검색바에 표시할 텍스트
+    val searchBarText = if (searchType == "all") tagName else "#$tagName"
+
+    // tagName이 변경되면 API 호출
+    LaunchedEffect(tagName, searchType) {
+        if (tagName.isNotBlank()) {
+            when (searchType) {
+                "all" -> viewModel.loadAllSearchResults(tagName)
+                else -> viewModel.loadFilesByTag(tagName)
+            }
+        }
+    }
+
+    // ViewModel의 파일 데이터를 ContentsItem으로 변환
+    val categories = remember(files) {
+        files.map { file ->
+            ContentsItem(
+                id = file.fileId.toString(),
+                type = "image",
+                imageRes = 0,
+                imageUrl = file.imageUrl,
+                tags = file.tags,
+                description = file.context,
+                isFavorite = false
+            )
+        }
+    }
 
     val gridState = rememberLazyGridState()
 
@@ -217,39 +248,65 @@ fun TagScreen(
                     )
 
                     Text(
-                        text = "#$tagName",
+                        text = displayTitle,
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.tertiary
                     )
 
-                    Icon(
-                        painter = painterResource(R.drawable.star),
-                        contentDescription = "Favorites",
-                        tint = MaterialTheme.colorScheme.tertiary,
+                    Spacer(modifier = Modifier.size(30.dp))
+                }
+                // Search Bar (읽기 전용)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(74.dp)
+                        .padding(horizontal = 16.dp, vertical = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
                         modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp)
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
                             ) {
-                                // 즐겨찾기 이동
+                                onSearchBarClick()
+                            },
+                        shape = RoundedCornerShape(20.dp),
+                        border = BorderStroke(
+                            color = MaterialTheme.colorScheme.tertiary,
+                            width = 2.dp
+                        ),
+                        color = Color.White
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier.weight(1f),
+                                contentAlignment = Alignment.CenterStart
+                            ) {
+                                Text(
+                                    text = searchBarText,
+                                    color = Color.Black,
+                                    fontSize = 16.sp
+                                )
                             }
-                            .size(30.dp)
-                    )
-                }
-                // Search Bar
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(64.dp)
-                        .padding(horizontal = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    PolaSearchBar(
-                        searchText = searchText,
-                        onValueChange = { searchText = it },
-                        modifier = Modifier.weight(1f)
-                    )
+                            Icon(
+                                painter = painterResource(R.drawable.search),
+                                contentDescription = "Search",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier
+                                    .width(25.dp)
+                                    .fillMaxHeight()
+                            )
+                        }
+                    }
                 }
 
                 // Grid Icon and Sort Menu
@@ -323,7 +380,7 @@ fun TagScreen(
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .clickable {
-                                                    selectedSort = sort
+                                                    viewModel.setSortOrder(sort)
                                                     isMenuExpanded = false
                                                 }
                                                 .padding(horizontal = 16.dp, vertical = 10.dp),
@@ -353,6 +410,46 @@ fun TagScreen(
             }
         }
 
+        // 로딩/에러 상태 UI
+        when (uiState) {
+            is TagUiState.Loading -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                }
+            }
+            is TagUiState.Error -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = (uiState as TagUiState.Error).message,
+                        color = Color.Gray,
+                        fontSize = 16.sp
+                    )
+                }
+            }
+            is TagUiState.Empty -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = headerHeightDp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "해당 검색어의 컨텐츠가 없습니다.",
+                        color = Color.Gray,
+                        fontSize = 16.sp
+                    )
+                }
+            }
+            is TagUiState.Success -> {
+                // 데이터가 표시되고 있으므로 아무것도 하지 않음
+            }
+        }
 
     }
 }

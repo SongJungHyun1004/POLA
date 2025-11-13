@@ -168,7 +168,7 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
                     navController.navigate(Screen.Favorite.route)
                 },
                 onNavigateToSearch = {
-                    navController.navigate(Screen.SearchScreen.route)
+                    navController.navigate(Screen.SearchScreen.createRoute())
                 },
                 onNavigateToChatbot = {
                     navController.navigate(Screen.Chatbot.route)
@@ -176,14 +176,31 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
             )
         }
 
-        composable(Screen.SearchScreen.route) {
+        composable(
+            route = Screen.SearchScreen.route,
+            arguments = listOf(
+                navArgument("query") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                },
+                navArgument("tab") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                }
+            )
+        ) { backStackEntry ->
+            val initialQuery = backStackEntry.arguments?.getString("query") ?: ""
+            val initialTab = backStackEntry.arguments?.getString("tab") ?: ""
+
             SearchScreen(
+                initialQuery = initialQuery,
+                initialTab = initialTab,
                 onBackClick = { navController.popBackStack() },
                 onTagClick = { tagName ->
-                    navController.navigate(Screen.Tag.createRoute(tagName.removePrefix("#")))
+                    navController.navigate(Screen.Tag.createRoute(tagName.removePrefix("#"), "tag"))
                 },
-                onSearchClick = { searchQuery ->
-                    // TODO: 검색 버튼 클릭 시 동작 구현
+                onSearchClick = { searchQuery, searchType ->
+                    navController.navigate(Screen.Tag.createRoute(searchQuery, searchType))
                 }
             )
         }
@@ -231,13 +248,38 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
         composable(
             route = Screen.Tag.route,
             arguments = listOf(
-                navArgument("tagName") { type = NavType.StringType }
+                navArgument("tagName") { type = NavType.StringType },
+                navArgument("searchType") {
+                    type = NavType.StringType
+                    defaultValue = "tag"
+                }
             )
         ) { backStackEntry ->
             val tagName = backStackEntry.arguments?.getString("tagName") ?: ""
+            val searchType = backStackEntry.arguments?.getString("searchType") ?: "tag"
             TagScreen(
                 tagName = tagName,
-                onBackClick = { navController.popBackStack() },
+                searchType = searchType,
+                onBackClick = {
+                    navController.navigate(
+                        Screen.SearchScreen.createRoute(
+                            query = tagName,
+                            tab = searchType
+                        )
+                    ) {
+                        popUpTo(Screen.SearchScreen.route) { inclusive = true }
+                    }
+                },
+                onSearchBarClick = {
+                    navController.navigate(
+                        Screen.SearchScreen.createRoute(
+                            query = tagName,
+                            tab = searchType
+                        )
+                    ) {
+                        popUpTo(Screen.SearchScreen.route) { inclusive = true }
+                    }
+                },
                 onNavigateToContents = { contentId ->
                     navController.navigate(Screen.Contents.createRoute(contentId))
                 }
