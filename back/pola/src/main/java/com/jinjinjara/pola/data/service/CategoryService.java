@@ -51,6 +51,7 @@ public class CategoryService {
             Category category = Category.builder()
                     .user(user)
                     .categoryName(categoryName)
+                    .fileCount(0)
                     .build();
 
             Category saved = categoryRepository.save(category);
@@ -123,6 +124,7 @@ public class CategoryService {
                     .id(category.getId())
                     .user(category.getUser())
                     .categoryName(newName)
+                    .fileCount(category.getFileCount())
                     .createdAt(category.getCreatedAt())
                     .build();
 
