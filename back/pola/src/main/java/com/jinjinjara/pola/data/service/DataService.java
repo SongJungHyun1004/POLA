@@ -42,11 +42,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.net.URL;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
+import java.util.*;
 import java.time.LocalDateTime;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -66,6 +63,7 @@ public class DataService {
     private final CategoryTagRepository categoryTagRepository;
     private final FileTagRepository fileTagRepository;
     private final FileSearchService fileSearchService;
+    private final CategoryCountCacheService  categoryCountCacheService;
 
     @Transactional(readOnly = true)
     public List<DataResponse> getRemindFiles(Long userId) {
@@ -114,14 +112,21 @@ public class DataService {
                 .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
 
         try {
-            // 1. FileTag 관계 먼저 삭제
+            Long userId = file.getUserId();
+            Long categoryId = file.getCategoryId();
+
+            // 1. FileTag 관계 삭제
             fileTagRepository.deleteByFile(file);
             System.out.println("[DataService] Deleted file_tags for fileId=" + fileId);
 
-            // 2. S3에서 원본 + 미리보기 삭제
+            // 2. Redis에서 해당 카테고리 파일 개수 감소
+            categoryCountCacheService.increment(userId, categoryId, -1);
+            System.out.println("[DataService] Redis category_count updated (-1) for categoryId=" + categoryId);
+
+            // 3. S3에서 삭제
             s3Service.deleteFileFromS3(file.getSrc());
 
-            // 3. DB에서 파일 삭제
+            // 4. DB에서 파일 삭제
             fileRepository.delete(file);
             System.out.println("[DataService] File deleted successfully: " + fileId);
 
@@ -129,6 +134,7 @@ public class DataService {
             throw new CustomException(ErrorCode.FILE_DELETE_FAIL, e.getMessage());
         }
     }
+
 
 
 
@@ -298,6 +304,7 @@ public class DataService {
                 .favoritedAt(LocalDateTime.now())
                 .views(0)
                 .build();
+        categoryCountCacheService.increment(user.getId(), file.getCategoryId(), +1);
 
         return fileRepository.save(file);
     }
@@ -310,16 +317,29 @@ public class DataService {
         File file = fileRepository.findByIdAndUserId(fileId, user.getId())
                 .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
 
-        // 카테고리 존재 및 소유권 검증만 수행
+        // 기존 카테고리 저장 (Redis에서 -1 해야 함)
+        Long oldCategoryId = file.getCategoryId();
+
+        // 카테고리 존재 여부 및 유저 소유 여부 체크
         categoryRepository.findByIdAndUserId(categoryId, user.getId())
                 .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
 
-        // category 엔티티 대신 categoryId(Long)만 설정
+        // 새로운 카테고리로 변경
         file.setCategoryId(categoryId);
 
         File savedFile = fileRepository.save(file);
 
-        // ✅ OpenSearch 업데이트
+        // 🔥 Redis 업데이트: old(-1) → new(+1)
+        if (!Objects.equals(oldCategoryId, categoryId)) {
+            categoryCountCacheService.increment(user.getId(), oldCategoryId, -1);
+            categoryCountCacheService.increment(user.getId(), categoryId, +1);
+
+            System.out.println("[DataService] Redis category_count updated: " +
+                    "oldCategory=" + oldCategoryId + " -> -1, " +
+                    "newCategory=" + categoryId + " -> +1");
+        }
+
+        // OpenSearch 업데이트
         String categoryName = categoryRepository.findById(categoryId)
                 .map(Category::getCategoryName)
                 .orElse("미분류");
