@@ -34,7 +34,8 @@ fun FileDetailData.toDomain(): FileDetail {
         originUrl = originUrl,
         createdAt = parseDateTime(createdAt),
         lastViewedAt = lastViewedAt?.let { parseDateTime(it) },
-        tags = tags.map { it.toDomain() }
+        tags = tags?.map { it.toDomain() } ?: emptyList()
+
     )
 }
 

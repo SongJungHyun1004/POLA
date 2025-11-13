@@ -3,6 +3,7 @@ package com.jinjinjara.pola.presentation.ui.screen.contents
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.os.Build
 import android.widget.Toast
 import androidx.annotation.RequiresApi
@@ -43,6 +44,7 @@ import com.jinjinjara.pola.R
 import com.jinjinjara.pola.domain.model.FileDetail
 import com.jinjinjara.pola.presentation.ui.component.PolaCard
 import com.jinjinjara.pola.presentation.ui.screen.category.CategoryScreen
+import com.jinjinjara.pola.util.Constants.SHARE_URL
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.URL
@@ -129,7 +131,7 @@ fun ContentsScreen(
                     ) {
                         Text(
                             text = state.message,
-                            color = MaterialTheme.colorScheme.error
+                            color = MaterialTheme.colorScheme.tertiary
                         )
                         Button(onClick = { viewModel.loadFileDetail(fileId) }) {
                             Text("다시 시도")
@@ -162,8 +164,8 @@ fun ContentsScreen(
             AlertDialog(
                 containerColor = MaterialTheme.colorScheme.background,
                 onDismissRequest = { showDeleteDialog = false },
-                title = { Text("컨텐츠 삭제") },
-                text = { Text("이 컨텐츠를 삭제하시겠습니까?") },
+                title = { Text("컨텐츠 삭제", color = MaterialTheme.colorScheme.tertiary) },
+                text = { Text("이 컨텐츠를 삭제하시겠습니까?", color = MaterialTheme.colorScheme.tertiary) },
                 confirmButton = {
                     TextButton(
                         onClick = {
@@ -197,7 +199,12 @@ fun ContentsScreen(
                     AlertDialog(
                         containerColor = MaterialTheme.colorScheme.background,
                         onDismissRequest = { },
-                        title = { Text("공유 링크 생성 중...") },
+                        title = {
+                            Text(
+                                "공유 링크 생성 중...",
+                                color = MaterialTheme.colorScheme.tertiary
+                            )
+                        },
                         text = {
                             Box(
                                 modifier = Modifier.fillMaxWidth(),
@@ -209,6 +216,7 @@ fun ContentsScreen(
                         confirmButton = { }
                     )
                 }
+
                 is ContentsViewModel.ShareState.Error -> {
                     AlertDialog(
                         containerColor = MaterialTheme.colorScheme.background,
@@ -230,6 +238,7 @@ fun ContentsScreen(
                         }
                     )
                 }
+
                 is ContentsViewModel.ShareState.Success -> {
                     AlertDialog(
                         containerColor = MaterialTheme.colorScheme.background,
@@ -271,28 +280,61 @@ fun ContentsScreen(
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
+                                        val shareURL = SHARE_URL + state.shareLink.shareUrl
                                         Text(
-                                            text = state.shareLink.shareUrl,
+                                            text = shareURL,
                                             style = MaterialTheme.typography.bodySmall,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            color = MaterialTheme.colorScheme.tertiary,
                                             modifier = Modifier.weight(1f)
                                         )
-                                        IconButton(
-                                            onClick = {
-                                                val clipboard =
-                                                    context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                                val clip = ClipData.newPlainText("공유 링크", state.shareLink.shareUrl)
-                                                clipboard.setPrimaryClip(clip)
-                                                Toast.makeText(context, "링크가 복사되었습니다", Toast.LENGTH_SHORT).show()
-                                            }
+                                        Row(
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
                                         ) {
-                                            Icon(
-                                                imageVector = Icons.Default.ContentCopy,
-                                                contentDescription = "복사",
-                                                tint = MaterialTheme.colorScheme.primary
-                                            )
+                                            // 복사 버튼
+                                            IconButton(
+                                                onClick = {
+                                                    val clipboard =
+                                                        context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                                    val clip = ClipData.newPlainText(
+                                                        "공유 링크",
+                                                        shareURL
+                                                    )
+                                                    clipboard.setPrimaryClip(clip)
+                                                    Toast.makeText(
+                                                        context,
+                                                        "링크가 복사되었습니다",
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
+                                                }
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.ContentCopy,
+                                                    contentDescription = "복사",
+                                                    tint = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
+
+                                            // 공유 버튼
+                                            IconButton(
+                                                onClick = {
+                                                    val sendIntent = Intent().apply {
+                                                        action = Intent.ACTION_SEND
+                                                        putExtra(Intent.EXTRA_TEXT, shareURL)
+                                                        type = "text/plain"
+                                                    }
+                                                    val shareIntent =
+                                                        Intent.createChooser(sendIntent, "공유하기")
+                                                    context.startActivity(shareIntent)
+                                                }
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Share,
+                                                    contentDescription = "공유",
+                                                    tint = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -316,6 +358,7 @@ fun ContentsScreen(
                     )
 
                 }
+
                 else -> {}
             }
         }
@@ -532,7 +575,7 @@ private fun ContentsScreenContent(
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface
+                        containerColor = MaterialTheme.colorScheme.background
                     ),
                     windowInsets = WindowInsets(0.dp)
                 )

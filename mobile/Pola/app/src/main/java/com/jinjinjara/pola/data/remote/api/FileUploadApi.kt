@@ -10,7 +10,7 @@ import retrofit2.http.*
 
 interface FileUploadApi {
 
-    @GET("files/s3/presigned/upload")
+    @GET("s3/presigned/upload")
     suspend fun getPresignedUrl(
         @Query("fileName") fileName: String
     ): Response<PresignedUrlResponse>

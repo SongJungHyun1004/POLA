@@ -1,6 +1,8 @@
 package com.jinjinjara.pola.navigation
 
 import android.content.Context
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -143,6 +145,7 @@ fun NavGraphBuilder.authNavGraph(
 /**
  * Main 네비게이션 그래프
  */
+@RequiresApi(Build.VERSION_CODES.O)
 fun NavGraphBuilder.mainNavGraph(navController: NavHostController) {
     composable(route = NavGraphs.MAIN) {
         MainScreen()
@@ -154,6 +157,7 @@ fun NavGraphBuilder.mainNavGraph(navController: NavHostController) {
 /**
  * Home 탭 네비게이션 그래프
  */
+@RequiresApi(Build.VERSION_CODES.O)
 fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
     navigation(
         startDestination = Screen.Home.route,
@@ -161,6 +165,9 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
     ) {
         composable(Screen.Home.route) {
             HomeScreen(
+                onNavigateToContents = { contentId ->
+                    navController.navigate(Screen.Contents.createRoute(contentId))
+                },
                 onNavigateToCategory = { categoryId ->
                     navController.navigate(Screen.Category.createRoute(categoryId))
                 },
@@ -255,7 +262,7 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
                 navController = navController,
                 fileId = contentId,
                 onBackClick = { navController.popBackStack() },
-                onShareClick = { /* TODO: 공유 기능 */ },
+                onShareClick = { /* 내부 공유 기능 구현 */ },
                 onEditClick = {
                     navController.navigate(Screen.ContentsEdit.createRoute(contentId))
                 },
@@ -266,7 +273,7 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
         composable(
             route = Screen.ContentsEdit.route,
             arguments = listOf(
-                navArgument("contentId") { type = NavType.StringType }
+                navArgument("contentId") { type = NavType.LongType }
             )
         ) { backStackEntry ->
             val contentId = backStackEntry.arguments?.getLong("contentId") ?: -1L
@@ -274,7 +281,7 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
                 contentId = contentId,
                 onBackClick = { navController.popBackStack() },
                 onSaveClick = {
-                    // TODO: 저장 로직
+                    // 저장 성공 시 이전 화면으로 돌아감
                     navController.popBackStack()
                 }
             )
@@ -299,10 +306,9 @@ fun NavGraphBuilder.timelineTabGraph(navController: NavHostController) {
     ) {
         composable(Screen.Timeline.route) {
             TimelineScreen(
-                // 필요한 네비게이션 콜백 추가
-                // onNavigateToDetail = { postId ->
-                //     navController.navigate(Screen.TimelineDetail.createRoute(postId))
-                // }
+                onNavigateToContents = { contentId ->
+                    navController.navigate(Screen.Contents.createRoute(contentId))
+                },
             )
         }
 
@@ -392,8 +398,12 @@ fun NavGraphBuilder.uploadScreen(navController: NavHostController) {
 /**
  * Remind 화면 (단일 화면)
  */
-fun NavGraphBuilder.remindScreen() {
+fun NavGraphBuilder.remindScreen(navController: NavHostController) {
     composable(Screen.Remind.route) {
-        RemindScreen()
+        RemindScreen(
+            onNavigateToContents = { contentId ->
+                navController.navigate(Screen.Contents.createRoute(contentId))
+            },
+        )
     }
 }

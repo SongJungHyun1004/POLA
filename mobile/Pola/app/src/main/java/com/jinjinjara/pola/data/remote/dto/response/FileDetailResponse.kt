@@ -55,7 +55,7 @@ data class FileDetailData(
     @Json(name = "last_viewed_at")
     val lastViewedAt: String?,
     @Json(name = "tags")
-    val tags: List<FileTag>
+    val tags: List<FileTag>?
 )
 
 @JsonClass(generateAdapter = true)

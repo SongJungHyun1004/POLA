@@ -222,6 +222,7 @@ fun PolaCard(
                             Text(
                                 text = timeAgo,
                                 fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.tertiary
                             )
                         }
 
