@@ -163,7 +163,10 @@ export default function Header() {
   /* -------------------- AI 검색 -------------------- */
   const doAISearch = () => {
     if (!aiQuery.trim()) return;
-    router.push(`/files?nlp=${encodeURIComponent(aiQuery)}`);
+
+    const q = encodeURIComponent(aiQuery.trim());
+    router.push(`/ragsearch?query=${q}`);
+
     setAiMode(false);
   };
 
