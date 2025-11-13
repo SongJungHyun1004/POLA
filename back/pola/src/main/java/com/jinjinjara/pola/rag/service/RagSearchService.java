@@ -48,6 +48,7 @@ public class RagSearchService {
         // 3) 태그 병합
         List<RagSearchSource> sources = rows.stream()
                 .map(r -> {
+                    // 태그 조회
                     List<String> tagNames = fileTagService.getTagsByFile(r.getId()).stream()
                             .map(com.jinjinjara.pola.data.dto.response.TagResponse::getTagName)
                             .filter(Objects::nonNull)
@@ -55,10 +56,19 @@ public class RagSearchService {
                             .filter(s -> !s.isEmpty())
                             .distinct()
                             .toList();
+
                     return RagSearchSource.builder()
                             .id(r.getId())
                             .src(s3Service.generateDownloadUrl(r.getSrc()))
+                            .type(r.getType())
                             .context(r.getContext())
+                            .favorite(r.getFavorite())
+                            .ocrText(r.getOcrText())
+                            .createdAt(
+                                    r.getCreatedAt() == null
+                                            ? null
+                                            : r.getCreatedAt().toLocalDateTime()
+                            )
                             .relevanceScore(r.getRelevanceScore())
                             .tags(tagNames)
                             .build();

@@ -242,4 +242,10 @@ public class ClassifierService {
         String t = s.trim();
         return Normalizer.normalize(t, Normalizer.Form.NFC);
     }
+
+    public boolean isGenericTag(String raw) {
+        if (raw == null) return false;
+        String t = normalize(raw.trim());
+        return GENERIC.contains(t);
+    }
 }
