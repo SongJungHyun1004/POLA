@@ -9,32 +9,34 @@ import PolaroidDetail from "../categories/[id]/components/PolaroidDetail";
 import { getRemindFiles, getFileDetail } from "@/services/fileService";
 
 export default function RemindPage() {
-  // State 정의
   const [reminds, setReminds] = useState<any[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState<1 | -1>(1);
   const [currentDetail, setCurrentDetail] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 첫 로딩 - Remind 목록 + 첫 상세 정보 로딩
+  // 1) 초기 데이터 로딩
   useEffect(() => {
     async function load() {
       try {
-        const list = await getRemindFiles(); // [{ id, src, favorite }]
+        const list = await getRemindFiles(); // [{ id, src, type, ocr_text, favorite, tags, createdAt }]
         setReminds(list);
 
         if (list.length > 0) {
-          const first = await getFileDetail(list[0].id);
-          const normalizedTags = (first.tags ?? []).map(
-            (t: any) => `#${t.tagName}`
-          );
+          const first = list[0];
+          const detail = await getFileDetail(first.id);
+
+          const tags = (detail.tags ?? []).map((t: any) => `#${t.tagName}`);
 
           setCurrentDetail({
-            id: first.id,
-            src: first.src ?? list[0].src ?? "/images/dummy_image_1.png",
-            tags: normalizedTags,
-            contexts: first.context ?? "",
-            date: first.created_at,
+            id: detail.id,
+            src: detail.src ?? first.src,
+            type: detail.type ?? first.type,
+            ocr_text: detail.ocr_text ?? first.ocr_text,
+            favorite: detail.favorite,
+            tags,
+            contexts: detail.context ?? "",
+            date: detail.createdAt,
           });
         }
       } catch (e) {
@@ -47,21 +49,22 @@ export default function RemindPage() {
     load();
   }, []);
 
-  // 특정 인덱스의 상세 정보 갱신
+  // 2) 특정 인덱스 상세 정보 업데이트
   const updateDetail = async (index: number) => {
     const target = reminds[index];
     if (!target) return;
 
     try {
       const detail = await getFileDetail(target.id);
-      const normalizedTags = (detail.tags ?? []).map(
-        (t: any) => `#${t.tagName}`
-      );
+      const tags = (detail.tags ?? []).map((t: any) => `#${t.tagName}`);
 
       setCurrentDetail({
         id: detail.id,
-        src: detail.src ?? target.src ?? "/images/dummy_image_1.png",
-        tags: normalizedTags,
+        src: detail.src ?? target.src,
+        type: detail.type ?? target.type,
+        ocr_text: detail.ocr_text ?? target.ocr_text,
+        favorite: detail.favorite,
+        tags,
         contexts: detail.context ?? "",
         date: detail.created_at,
       });
@@ -70,26 +73,23 @@ export default function RemindPage() {
     }
   };
 
-  // 페이지 이동
+  // 3) 페이지 이동
   const paginate = (dir: 1 | -1) => {
     if (reminds.length === 0) return;
-
     setDirection(dir);
     const nextIndex = (currentIndex + dir + reminds.length) % reminds.length;
     setCurrentIndex(nextIndex);
     updateDetail(nextIndex);
   };
 
-  // 방향키 입력 처리
+  // 4) 방향키 처리
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const active = document.activeElement;
-
-      // 입력창 포커스 시 무시
+      const a = document.activeElement;
       if (
-        active instanceof HTMLInputElement ||
-        active instanceof HTMLTextAreaElement ||
-        active instanceof HTMLSelectElement
+        a instanceof HTMLInputElement ||
+        a instanceof HTMLTextAreaElement ||
+        a instanceof HTMLSelectElement
       ) {
         return;
       }
@@ -108,7 +108,7 @@ export default function RemindPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [reminds, currentIndex]);
 
-  // 렌더링 분기
+  // 로딩 중 화면
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full text-2xl text-[#4C3D25]">
@@ -125,7 +125,7 @@ export default function RemindPage() {
     );
   }
 
-  // Prev/Next index 계산
+  // Prev / Next
   const leftIndex = (currentIndex - 1 + reminds.length) % reminds.length;
   const rightIndex = (currentIndex + 1) % reminds.length;
 
@@ -145,7 +145,7 @@ export default function RemindPage() {
 
   return (
     <div className="relative w-full h-full text-[#4C3D25] overflow-hidden flex flex-col">
-      {/* Title Row */}
+      {/* Title */}
       <h1 className="text-6xl font-bold ml-8 mt-6 mb-4 flex-none">Remind</h1>
 
       {/* Slider */}
@@ -155,16 +155,10 @@ export default function RemindPage() {
           onClick={() => paginate(-1)}
           className="absolute left-[20%] top-1/2 -translate-y-1/2 scale-[0.88] opacity-60 cursor-pointer z-10 hover:opacity-80"
         >
-          <PolaroidPreview
-            data={{
-              id: reminds[leftIndex].id,
-              src: reminds[leftIndex].src,
-              favorite: reminds[leftIndex].favorite,
-            }}
-          />
+          <PolaroidPreview data={reminds[leftIndex]} />
         </div>
 
-        {/* Main Card */}
+        {/* Center - Detail */}
         <AnimatePresence custom={direction} mode="popLayout">
           <motion.div
             key={currentDetail?.id}
@@ -185,16 +179,10 @@ export default function RemindPage() {
           onClick={() => paginate(1)}
           className="absolute right-[20%] top-1/2 -translate-y-1/2 scale-[0.88] opacity-60 cursor-pointer z-10 hover:opacity-80"
         >
-          <PolaroidPreview
-            data={{
-              id: reminds[rightIndex].id,
-              src: reminds[rightIndex].src,
-              favorite: reminds[rightIndex].favorite,
-            }}
-          />
+          <PolaroidPreview data={reminds[rightIndex]} />
         </div>
 
-        {/* Arrows */}
+        {/* Arrow Buttons */}
         <button
           className="absolute left-[12%] top-1/2 -translate-y-1/2 hover:opacity-80 z-20"
           onClick={() => paginate(-1)}
