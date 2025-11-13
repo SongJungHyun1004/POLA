@@ -26,6 +26,19 @@ public interface FileRepository extends JpaRepository<File, Long> {
 
     Optional<File> findByShareToken(String shareToken);
 
+    @Query(value = """
+            SELECT *
+            FROM (
+                SELECT f.*,
+                       ROW_NUMBER() OVER (PARTITION BY f.category_id ORDER BY f.created_at DESC) AS rn
+                FROM files f
+                WHERE f.user_id = :userId
+            ) sub
+            WHERE sub.rn <= 5
+            """, nativeQuery = true)
+    List<File> findTop5FilesPerCategory(@Param("userId") Long userId);
+
+
     // 즐겨찾기 정렬 순서 밀기 (+1)
     @Modifying
     @Query("""

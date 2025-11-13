@@ -22,23 +22,19 @@ public class HomeService {
     private final FileRepository fileRepository;
     private final CategoryRepository categoryRepository;
     private final S3Service s3Service;
-
     public HomeResponse getHomeData(Long userId) {
 
-        // 3. 카테고리를 파일 개수 기준으로 정렬해서 가져오기
         List<Category> categories = categoryRepository.findAllSorted(userId);
 
-        // 5. 파일들 한 번에 모아서 presigned URL 한 번에 생성
-        List<File> allFiles = new ArrayList<>();
-        Map<Long, List<File>> categoryFileMap = new HashMap<>();
+        List<File> top5Files = fileRepository.findTop5FilesPerCategory(userId);
 
-        for (Category c : categories) {
-            List<File> files = fileRepository.findTop5ByUserIdAndCategoryIdOrderByCreatedAtDesc(userId, c.getId());
-            categoryFileMap.put(c.getId(), files);
-            allFiles.addAll(files);
-        }
+        Map<Long, List<File>> categoryFileMap = top5Files.stream()
+                .collect(Collectors.groupingBy(File::getCategoryId));
 
-        List<File> favorites = fileRepository.findTop3ByUserIdAndFavoriteTrueOrderByCreatedAtDesc(userId);
+        List<File> allFiles = new ArrayList<>(top5Files);
+
+        List<File> favorites = fileRepository
+                .findTop3ByUserIdAndFavoriteTrueOrderByCreatedAtDesc(userId);
         allFiles.addAll(favorites);
 
         LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
@@ -48,7 +44,6 @@ public class HomeService {
         List<File> timeline = fileRepository.findTop10ByUserIdOrderByCreatedAtDesc(userId);
         allFiles.addAll(timeline);
 
-        // 6. presigned url 생성(한 번에)
         Map<Long, S3Service.FileMeta> fileMetaMap = allFiles.stream()
                 .filter(f -> f.getSrc() != null)
                 .collect(Collectors.toMap(
@@ -59,14 +54,12 @@ public class HomeService {
 
         Map<Long, String> previewUrls = s3Service.generatePreviewUrls(fileMetaMap);
 
-        // 7. DTO 변환
         List<CategorySection> categorySections = categories.stream()
                 .map(c -> CategorySection.builder()
                         .categoryId(c.getId())
                         .categoryName(c.getCategoryName())
                         .files(
-                                categoryFileMap.getOrDefault(c.getId(), List.of())
-                                        .stream()
+                                categoryFileMap.getOrDefault(c.getId(), List.of()).stream()
                                         .map(f -> toDataResponse(f, previewUrls))
                                         .toList()
                         )
@@ -80,6 +73,7 @@ public class HomeService {
                 .timeline(timeline.stream().map(f -> toDataResponse(f, previewUrls)).toList())
                 .build();
     }
+
 
     private DataResponse toDataResponse(File f, Map<Long, String> previewUrls) {
         return DataResponse.builder()

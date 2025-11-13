@@ -18,6 +18,19 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
 
     boolean existsByUserAndCategoryName(Users user, String categoryName);
 
+    @Query(value = """
+    SELECT *
+    FROM (
+        SELECT f.*,
+               ROW_NUMBER() OVER (PARTITION BY f.category_id ORDER BY f.created_at DESC) AS rn
+        FROM files f
+        WHERE f.user_id = :userId
+    ) sub
+    WHERE sub.rn <= 5
+    """, nativeQuery = true)
+    List<File> findTop5FilesPerCategory(@Param("userId") Long userId);
+
+
     @Query("SELECT c FROM Category c " +
             "WHERE c.user = :user " +
             "ORDER BY c.fileCount DESC, " +
