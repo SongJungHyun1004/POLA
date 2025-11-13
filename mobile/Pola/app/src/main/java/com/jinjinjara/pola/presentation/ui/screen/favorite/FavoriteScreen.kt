@@ -49,10 +49,16 @@ enum class ViewMode {
 fun FavoriteScreen(
     modifier: Modifier = Modifier,
     onBackClick: () -> Unit = {},
+    onNavigateToContents: (Long) -> Unit = {},
     viewModel: FavoriteViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+
+    // 화면 진입 시 데이터 새로고침
+    LaunchedEffect(Unit) {
+        viewModel.loadFavorites()
+    }
 
     // 에러 토스트 처리
     LaunchedEffect(Unit) {
@@ -94,6 +100,82 @@ fun FavoriteScreen(
         }
         is FavoriteUiState.Success -> {
             val favoriteItems = state.data
+
+            // Empty 상태 처리
+            if (favoriteItems.isEmpty()) {
+                Scaffold(
+                    topBar = {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp)
+                                    .padding(horizontal = 4.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.CenterStart)
+                                        .size(48.dp)
+                                        .clickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = null
+                                        ) {
+                                            onBackClick()
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "닫기",
+                                        tint = MaterialTheme.colorScheme.tertiary,
+                                        modifier = Modifier.size(36.dp)
+                                    )
+                                }
+
+                                Text(
+                                    text = "즐겨찾기",
+                                    fontSize = 24.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.tertiary
+                                )
+                            }
+                        }
+                    }
+                ) { padding ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(padding),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            androidx.compose.foundation.Image(
+                                painter = painterResource(R.drawable.empty),
+                                contentDescription = "No content",
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 32.dp),
+                                contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                            )
+                            Spacer(modifier = Modifier.height(24.dp))
+                            Text(
+                                text = "즐겨찾기 한 항목이 없습니다",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.tertiary
+                            )
+                        }
+                    }
+                }
+                return
+            }
+
             FavoriteScreenContent(
                 modifier = modifier,
                 favoriteItems = favoriteItems,
@@ -107,7 +189,7 @@ fun FavoriteScreen(
                 onViewModeChange = { viewMode = it },
                 onBackClick = onBackClick,
                 onItemClick = { item ->
-                    Toast.makeText(context, "상세화면 이동", Toast.LENGTH_SHORT).show()
+                    onNavigateToContents(item.fileId)
                 },
                 onFavoriteToggle = { item ->
                     viewModel.toggleFavorite(item.fileId)
