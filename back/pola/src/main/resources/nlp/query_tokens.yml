@@ -23,7 +23,6 @@ timeTokens:
   지난달: -1m
   이번달: 0m
 
-
 queryTypes:
   comparison:
     - 비교

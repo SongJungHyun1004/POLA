@@ -11,4 +11,5 @@ public class QueryPreprocessResult {
     private final String cleanedQuery;
     private final LocalDate startDate;
     private final LocalDate endDate;
+    private final QueryType queryType;
 }

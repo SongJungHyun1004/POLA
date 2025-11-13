@@ -18,4 +18,6 @@ public class FileSearch {
     private String ocrText;
     private String imageUrl;
     private String createdAt;
+    private Boolean favorite;
+    private String fileType;
 }

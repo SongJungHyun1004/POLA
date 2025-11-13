@@ -331,7 +331,10 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
 
         composable(Screen.Favorite.route) {
             FavoriteScreen(
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStack() },
+                onNavigateToContents = { contentId ->
+                    navController.navigate(Screen.Contents.createRoute(contentId))
+                }
             )
         }
 

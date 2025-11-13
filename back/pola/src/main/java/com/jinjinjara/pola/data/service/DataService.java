@@ -22,7 +22,6 @@ import com.jinjinjara.pola.s3.service.S3Service;
 import com.jinjinjara.pola.search.model.FileSearch;
 import com.jinjinjara.pola.search.service.FileSearchService;
 import com.jinjinjara.pola.user.entity.Users;
-import com.jinjinjara.pola.vision.dto.common.Embedding;
 import com.jinjinjara.pola.vision.dto.response.AnalyzeResponse;
 import com.jinjinjara.pola.vision.entity.FileEmbeddings;
 import com.jinjinjara.pola.vision.repository.FileEmbeddingsRepository;
@@ -38,15 +37,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.util.StopWatch;
 
 import java.net.URL;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
+import java.util.*;
 import java.time.LocalDateTime;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -66,6 +62,7 @@ public class DataService {
     private final CategoryTagRepository categoryTagRepository;
     private final FileTagRepository fileTagRepository;
     private final FileSearchService fileSearchService;
+    private final CategoryCountCacheService  categoryCountCacheService;
 
     @Transactional(readOnly = true)
     public List<DataResponse> getRemindFiles(Long userId) {
@@ -114,14 +111,21 @@ public class DataService {
                 .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
 
         try {
-            // 1. FileTag 관계 먼저 삭제
+            Long userId = file.getUserId();
+            Long categoryId = file.getCategoryId();
+
+            // 1. FileTag 관계 삭제
             fileTagRepository.deleteByFile(file);
             System.out.println("[DataService] Deleted file_tags for fileId=" + fileId);
 
-            // 2. S3에서 원본 + 미리보기 삭제
+            // 2. Redis에서 해당 카테고리 파일 개수 감소
+            categoryCountCacheService.increment(userId, categoryId, -1);
+            System.out.println("[DataService] Redis category_count updated (-1) for categoryId=" + categoryId);
+
+            // 3. S3에서 삭제
             s3Service.deleteFileFromS3(file.getSrc());
 
-            // 3. DB에서 파일 삭제
+            // 4. DB에서 파일 삭제
             fileRepository.delete(file);
             System.out.println("[DataService] File deleted successfully: " + fileId);
 
@@ -129,6 +133,7 @@ public class DataService {
             throw new CustomException(ErrorCode.FILE_DELETE_FAIL, e.getMessage());
         }
     }
+
 
 
 
@@ -288,7 +293,7 @@ public class DataService {
                 .categoryId(uncategorized.getId())
                 .src(request.getKey())                     // S3 key
                 .type(request.getType())                   // MIME type
-                .context("Llava")
+                .context("AI가 파일을 해석 중입니다.")
                 .fileSize((long) request.getFileSize())
                 .originUrl(request.getOriginUrl())
                 .platform(request.getPlatform())
@@ -298,6 +303,7 @@ public class DataService {
                 .favoritedAt(LocalDateTime.now())
                 .views(0)
                 .build();
+        categoryCountCacheService.increment(user.getId(), file.getCategoryId(), +1);
 
         return fileRepository.save(file);
     }
@@ -310,16 +316,29 @@ public class DataService {
         File file = fileRepository.findByIdAndUserId(fileId, user.getId())
                 .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
 
-        // 카테고리 존재 및 소유권 검증만 수행
+        // 기존 카테고리 저장 (Redis에서 -1 해야 함)
+        Long oldCategoryId = file.getCategoryId();
+
+        // 카테고리 존재 여부 및 유저 소유 여부 체크
         categoryRepository.findByIdAndUserId(categoryId, user.getId())
                 .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
 
-        // category 엔티티 대신 categoryId(Long)만 설정
+        // 새로운 카테고리로 변경
         file.setCategoryId(categoryId);
 
         File savedFile = fileRepository.save(file);
 
-        // ✅ OpenSearch 업데이트
+        // 🔥 Redis 업데이트: old(-1) → new(+1)
+        if (!Objects.equals(oldCategoryId, categoryId)) {
+            categoryCountCacheService.increment(user.getId(), oldCategoryId, -1);
+            categoryCountCacheService.increment(user.getId(), categoryId, +1);
+
+            System.out.println("[DataService] Redis category_count updated: " +
+                    "oldCategory=" + oldCategoryId + " -> -1, " +
+                    "newCategory=" + categoryId + " -> +1");
+        }
+
+        // OpenSearch 업데이트
         String categoryName = categoryRepository.findById(categoryId)
                 .map(Category::getCategoryName)
                 .orElse("미분류");
@@ -502,37 +521,52 @@ public class DataService {
 
     @Transactional
     public File postProcessingFile(Users user, Long fileId) throws Exception {
+
+        StopWatch sw = new StopWatch("postProcess");
         log.info("[PostProcess] Start post-processing fileId={}, userId={}", fileId, user.getId());
 
+        sw.start("Load File");
         File file = fileRepository.findById(fileId)
                 .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
         log.info("[PostProcess] File entity loaded: src={}", file.getSrc());
+        sw.stop();
 
+        sw.start("Load Url");
         URL downUrl = s3Service.generateDownloadUrl(file.getSrc());
         log.info("[PostProcess] S3 download URL generated: {}", downUrl);
+        sw.stop();
 
+        sw.start("OCR");
         String ocrText = visionService.extractTextFromS3Url(downUrl.toString());
         log.info("[PostProcess] OCR extraction completed: textLength={}",
                 ocrText != null ? ocrText.length() : 0);
+        sw.stop();
 
+        sw.start("Analyze");
         AnalyzeResponse analyzeResponse = analyzeFacadeService.analyze(user.getId(), downUrl.toString());
         log.info("[PostProcess] Analyze completed: categoryId={}, tagsCount={}",
                 analyzeResponse.getCategoryId(),
                 analyzeResponse.getTags() != null ? analyzeResponse.getTags().size() : 0);
+        sw.stop();
 
+        sw.start("TagSave");
         fileTagService.addTagsToFile(fileId, analyzeResponse.getTags());
         log.info("[PostProcess] Tags saved for fileId={}", fileId);
+        sw.stop();
 
-        float[] embedding = embeddingService.embedOcrAndContext(file.getOcrText(), file.getContext());
+        sw.start("Embedding");
+        float[] embedding = embeddingService.embedOcrAndContext(ocrText, analyzeResponse.getDescription());
         log.info("[PostProcess] Embedding generated: dimension={}",
                 embedding != null ? embedding.length : 0);
+        sw.stop();
 
+        sw.start("EmbeddingDBSave");
         FileEmbeddings fileEmbeddings = FileEmbeddings.builder()
                 .userId(user.getId())
                 .file(file)
                 .ocrText(ocrText)
                 .context(analyzeResponse.getDescription())
-                .embedding(embeddingService.embedOcrAndContext(ocrText, analyzeResponse.getDescription()))
+                .embedding(embedding)
                 .build();
 
         log.info("[PostProcess] FileEmbeddings entity created (pre-save)");
@@ -540,7 +574,9 @@ public class DataService {
         file.setVectorId(fileEmbeddings.getId());
         fileEmbeddings = fileEmbeddingsRepository.save(fileEmbeddings);
         log.info("[PostProcess] FileEmbeddings saved: embeddingId={}", fileEmbeddings.getId());
+        sw.stop();
 
+        sw.start("FileUpdate");
         fileRepository.updatePostProcessing(
                 file.getId(),
                 user.getId(),
@@ -558,8 +594,10 @@ public class DataService {
 
         log.info("[PostProcess] File entity updated (in-memory): fileId={}, vectorId={}",
                 file.getId(), file.getVectorId());
+        sw.stop();
 
-        // ✅ OpenSearch 색인 추가
+        sw.start("OpenSearch");
+        // OpenSearch 색인 추가
         String categoryName = categoryRepository.findById(analyzeResponse.getCategoryId())
                 .map(Category::getCategoryName)
                 .orElse("미분류");
@@ -567,6 +605,11 @@ public class DataService {
         log.info("[PostProcess] OpenSearch indexing initiated for fileId={}", fileId);
 
         log.info("[PostProcess] Post-processing completed successfully for fileId={}", fileId);
+        sw.stop();
+
+        log.info(sw.prettyPrint());
+        log.info("[PostProcess] total={} ms", sw.getTotalTimeMillis());
+
         return file;
     }
     /**
@@ -591,6 +634,8 @@ public class DataService {
                     .ocrText(file.getOcrText() != null ? file.getOcrText() : "")
                     .imageUrl(file.getSrc())
                     .createdAt(file.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
+                    .favorite(file.getFavorite() != null ? file.getFavorite() : false)
+                    .fileType(file.getType())
                     .build();
 
             fileSearchService.save(fileSearch);
