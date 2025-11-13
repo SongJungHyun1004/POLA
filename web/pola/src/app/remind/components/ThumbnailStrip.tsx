@@ -5,10 +5,15 @@ interface Props {
   images: {
     id: number;
     src: string;
+    type?: string; // image/png | text/plain
+    ocr_text?: string;
   }[];
   currentIndex: number;
   onSelect: (i: number) => void;
 }
+
+// 텍스트 문서 아이콘 경로 (없으면 Fallback)
+const TEXT_ICON = "/images/text_file_icon.png";
 
 export default function ThumbnailStrip({
   images,
@@ -19,14 +24,12 @@ export default function ThumbnailStrip({
   const visibleCount = 7;
   const thumbnailSize = 56;
 
-  // Wheel → horizontal scroll
   const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
     if (!containerRef.current) return;
-
-    // vertical scroll → horizontal scroll
     containerRef.current.scrollLeft += e.deltaY;
   };
 
+  // 현재 선택된 인덱스 중앙으로 스크롤 이동
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -34,6 +37,7 @@ export default function ThumbnailStrip({
     const scrollPos =
       Math.max(currentIndex - Math.floor(visibleCount / 2), 0) *
       (thumbnailSize + 12);
+
     container.scrollTo({ left: scrollPos, behavior: "smooth" });
   }, [currentIndex]);
 
@@ -41,19 +45,52 @@ export default function ThumbnailStrip({
     <div
       ref={containerRef}
       onWheel={handleWheel}
-      className="flex gap-3 overflow-x-auto no-scrollbar pt-6 px-2 pb-2 justify-start mx-auto max-w-3/5"
+      className="flex gap-3 overflow-x-auto no-scrollbar pt-6 px-2 pb-2 justify-start mx-auto max-w-[60%]"
     >
-      {images.map((item, i) => (
-        <div
-          key={item.id}
-          className={`w-14 h-14 border border-gray-400 rounded-md overflow-hidden cursor-pointer shrink-0 ${
-            currentIndex === i ? "ring-2 ring-black" : ""
-          }`}
-          onClick={() => onSelect(i)}
-        >
-          <img src={item.src} className="w-full h-full object-cover" />
-        </div>
-      ))}
+      {images.map((item, i) => {
+        const isText = item.type?.startsWith("text");
+
+        return (
+          <div
+            key={item.id}
+            className={`w-14 h-14 border border-gray-400 rounded-md overflow-hidden cursor-pointer shrink-0 transition-transform duration-150
+              ${
+                currentIndex === i
+                  ? "ring-2 ring-black scale-105"
+                  : "hover:-translate-y-1"
+              }
+            `}
+            onClick={() => onSelect(i)}
+          >
+            {/* TEXT FILE → 아이콘 또는 TXT 박스 */}
+            {isText ? (
+              <div className="w-full h-full bg-[#F4F1E8] flex items-center justify-center text-[#4C3D25] font-semibold text-xs">
+                {/* 아이콘이 있으면 아이콘 표시 */}
+                <img
+                  src={TEXT_ICON}
+                  alt="text file"
+                  className="w-10 h-10 object-contain opacity-80"
+                  onError={(e) => {
+                    // 아이콘 로딩 실패 시 TXT 텍스트 표시
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = "none";
+                  }}
+                />
+
+                {/* Fallback TXT 표시 */}
+                <span className="absolute">TXT</span>
+              </div>
+            ) : (
+              /* IMAGE FILE */
+              <img
+                src={item.src}
+                alt=""
+                className="w-full h-full object-cover"
+              />
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
