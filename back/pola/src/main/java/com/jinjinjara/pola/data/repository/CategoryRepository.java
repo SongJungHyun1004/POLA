@@ -17,12 +17,39 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     Optional<Category> findByUserAndCategoryName(Users user, String categoryName);
 
     boolean existsByUserAndCategoryName(Users user, String categoryName);
-    @Query("SELECT c FROM Category c WHERE c.user.id = :userId ORDER BY c.createdAt DESC")
-    List<Category> findAllByUserId(@Param("userId") Long userId);
-    Optional<Category> findByIdAndUserId(Long id, Long userId);
+
+    @Query(value = """
+    SELECT *
+    FROM (
+        SELECT f.*,
+               ROW_NUMBER() OVER (PARTITION BY f.category_id ORDER BY f.created_at DESC) AS rn
+        FROM files f
+        WHERE f.user_id = :userId
+    ) sub
+    WHERE sub.rn <= 5
+    """, nativeQuery = true)
+    List<File> findTop5FilesPerCategory(@Param("userId") Long userId);
+
+
+    @Query("SELECT c FROM Category c " +
+            "WHERE c.user = :user " +
+            "ORDER BY c.fileCount DESC, " +
+            "CASE WHEN c.categoryName = '미분류' THEN 1 ELSE 0 END ASC, " +
+            "c.categoryName ASC")
+    List<Category> findAllSortedByUser(@Param("user") Users user);
+
+
+    @Query("SELECT c FROM Category c " +
+            "WHERE c.user.id = :userId " +
+            "ORDER BY c.fileCount DESC, " +
+            "CASE WHEN c.categoryName = '미분류' THEN 1 ELSE 0 END ASC, " +
+            "c.categoryName ASC")
+    List<Category> findAllSorted(Long userId);
+
 
     @Query("SELECT c.id FROM Category c WHERE c.user.id = :userId AND c.categoryName = :categoryName")
     Optional<Long> findIdByUserIdAndCategoryName(@Param("userId") Long userId, @Param("categoryName") String categoryName);
+
     Optional<Category> findByUserIdAndCategoryName(Long userId, String categoryName);
 
     @Query("SELECT c.user.id FROM Category c WHERE c.id = :categoryId")

@@ -7,7 +7,7 @@ fun UserCategoryDto.toDomain(): UserCategory {
     return UserCategory(
         id = id,
         categoryName = categoryName,
-        categorySort = categorySort,
+        fileCount = fileCount,
         createdAt = createdAt,
         userEmail = userEmail
     )

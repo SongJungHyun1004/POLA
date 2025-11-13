@@ -350,7 +350,12 @@ fun CategoryScreen(
 
                 // CategoryChips
                 val categories = remember(uiState.userCategories) {
-                    listOf(UserCategory(-1, "전체")) + uiState.userCategories
+                    val sortedCategories = uiState.userCategories.sortedWith(
+                        compareByDescending<UserCategory> { it.fileCount }
+                            .thenBy { if (it.categoryName == "미분류") 1 else 0 }
+                            .thenBy { it.categoryName }
+                    )
+                    listOf(UserCategory(-1, "전체")) + sortedCategories
                 }
 
                 CategoryChips(
