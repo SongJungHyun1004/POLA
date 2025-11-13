@@ -26,7 +26,8 @@ public class HomeService {
 
     public HomeResponse getHomeData(Long userId) {
         // --- 카테고리별 파일 ---
-        List<Category> categories = categoryRepository.findAllByUserId(userId);
+//        List<Category> categories = categoryRepository.findAllByUserId(userId);
+        List<Category> categories = categoryRepository.findAllByUserIdOrderByFileCountDesc(userId);
 
         // 먼저 모든 파일을 모아두고, 한 번에 presigned URL 생성 (효율성 ↑)
         List<File> allFiles = new ArrayList<>();
