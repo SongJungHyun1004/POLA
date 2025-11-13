@@ -94,12 +94,16 @@ class CategoryRepositoryImpl @Inject constructor(
                     categories = categoriesWithTags.map { (categoryName, tags) ->
                         CategoryWithTags(
                             categoryName = categoryName,
-                            tags = tags
-                        )
+                            tags = tags,
+                            fileCount = 0
+                        ).also {
+                            Log.d("Category:Repo", "CategoryWithTags: name=$categoryName, fileCount=${it.fileCount}, tags=$tags")
+                        }
                     }
                 )
 
                 Log.d("Category:Repo", "Request: $request")
+                Log.d("Category:Repo", "Request categories count: ${request.categories.size}")
                 val response = categoryApi.initCategoryTags(request)
 
                 Log.d("Category:Repo", "Response code: ${response.code()}")
@@ -215,7 +219,11 @@ class CategoryRepositoryImpl @Inject constructor(
 
                     val categories = body.data
                         .map { it.toDomain() }
-                        .sortedBy { it.sort }
+                        .sortedWith(
+                            compareByDescending<Category> { it.sort }
+                                .thenBy { if (it.name == "미분류") 1 else 0 }
+                                .thenBy { it.name }
+                        )
 
                     Result.Success(categories)
                 } else {
