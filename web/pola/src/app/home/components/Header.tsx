@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, KeyboardEvent, MouseEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -14,10 +14,16 @@ import {
   FileText,
   LogOut,
   X,
+  ChevronDown,
 } from "lucide-react";
 import useAuthStore from "@/store/useAuthStore";
 import { authService } from "@/services/authService";
 import { uploadService } from "@/services/uploadService";
+import { fetchTagSuggestions } from "@/services/fileService";
+
+type SearchMode = "INTEGRATED" | "TAG";
+
+const SEARCH_HISTORY_KEY = "pola_search_history";
 
 export default function Header() {
   const { user } = useAuthStore();
@@ -26,47 +32,174 @@ export default function Header() {
   const [query, setQuery] = useState("");
   const [aiQuery, setAiQuery] = useState("");
   const [aiMode, setAiMode] = useState(false);
-  const [tag, setTag] = useState("");
-  const [category, setCategory] = useState("");
-  const [showModal, setShowModal] = useState(false);
+
+  /** 검색 모드: 통합 / 태그 */
+  const [searchMode, setSearchMode] = useState<SearchMode>("INTEGRATED");
+  const [modeDropdownOpen, setModeDropdownOpen] = useState(false);
+
+  /** 자동완성 */
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [highlightIndex, setHighlightIndex] = useState<number>(-1);
+
+  /** 프로필 / 업로드 모달 */
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState(false);
 
   const profileRef = useRef<HTMLDivElement>(null);
+  const modeDropdownRef = useRef<HTMLDivElement>(null);
+  const searchWrapperRef = useRef<HTMLDivElement>(null);
 
-  const tags = ["태그1", "태그2", "태그3", "태그4"];
-  const categories = ["Travel", "Food", "Daily", "Friends"];
-
-  const doNormalSearch = () => {
-    const params = new URLSearchParams();
-    if (query) params.append("search", query);
-    if (tag) params.append("tags", tag);
-    if (category) params.append("category", category);
-    router.push(`/files?${params.toString()}`);
+  /* -------------------- 유틸: 최근 검색어 -------------------- */
+  const getSearchHistory = (): string[] => {
+    if (typeof window === "undefined") return [];
+    try {
+      return JSON.parse(localStorage.getItem(SEARCH_HISTORY_KEY) || "[]");
+    } catch {
+      return [];
+    }
   };
 
+  const saveSearchHistory = (term: string) => {
+    if (!term.trim()) return;
+    const prev = getSearchHistory().filter((t) => t !== term);
+    const next = [term, ...prev].slice(0, 20);
+    localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(next));
+  };
+
+  /* -------------------- 자동완성 로직 -------------------- */
+  useEffect(() => {
+    // 입력이 비었으면 자동완성 숨김
+    if (!query.trim()) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      setHighlightIndex(-1);
+      return;
+    }
+
+    async function load() {
+      if (searchMode === "TAG") {
+        // 태그 검색: API 호출
+        try {
+          const tags = await fetchTagSuggestions(query);
+          setSuggestions(tags);
+          setShowSuggestions(tags.length > 0);
+          setHighlightIndex(tags.length > 0 ? 0 : -1);
+        } catch (e) {
+          console.error("태그 자동완성 실패:", e);
+          setSuggestions([]);
+          setShowSuggestions(false);
+          setHighlightIndex(-1);
+        }
+      } else {
+        // 통합 검색: 로컬스토리지 기반
+        const history = getSearchHistory();
+        const filtered = history.filter((t) => t.includes(query));
+        setSuggestions(filtered);
+        setShowSuggestions(filtered.length > 0);
+        setHighlightIndex(filtered.length > 0 ? 0 : -1);
+      }
+    }
+
+    load();
+  }, [query, searchMode]);
+
+  /* -------------------- 키보드 네비게이션 -------------------- */
+  const handleSearchInputKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (!showSuggestions || suggestions.length === 0) {
+      if (e.key === "Enter") {
+        // 자동완성 없을 때는 바로 검색
+        e.preventDefault();
+        doSearch();
+      }
+      return;
+    }
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlightIndex((prev) =>
+        prev < suggestions.length - 1 ? prev + 1 : prev
+      );
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlightIndex((prev) => (prev > 0 ? prev - 1 : prev));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (highlightIndex >= 0 && highlightIndex < suggestions.length) {
+        const value = suggestions[highlightIndex];
+        setQuery(value);
+        // 자동완성 값만 입력창에 채우고, 검색은 실행하지 않음
+        setShowSuggestions(false);
+        setHighlightIndex(-1);
+      } else {
+        doSearch();
+      }
+    } else if (e.key === "Escape") {
+      setShowSuggestions(false);
+      setHighlightIndex(-1);
+    }
+  };
+
+  /* -------------------- 검색 실행 -------------------- */
+  const doSearch = () => {
+    if (!query.trim()) return;
+
+    if (searchMode === "INTEGRATED") {
+      saveSearchHistory(query);
+      const params = new URLSearchParams();
+      params.append("search", query);
+      router.push(`/files?${params.toString()}`);
+    } else {
+      const params = new URLSearchParams();
+      params.append("tag", query);
+      router.push(`/files?${params.toString()}`);
+    }
+
+    setShowSuggestions(false);
+  };
+
+  /* -------------------- AI 검색 -------------------- */
   const doAISearch = () => {
-    if (!aiQuery) return;
+    if (!aiQuery.trim()) return;
     router.push(`/files?nlp=${encodeURIComponent(aiQuery)}`);
     setAiMode(false);
   };
 
-  /** 외부 클릭 시 프로필 모달 닫기 */
+  /* -------------------- 외부 클릭 처리 -------------------- */
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        profileRef.current &&
-        !profileRef.current.contains(e.target as Node)
-      ) {
+    const handleClick = (e: MouseEvent | globalThis.MouseEvent) => {
+      const target = e.target as Node;
+
+      // 프로필 모달
+      if (profileRef.current && !profileRef.current.contains(target)) {
         setShowProfileModal(false);
       }
+
+      // 검색 모드 드롭다운
+      if (
+        modeDropdownRef.current &&
+        !modeDropdownRef.current.contains(target)
+      ) {
+        setModeDropdownOpen(false);
+      }
+
+      // 자동완성 (검색 영역 밖 클릭 시 닫기)
+      if (
+        searchWrapperRef.current &&
+        !searchWrapperRef.current.contains(target)
+      ) {
+        setShowSuggestions(false);
+        setHighlightIndex(-1);
+      }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  /* -------------------- 붙여넣기 업로드 -------------------- */
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
       const items = e.clipboardData?.items;
@@ -82,8 +215,69 @@ export default function Header() {
 
     window.addEventListener("paste", handlePaste);
     return () => window.removeEventListener("paste", handlePaste);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /* -------------------- 텍스트 파일 UTF-8 변환 -------------------- */
+  function convertTextFileToUTF8(file: File): Promise<File> {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+
+      reader.readAsText(file, "utf-8");
+
+      reader.onload = () => {
+        const utf8Blob = new Blob([reader.result as string], {
+          type: "text/plain; charset=utf-8",
+        });
+
+        const utf8File = new File([utf8Blob], file.name, {
+          type: "text/plain; charset=utf-8",
+        });
+
+        resolve(utf8File);
+      };
+    });
+  }
+
+  /* -------------------- 업로드 전체 프로세스 -------------------- */
+  async function handleUploadProcess(file: File) {
+    try {
+      setUploading(true);
+      setUploadedFile(false);
+
+      let uploadFile = file;
+      if (file.type === "text/plain") {
+        console.log("텍스트 파일 감지 → UTF-8 변환 실행");
+        uploadFile = await convertTextFileToUTF8(file);
+        console.log("UTF-8 변환 완료:", uploadFile);
+      }
+
+      const { url, key } = await uploadService.getPresignedUploadUrl(
+        uploadFile.name
+      );
+
+      await uploadService.uploadToS3(url, uploadFile);
+
+      const originUrl = url.split("?")[0];
+      const completeData = await uploadService.completeUpload({
+        key,
+        type: uploadFile.type,
+        fileSize: uploadFile.size,
+        originUrl,
+        platform: "WEB",
+      });
+
+      uploadService.postProcess(completeData.id);
+      setUploadedFile(true);
+    } catch (err) {
+      console.error(err);
+      alert("파일 업로드 중 오류가 발생했습니다.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  /* -------------------- 로그인 전 헤더 -------------------- */
   if (!user) {
     return (
       <header className="flex justify-between items-center w-full pb-10 px-8 pt-6">
@@ -108,79 +302,12 @@ export default function Header() {
     );
   }
 
-  /** 업로드 전체 프로세스 처리 함수 */
-  /** CP949 → UTF-8 강제 변환 (텍스트 파일 전용) */
-  function convertTextFileToUTF8(file: File): Promise<File> {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
+  const modeLabel = searchMode === "INTEGRATED" ? "통합 검색" : "태그 검색";
 
-      // UTF-8로 읽기
-      reader.readAsText(file, "utf-8");
-
-      reader.onload = () => {
-        const utf8Blob = new Blob([reader.result as string], {
-          type: "text/plain; charset=utf-8",
-        });
-
-        // 기존 파일명 유지
-        const utf8File = new File([utf8Blob], file.name, {
-          type: "text/plain; charset=utf-8",
-        });
-
-        resolve(utf8File);
-      };
-    });
-  }
-
-  /** 업로드 전체 프로세스 */
-  async function handleUploadProcess(file: File) {
-    try {
-      setUploading(true);
-      setUploadedFile(false);
-
-      // 텍스트 파일이면 UTF-8로 변환
-      let uploadFile = file;
-      if (file.type === "text/plain") {
-        console.log("텍스트 파일 감지 → UTF-8 변환 실행");
-        uploadFile = await convertTextFileToUTF8(file);
-        console.log("UTF-8 변환 완료:", uploadFile);
-      }
-
-      // 1) Presigned URL 요청
-      const { url, key } = await uploadService.getPresignedUploadUrl(
-        uploadFile.name
-      );
-
-      // 2) S3 업로드
-      await uploadService.uploadToS3(url, uploadFile);
-
-      // 3) DB에 파일 등록
-      const originUrl = url.split("?")[0];
-      const completeData = await uploadService.completeUpload({
-        key,
-        type: uploadFile.type,
-        fileSize: uploadFile.size,
-        originUrl,
-        platform: "WEB",
-      });
-
-      // 4) 후처리 API 요청 (await 필요 없음)
-      uploadService.postProcess(completeData.id);
-
-      // 업로드 완료 표시
-      setUploadedFile(true);
-    } catch (err) {
-      console.error(err);
-      alert("파일 업로드 중 오류가 발생했습니다.");
-    } finally {
-      setUploading(false);
-    }
-  }
-
+  /* -------------------- 로그인 후 헤더 -------------------- */
   return (
     <>
-      {/* 헤더 */}
-      <header className="flex justify-between items-center w-full pb-10 px-8 pt-6">
+      <header className="relative flex justify-between items-center w-full pb-10 px-8 pt-6 bg-[#FFFEF8]">
         {/* 로고 */}
         <Link href="/home">
           <Image
@@ -193,46 +320,107 @@ export default function Header() {
           />
         </Link>
 
-        {/* 검색 섹션 */}
-        <div className="flex items-center w-1/2 gap-3">
+        {/* 검색 섹션 (기존 AI 버튼/애니메이션 포함) */}
+        <div
+          ref={searchWrapperRef}
+          className="relative flex items-center w-1/2 gap-3"
+        >
+          {/* 기본 검색창 */}
           <div
             className={`transition-all duration-300 flex items-center bg-white border rounded-full ${
               aiMode
-                ? "w-10 h-10 justify-center p-0 border"
+                ? "w-10 h-10 justify-center p-0"
                 : "flex-grow px-4 py-2 border"
             }`}
           >
-            {!aiMode && (
+            {!aiMode ? (
               <>
+                {/* 검색 모드 드롭다운 */}
+                <div className="relative" ref={modeDropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => setModeDropdownOpen((prev) => !prev)}
+                    className="flex items-center gap-1 font-semibold text-[#4C3D25]"
+                  >
+                    {modeLabel}
+                    <ChevronDown className="w-4 h-4" />
+                  </button>
+
+                  {modeDropdownOpen && (
+                    <div className="absolute top-[120%] left-0 bg-white border rounded-xl shadow-lg z-50 py-1 w-32">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearchMode("INTEGRATED");
+                          setModeDropdownOpen(false);
+                          setQuery("");
+                          setSuggestions([]);
+                          setHighlightIndex(-1);
+                        }}
+                        className="block w-full text-left px-3 py-2 hover:bg-gray-100"
+                      >
+                        통합 검색
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearchMode("TAG");
+                          setModeDropdownOpen(false);
+                          setQuery("");
+                          setSuggestions([]);
+                          setHighlightIndex(-1);
+                        }}
+                        className="block w-full text-left px-3 py-2 hover:bg-gray-100"
+                      >
+                        태그 검색
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* 검색어 입력 */}
                 <input
                   type="text"
-                  placeholder="검색어"
+                  placeholder="검색어 입력"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && doNormalSearch()}
-                  className="flex-grow outline-none text-tertiary placeholder:text-tertiary/50"
+                  onKeyDown={handleSearchInputKeyDown}
+                  onFocus={() => {
+                    if (suggestions.length > 0) {
+                      setShowSuggestions(true);
+                    }
+                  }}
+                  className="flex-grow outline-none text-tertiary placeholder:text-tertiary/50 ml-3"
                 />
+
+                {/* 검색 버튼 */}
                 <button
                   type="button"
-                  onClick={() => setShowModal(true)}
-                  className="mr-2 text-tertiary hover:text-black"
+                  onClick={doSearch}
+                  className="text-tertiary hover:text-black transition"
                 >
-                  <SlidersHorizontal className="w-5 h-5" />
+                  <Search className="w-5 h-5" />
+                </button>
+              </>
+            ) : (
+              <>
+                {/* 🔥 AI 모드일 때 왼쪽 동그란 버튼: AI 모드 종료 */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAiMode(false);
+                    setShowSuggestions(false);
+                    setHighlightIndex(-1);
+                  }}
+                  className="text-tertiary hover:text-black transition"
+                >
+                  <Search className="w-5 h-5" />
                 </button>
               </>
             )}
-            <button
-              type="button"
-              onClick={() => {
-                if (aiMode) setAiMode(false);
-                else doNormalSearch();
-              }}
-              className="text-tertiary hover:text-black transition"
-            >
-              <Search className="w-5 h-5" />
-            </button>
           </div>
 
+          {/* AI 검색 박스 (기존 애니메이션 유지) */}
           <div
             className={`bg-white border rounded-full flex items-center transition-all duration-300 overflow-hidden ${
               aiMode ? "flex-grow px-4 py-2" : "w-10 h-10 justify-center"
@@ -240,6 +428,7 @@ export default function Header() {
           >
             {aiMode ? (
               <>
+                {/* AI 입력창 */}
                 <input
                   type="text"
                   placeholder="AI를 통한 자연어 검색"
@@ -248,9 +437,12 @@ export default function Header() {
                   onKeyDown={(e) => e.key === "Enter" && doAISearch()}
                   className="flex-grow outline-none placeholder:text-tertiary/50 animate-fade-slide-in"
                 />
+
+                {/* 🔥 AI 검색 실행 버튼 (Send 아이콘 유지) */}
                 <button
+                  type="button"
                   onClick={doAISearch}
-                  className="text-black hover:text-gray-800"
+                  className="text-tertiary hover:text-black transition"
                 >
                   <Send className="w-5 h-5" />
                 </button>
@@ -265,11 +457,34 @@ export default function Header() {
               </button>
             )}
           </div>
+
+          {/* 자동완성 박스 (검색창 아래로, body를 밀지 않도록 absolute) */}
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="absolute left-0 right-0 top-[100%] mt-2 bg-white border rounded-2xl shadow-lg z-40 p-4 max-h-80 overflow-y-auto">
+              {suggestions.map((s, idx) => (
+                <button
+                  key={`${s}-${idx}`}
+                  type="button"
+                  className={`w-full text-left px-3 py-2 rounded-lg ${
+                    highlightIndex === idx ? "bg-gray-200" : "hover:bg-gray-100"
+                  }`}
+                  // onMouseDown 을 써야 input blur 전에 처리 가능
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    setQuery(s);
+                    setShowSuggestions(false);
+                    setHighlightIndex(-1);
+                  }}
+                >
+                  {searchMode === "TAG" ? `#${s}` : s}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* 프로필 영역 */}
+        {/* 프로필 영역 (기존 그대로) */}
         <div ref={profileRef} className="relative flex items-center gap-3">
-          {/* 🔹 클릭 범위를 유저네임 + 이미지 전체로 확장 */}
           <button
             onClick={() => setShowProfileModal((prev) => !prev)}
             className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition"
@@ -279,7 +494,7 @@ export default function Header() {
               <img
                 src={user.profile_image_url || "/images/default_profile.png"}
                 alt="profile"
-                className="object-cover"
+                className="object-cover w-full h-full"
               />
             </div>
           </button>
@@ -324,7 +539,11 @@ export default function Header() {
                       alert("로그아웃 중 오류가 발생했습니다.");
                       localStorage.removeItem("accessToken");
                       window.location.href = "/";
+                      return;
                     }
+
+                    localStorage.removeItem("accessToken");
+                    window.location.href = "/";
                   }}
                   className="flex items-center justify-center gap-2 text-red-500 hover:text-red-600 w-full font-semibold"
                 >
@@ -336,82 +555,6 @@ export default function Header() {
           )}
         </div>
       </header>
-
-      {/* 상세 검색 모달 */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/30 z-40 flex justify-center items-start pt-20">
-          <div className="bg-white w-[90%] max-w-2xl rounded-xl p-6 shadow-lg animate-fade-slide-in">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">상세 검색</h2>
-              <button
-                onClick={() => setShowModal(false)}
-                className="text-gray-500 hover:text-black"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="flex flex-col gap-4 text-tertiary">
-              {/* 검색어 */}
-              <div className="flex flex-col">
-                <label className="text-sm mb-1 font-medium">검색어</label>
-                <input
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  className="h-12 px-3 py-2 rounded-lg border outline-none"
-                  placeholder="검색어 입력"
-                />
-              </div>
-
-              {/* 태그 */}
-              <div className="flex flex-col">
-                <label className="text-sm mb-1 font-medium">태그</label>
-                <select
-                  value={tag}
-                  onChange={(e) => setTag(e.target.value)}
-                  className="h-12 px-3 py-2 rounded-lg border outline-none"
-                >
-                  <option value="">전체</option>
-                  {tags.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* 카테고리 */}
-              <div className="flex flex-col">
-                <label className="text-sm mb-1 font-medium">카테고리</label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="h-12 px-3 py-2 rounded-lg border outline-none"
-                >
-                  <option value="">전체</option>
-                  {categories.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  doNormalSearch();
-                  setShowModal(false);
-                }}
-                className="mt-2 bg-black text-white rounded-lg py-2 text-center font-semibold"
-              >
-                검색하기
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* 업로드 모달 */}
       {showUploadModal && (
@@ -447,7 +590,6 @@ export default function Header() {
                 이미지(PNG/JPG), 텍스트 파일만 업로드 가능합니다.
               </p>
 
-              {/* 실제 파일 input */}
               <input
                 type="file"
                 accept="image/png, image/jpg, text/plain"
@@ -478,6 +620,7 @@ export default function Header() {
   );
 }
 
+/* -------------------- 공용 메뉴 아이템 -------------------- */
 function MenuItem({
   icon,
   text,

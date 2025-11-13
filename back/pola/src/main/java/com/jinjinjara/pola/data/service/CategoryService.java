@@ -37,7 +37,6 @@ public class CategoryService {
     private final CategoryTagRepository categoryTagRepository;
     private final FileRepository fileRepository;
     private final ApplicationEventPublisher publisher;
-    private final CategoryCountCacheService categoryCountCacheService;
     /**
      * CREATE - 카테고리 생성
      */
@@ -52,7 +51,6 @@ public class CategoryService {
             Category category = Category.builder()
                     .user(user)
                     .categoryName(categoryName)
-                    .categorySort(0)
                     .build();
 
             Category saved = categoryRepository.save(category);
@@ -71,19 +69,25 @@ public class CategoryService {
     @Transactional(readOnly = true)
     public List<CategoryResponse> getCategoriesByUser(Users user) {
         try {
-            List<Category> categories = categoryRepository.findByUser(user);
+            // 정렬된 카테고리 조회 (fileCount DESC, 가나다순, 미분류는 마지막)
+            List<Category> categories = categoryRepository.findAllSortedByUser(user);
+
             if (categories.isEmpty()) {
                 throw new CustomException(ErrorCode.CATEGORY_NOT_FOUND);
             }
+
             return categories.stream()
                     .map(CategoryResponse::fromEntity)
                     .toList();
+
         } catch (CustomException e) {
             throw e;
+
         } catch (Exception e) {
             throw new CustomException(ErrorCode.DATA_NOT_FOUND, e.getMessage());
         }
     }
+
 
     /**
      * READ - 단일 조회
@@ -119,7 +123,6 @@ public class CategoryService {
                     .id(category.getId())
                     .user(category.getUser())
                     .categoryName(newName)
-                    .categorySort(category.getCategorySort())
                     .createdAt(category.getCreatedAt())
                     .build();
 
@@ -145,7 +148,6 @@ public class CategoryService {
 
             Users user = category.getUser();
             Long userId = user.getId();
-            Long deletedCategoryId = id;
 
             // 2. '미분류' 카테고리 조회 또는 생성
             Category uncategorized = categoryRepository.findByUserIdAndCategoryName(userId, "미분류")
@@ -153,6 +155,7 @@ public class CategoryService {
                         Category newCategory = Category.builder()
                                 .user(user)
                                 .categoryName("미분류")
+                                .fileCount(0)
                                 .build();
                         return categoryRepository.save(newCategory);
                     });
@@ -161,24 +164,18 @@ public class CategoryService {
 
             // 3. 이 카테고리에 포함된 파일들 모두 "미분류"로 이동
             List<File> files = fileRepository.findAllByCategoryId(id);
-            int movedCount = files.size(); // Redis 반영에 중요
+            int movedCount = files.size();
 
             for (File file : files) {
                 file.setCategoryId(uncategorizedId);
             }
             fileRepository.saveAll(files);
 
-            // 3-1. Redis 카운트 반영 (중요!)
-            // oldCategoryId → -movedCount
+            // 3-1. 미분류 카테고리에 파일 개수 반영
             if (movedCount > 0) {
-                categoryCountCacheService.increment(userId, deletedCategoryId, -movedCount);
-
-                // uncategorized → +movedCount
-                categoryCountCacheService.increment(userId, uncategorizedId, +movedCount);
+                uncategorized.increaseCount(movedCount);
+                categoryRepository.save(uncategorized);
             }
-
-            // old 카테고리 Redis field 삭제
-            categoryCountCacheService.deleteField(userId, deletedCategoryId);
 
             // 4. category_tags 삭제
             categoryTagRepository.deleteByCategoryId(id);
