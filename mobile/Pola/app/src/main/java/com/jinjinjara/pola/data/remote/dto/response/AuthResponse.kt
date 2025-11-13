@@ -68,8 +68,8 @@ data class UserCategoryDto(
     @Json(name = "categoryName")
     val categoryName: String,
 
-    @Json(name = "categorySort")
-    val categorySort: Int,
+    @Json(name = "fileCount")
+    val fileCount: Int,
 
     @Json(name = "createdAt")
     val createdAt: String,
