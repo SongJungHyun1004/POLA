@@ -1,9 +1,6 @@
 // apiClient.js - 크롬 확장 프로그램용 API 클라이언트
 
-// 설정 로드
-importScripts('config.js');
 
-const API_BASE_URL = CONFIG.API_BASE_URL;
 /**
  * API 요청 함수 (자동 토큰 갱신 포함)
  */
@@ -23,7 +20,7 @@ async function apiRequest(url, options = {}) {
     }
     
     // 3. API 요청
-    let response = await fetch(API_BASE_URL + url, {
+    let response = await fetch(CONFIG.API_BASE_URL + url, {
       ...options,
       headers
     });
@@ -37,7 +34,7 @@ async function apiRequest(url, options = {}) {
         
         // 새 토큰으로 재시도
         headers['Authorization'] = `Bearer ${newAccessToken}`;
-        response = await fetch(API_BASE_URL + url, {
+        response = await fetch(CONFIG.API_BASE_URL + url, {
           ...options,
           headers
         });
@@ -82,7 +79,7 @@ function getStoredTokens() {
  * 토큰 갱신
  */
 async function refreshToken(refreshToken) {
-  const response = await fetch(API_BASE_URL + '/oauth/reissue', {
+  const response = await fetch(CONFIG.API_BASE_URL + '/oauth/reissue', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${refreshToken}`,
@@ -121,42 +118,135 @@ function clearAuth() {
 /**
  * 이미지 업로드 API
  */
+/**
+ * 이미지 업로드 API (S3 직접 업로드 방식)
+ */
 async function uploadImage(imageData, metadata = {}) {
   try {
+    console.log('이미지 업로드 시작...');
+    
     // Base64를 Blob으로 변환
     const blob = base64ToBlob(imageData);
+    const fileSize = blob.size;
     
-    // FormData 생성
-    const formData = new FormData();
-    formData.append('image', blob, 'capture.png');
-    
-    // 메타데이터 추가
-    if (metadata.title) formData.append('title', metadata.title);
-    if (metadata.description) formData.append('description', metadata.description);
-    if (metadata.url) formData.append('sourceUrl', metadata.url);
+    console.log('이미지 Blob 생성 완료, 크기:', fileSize, 'bytes');
     
     // 토큰 가져오기
     const tokens = await getStoredTokens();
     
-    // 업로드 요청
-    const response = await fetch(API_BASE_URL + '/api/images/upload', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${tokens.accessToken}`
-        // Content-Type은 FormData가 자동 설정
-      },
-      body: formData
-    });
-    
-    if (!response.ok) {
-      throw new Error('이미지 업로드 실패');
+    if (!tokens.accessToken) {
+      throw new Error('로그인이 필요합니다.');
     }
     
-    return await response.json();
+    // 1단계: S3 Presigned URL 생성
+    console.log('1단계: S3 업로드 URL 생성 중...');
+    const timestamp = Date.now();
+    const fileName = metadata.title || `upload_${timestamp}.png`;
+    
+    const presignedResponse = await fetch(
+      `${CONFIG.API_BASE_URL}s3/presigned/upload?fileName=${encodeURIComponent(fileName)}`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${tokens.accessToken}`
+        }
+      }
+    );
+    
+    if (!presignedResponse.ok) {
+      const errorText = await presignedResponse.text();
+      console.error('Presigned URL 생성 실패:', errorText);
+      throw new Error('업로드 URL 생성 실패');
+    }
+    
+    const presignedData = await presignedResponse.json();
+    const uploadUrl = presignedData.data.url;
+    const fileKey = presignedData.data.key;
+    
+    console.log('✅ 1단계 완료 - Upload URL 획득');
+    
+    // 2단계: S3에 직접 업로드
+    console.log('2단계: S3에 이미지 업로드 중...');
+    
+    const s3UploadResponse = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'image/png'
+      },
+      body: blob
+    });
+    
+    if (!s3UploadResponse.ok) {
+      console.error('S3 업로드 실패:', s3UploadResponse.status);
+      throw new Error('S3 업로드 실패');
+    }
+    
+    console.log('✅ 2단계 완료 - S3 업로드 성공');
+    
+    // 3단계: DB에 파일 메타데이터 저장
+    console.log('3단계: 파일 정보 저장 중...');
+    
+    const originUrl = uploadUrl.split('?')[0];
+    
+    const completeResponse = await fetch(`${CONFIG.API_BASE_URL}files/complete`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${tokens.accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        key: fileKey,
+        type: 'image/png',
+        fileSize: fileSize,
+        originUrl: originUrl,
+        platform: 'WEB'
+      })
+    });
+    
+    if (!completeResponse.ok) {
+      const errorText = await completeResponse.text();
+      console.error('파일 등록 실패:', errorText);
+      throw new Error('파일 등록 실패');
+    }
+    
+    const completeData = await completeResponse.json();
+    console.log('✅ 3단계 완료 - 파일 등록 성공');
+    
+    // 4단계: 파일 분류 (백그라운드)
+    triggerPostProcessInBackground(completeData.data.id, tokens.accessToken);
+    
+    return completeData;
     
   } catch (error) {
     console.error('이미지 업로드 오류:', error);
     throw error;
+  }
+}
+
+/**
+ * 파일 분류 백그라운드 처리
+ */
+async function triggerPostProcessInBackground(fileId, accessToken) {
+  try {
+    console.log(`파일 분류 시작 (File ID: ${fileId})...`);
+    
+    const response = await fetch(
+      `${CONFIG.API_BASE_URL}files/${fileId}/post-process`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      }
+    );
+    
+    if (response.ok) {
+      console.log('✅ 파일 분류 성공');
+    } else {
+      console.warn('⚠️ 파일 분류 실패');
+    }
+  } catch (error) {
+    console.error('⚠️ 파일 분류 오류:', error);
   }
 }
 
