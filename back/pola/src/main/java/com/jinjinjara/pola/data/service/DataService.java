@@ -591,6 +591,8 @@ public class DataService {
                     .ocrText(file.getOcrText() != null ? file.getOcrText() : "")
                     .imageUrl(file.getSrc())
                     .createdAt(file.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
+                    .favorite(file.getFavorite() != null ? file.getFavorite() : false)
+                    .fileType(file.getType())
                     .build();
 
             fileSearchService.save(fileSearch);
