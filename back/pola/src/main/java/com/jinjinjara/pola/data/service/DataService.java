@@ -98,6 +98,7 @@ public class DataService {
                         .type(file.getType())
                         .context(file.getContext())
                         .ocrText(file.getOcrText())
+                        .createdAt(file.getCreatedAt())
                         .favorite(file.getFavorite())
                         .tags(tagMap.getOrDefault(file.getId(), List.of())) // 파일별 태그 리스트
                         .build())
