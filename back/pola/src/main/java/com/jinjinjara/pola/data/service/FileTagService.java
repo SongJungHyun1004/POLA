@@ -46,6 +46,10 @@ public class FileTagService {
                     .build();
 
             FileTag saved = fileTagRepository.save(fileTag);
+
+            // OpenSearch 업데이트 추가
+            updateOpenSearchTags(fileId);
+
             return FileTagResponse.fromEntity(saved);
         } catch (Exception e) {
             throw new CustomException(ErrorCode.TAG_CREATE_FAIL, e.getMessage());
@@ -89,6 +93,8 @@ public class FileTagService {
                     .ocrText(file.getOcrText() != null ? file.getOcrText() : "")
                     .imageUrl(file.getSrc())
                     .createdAt(file.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
+                    .favorite(file.getFavorite() != null ? file.getFavorite() : false)
+                    .fileType(file.getType())
                     .build();
 
             fileSearchService.save(fileSearch);

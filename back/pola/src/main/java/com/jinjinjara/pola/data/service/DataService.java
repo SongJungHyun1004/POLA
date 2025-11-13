@@ -116,6 +116,10 @@ public class DataService {
 
             fileTagRepository.deleteByFile(file);
             s3Service.deleteFileFromS3(file.getSrc());
+            // 3. OpenSearch에서 인덱스 삭제
+            deleteFromOpenSearchAsync(fileId);
+
+
             fileRepository.delete(file);
 
             category.decreaseCount(1);
@@ -324,13 +328,16 @@ public class DataService {
         file.setCategoryId(categoryId);
         File savedFile = fileRepository.save(file);
 
+        // OpenSearch 업데이트
+        String categoryName = categoryRepository.findById(categoryId)
+                .map(Category::getCategoryName)
+                .orElse("미분류");
         oldCategory.decreaseCount(1);
         newCategory.increaseCount(1);
 
         categoryRepository.save(oldCategory);
         categoryRepository.save(newCategory);
 
-        String categoryName = newCategory.getCategoryName();
         indexToOpenSearchAsync(savedFile, categoryName);
 
         return savedFile;
@@ -356,7 +363,15 @@ public class DataService {
         file.setFavoriteSort(sortValue != null ? sortValue : 0);
         file.setFavoritedAt(LocalDateTime.now());
 
-        return fileRepository.save(file);
+        File saved = fileRepository.save(file);
+
+        // OpenSearch 업데이트
+        String categoryName = categoryRepository.findById(file.getCategoryId())
+                .map(Category::getCategoryName)
+                .orElse("미분류");
+        indexToOpenSearchAsync(saved, categoryName);
+
+        return saved;
     }
 
     /**
@@ -375,7 +390,15 @@ public class DataService {
         file.setFavoriteSort(0);
 //        file.setFavoritedAt(null);
 
-        return fileRepository.save(file);
+        File saved = fileRepository.save(file);
+
+        // OpenSearch 업데이트
+        String categoryName = categoryRepository.findById(file.getCategoryId())
+                .map(Category::getCategoryName)
+                .orElse("미분류");
+        indexToOpenSearchAsync(saved, categoryName);
+
+        return saved;
     }
 //    //즐겨찾기 파일 조회
 //    @Transactional(readOnly = true)
@@ -480,7 +503,7 @@ public class DataService {
 
         File saved = fileRepository.save(file);
 
-        // ✅ OpenSearch 업데이트
+        // OpenSearch 업데이트
         String categoryName = categoryRepository.findById(saved.getCategoryId())
                 .map(Category::getCategoryName)
                 .orElse("미분류");
@@ -633,11 +656,27 @@ public class DataService {
                     .build();
 
             fileSearchService.save(fileSearch);
-            log.info("✅ OpenSearch 색인 완료: fileId={}", file.getId());
+            log.info(" OpenSearch 색인 완료: fileId={}", file.getId());
 
         } catch (Exception e) {
-            log.error("❌ OpenSearch 색인 실패: fileId={}", file.getId(), e);
+            log.error(" OpenSearch 색인 실패: fileId={}", file.getId(), e);
             // 실패해도 파일은 PostgreSQL에 저장되어 있음
+        }
+    }
+
+    /**
+     * OpenSearch 인덱스 삭제 (비동기 처리)
+     * 파일 삭제 시 자동으로 검색 인덱스에서 제거
+     */
+    @Async
+    public void deleteFromOpenSearchAsync(Long fileId) {
+        try {
+            fileSearchService.delete(fileId);
+            log.info(" OpenSearch 인덱스 삭제 완료: fileId={}", fileId);
+
+        } catch (Exception e) {
+            log.error(" OpenSearch 인덱스 삭제 실패: fileId={}", fileId, e);
+            // 실패해도 파일은 PostgreSQL에서 삭제되어 있음
         }
     }
 
