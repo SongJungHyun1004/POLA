@@ -18,6 +18,12 @@ function createContextMenus() {
   });
 
   chrome.contextMenus.create({
+    id: "uploadImage",
+    title: "🖼️ 이미지를 POLA에 저장하기",
+    contexts: ["image"]
+  });
+
+  chrome.contextMenus.create({
     id: "copyText",
     title: "📝 선택한 텍스트 가져오기",
     contexts: ["selection"]
@@ -43,6 +49,8 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
   if (info.menuItemId === "captureScreen") {
     await startAreaCaptureWithInjection(tab);
+  } else if (info.menuItemId === "uploadImage") { 
+    await handleImageUpload(info, tab);
   } else if (info.menuItemId === "copyText") {
     await handleTextCapture(info, tab);
   }
@@ -751,5 +759,139 @@ async function triggerPostProcess(fileId, accessToken) {
   } catch (error) {
     // 분류 실패는 사용자에게 알리지 않음 (백그라운드 작업)
     console.error('⚠️ 파일 분류 오류:', error);
+  }
+}
+
+/**
+ * 이미지 업로드 처리
+ */
+async function handleImageUpload(info, tab) {
+  try {
+    const imageUrl = info.srcUrl;
+    
+    if (!imageUrl) {
+      throw new Error('이미지 URL을 찾을 수 없습니다.');
+    }
+
+    console.log('이미지 업로드 시작:', imageUrl);
+    showNotification('업로드 중...', '이미지를 POLA에 업로드하고 있습니다.');
+
+    // 1. 이미지 다운로드
+    console.log('1단계: 이미지 다운로드 중...');
+    const imageResponse = await fetch(imageUrl);
+    
+    if (!imageResponse.ok) {
+      throw new Error('이미지를 가져올 수 없습니다.');
+    }
+
+    const blob = await imageResponse.blob();
+    const fileSize = blob.size;
+    
+    // 이미지 타입 확인
+    const contentType = blob.type || 'image/png';
+    
+    console.log('✅ 이미지 다운로드 완료, 크기:', fileSize, 'bytes, 타입:', contentType);
+
+    // 토큰 가져오기
+    const { accessToken } = await chrome.storage.local.get(['accessToken']);
+
+    if (!accessToken) {
+      throw new Error('로그인이 필요합니다.');
+    }
+
+    // 2단계: S3 Presigned URL 생성
+    console.log('2단계: S3 업로드 URL 생성 중...');
+    const timestamp = Date.now();
+    const extension = contentType.split('/')[1] || 'png';
+    const fileName = `image_${timestamp}.${extension}`;
+
+    const presignedResponse = await fetch(
+      `${API_BASE_URL}s3/presigned/upload?fileName=${encodeURIComponent(fileName)}`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      }
+    );
+
+    if (!presignedResponse.ok) {
+      const errorText = await presignedResponse.text();
+      console.error('Presigned URL 생성 실패:', errorText);
+      throw new Error('업로드 URL 생성 실패');
+    }
+
+    const presignedData = await presignedResponse.json();
+    const uploadUrl = presignedData.data.url;
+    const fileKey = presignedData.data.key;
+
+    console.log('✅ 2단계 완료 - Upload URL 획득');
+
+    // 3단계: S3에 직접 업로드
+    console.log('3단계: S3에 이미지 업로드 중...');
+
+    const s3UploadResponse = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': contentType
+      },
+      body: blob
+    });
+
+    if (!s3UploadResponse.ok) {
+      console.error('S3 업로드 실패:', s3UploadResponse.status, s3UploadResponse.statusText);
+      throw new Error('S3 업로드 실패');
+    }
+
+    console.log('✅ 3단계 완료 - S3 업로드 성공');
+
+    // 4단계: DB에 파일 메타데이터 저장
+    console.log('4단계: 파일 정보 저장 중...');
+
+    const originUrl = uploadUrl.split('?')[0];
+
+    const completeResponse = await fetch(`${API_BASE_URL}files/complete`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        key: fileKey,
+        type: contentType,
+        fileSize: fileSize,
+        originUrl: originUrl,
+        platform: 'WEB'
+      })
+    });
+
+    if (!completeResponse.ok) {
+      const errorText = await completeResponse.text();
+      console.error('파일 등록 실패:', errorText);
+      throw new Error('파일 등록 실패');
+    }
+
+    const completeData = await completeResponse.json();
+    console.log('✅ 4단계 완료 - 파일 등록 성공:', completeData);
+
+    // 업로드 성공!
+    showNotification(
+      '✨ 업로드 완료!',
+      '이미지가 POLA에 성공적으로 저장되었습니다.'
+    );
+
+    console.log('🎉 전체 업로드 플로우 완료!');
+    console.log('파일 ID:', completeData.data.id);
+    console.log('저장 URL:', completeData.data.originUrl);
+
+    // 5단계: 파일 분류 (백그라운드에서 실행)
+    triggerPostProcess(completeData.data.id, accessToken);
+
+  } catch (error) {
+    console.error('이미지 업로드 실패:', error);
+    showNotification(
+      '업로드 실패',
+      error.message || '이미지 업로드 중 오류가 발생했습니다.'
+    );
   }
 }
