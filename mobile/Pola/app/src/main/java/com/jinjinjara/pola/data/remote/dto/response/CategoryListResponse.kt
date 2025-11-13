@@ -14,7 +14,7 @@ data class CategoryListResponse(
 data class CategoryDto(
     @Json(name = "id") val id: Long,
     @Json(name = "categoryName") val categoryName: String,
-    @Json(name = "categorySort") val categorySort: Int,
+    @Json(name = "fileCount") val fileCount: Int,
     @Json(name = "createdAt") val createdAt: String,
     @Json(name = "userEmail") val userEmail: String? = null
 )

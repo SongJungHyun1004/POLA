@@ -79,6 +79,6 @@ fun CategoryDto.toDomain(): Category {
     return Category(
         id = id,
         name = categoryName,
-        sort = categorySort
+        sort = fileCount
     )
 }

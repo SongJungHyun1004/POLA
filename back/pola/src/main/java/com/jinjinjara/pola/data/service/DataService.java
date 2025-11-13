@@ -43,6 +43,8 @@ import java.net.URL;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.time.LocalDateTime;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -98,6 +100,7 @@ public class DataService {
                         .type(file.getType())
                         .context(file.getContext())
                         .ocrText(file.getOcrText())
+                        .createdAt(file.getCreatedAt())
                         .favorite(file.getFavorite())
                         .tags(tagMap.getOrDefault(file.getId(), List.of())) // 파일별 태그 리스트
                         .build())
@@ -116,6 +119,10 @@ public class DataService {
 
             fileTagRepository.deleteByFile(file);
             s3Service.deleteFileFromS3(file.getSrc());
+            // 3. OpenSearch에서 인덱스 삭제
+            deleteFromOpenSearchAsync(fileId);
+
+
             fileRepository.delete(file);
 
             category.decreaseCount(1);
@@ -324,13 +331,16 @@ public class DataService {
         file.setCategoryId(categoryId);
         File savedFile = fileRepository.save(file);
 
+        // OpenSearch 업데이트
+        String categoryName = categoryRepository.findById(categoryId)
+                .map(Category::getCategoryName)
+                .orElse("미분류");
         oldCategory.decreaseCount(1);
         newCategory.increaseCount(1);
 
         categoryRepository.save(oldCategory);
         categoryRepository.save(newCategory);
 
-        String categoryName = newCategory.getCategoryName();
         indexToOpenSearchAsync(savedFile, categoryName);
 
         return savedFile;
@@ -356,7 +366,15 @@ public class DataService {
         file.setFavoriteSort(sortValue != null ? sortValue : 0);
         file.setFavoritedAt(LocalDateTime.now());
 
-        return fileRepository.save(file);
+        File saved = fileRepository.save(file);
+
+        // OpenSearch 업데이트
+        String categoryName = categoryRepository.findById(file.getCategoryId())
+                .map(Category::getCategoryName)
+                .orElse("미분류");
+        indexToOpenSearchAsync(saved, categoryName);
+
+        return saved;
     }
 
     /**
@@ -375,7 +393,15 @@ public class DataService {
         file.setFavoriteSort(0);
 //        file.setFavoritedAt(null);
 
-        return fileRepository.save(file);
+        File saved = fileRepository.save(file);
+
+        // OpenSearch 업데이트
+        String categoryName = categoryRepository.findById(file.getCategoryId())
+                .map(Category::getCategoryName)
+                .orElse("미분류");
+        indexToOpenSearchAsync(saved, categoryName);
+
+        return saved;
     }
 //    //즐겨찾기 파일 조회
 //    @Transactional(readOnly = true)
@@ -480,7 +506,7 @@ public class DataService {
 
         File saved = fileRepository.save(file);
 
-        // ✅ OpenSearch 업데이트
+        // OpenSearch 업데이트
         String categoryName = categoryRepository.findById(saved.getCategoryId())
                 .map(Category::getCategoryName)
                 .orElse("미분류");
@@ -517,7 +543,8 @@ public class DataService {
         sw.start("Load File");
         File file = fileRepository.findById(fileId)
                 .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
-        log.info("[PostProcess] File entity loaded: src={}", file.getSrc());
+        Long oldCategoryId = file.getCategoryId(); // 기존 카테고리 ID 저장
+        log.info("[PostProcess] File entity loaded: src={}, oldCategoryId={}", file.getSrc(), oldCategoryId);
         sw.stop();
 
         sw.start("Load Url");
@@ -525,75 +552,122 @@ public class DataService {
         log.info("[PostProcess] S3 download URL generated: {}", downUrl);
         sw.stop();
 
-        sw.start("OCR");
-        String ocrText = visionService.extractTextFromS3Url(downUrl.toString());
-        log.info("[PostProcess] OCR extraction completed: textLength={}",
-                ocrText != null ? ocrText.length() : 0);
-        sw.stop();
+        sw.start("OCR+Analyze");
 
-        sw.start("Analyze");
-        AnalyzeResponse analyzeResponse = analyzeFacadeService.analyze(user.getId(), downUrl.toString());
-        log.info("[PostProcess] Analyze completed: categoryId={}, tagsCount={}",
-                analyzeResponse.getCategoryId(),
-                analyzeResponse.getTags() != null ? analyzeResponse.getTags().size() : 0);
+        // OCR 비동기 실행
+        CompletableFuture<String> ocrFuture = CompletableFuture.supplyAsync(() -> {
+            long t0 = System.currentTimeMillis();
+            try {
+                String text = visionService.extractTextFromS3Url(downUrl.toString());
+                long elapsed = System.currentTimeMillis() - t0;
+                log.info("[PostProcess] OCR extraction completed: textLength={}, elapsed={} ms",
+                        text != null ? text.length() : 0,
+                        elapsed);
+                return text;
+            } catch (Exception e) {
+                log.error("[PostProcess] OCR failed", e);
+                throw new CompletionException(e);
+            }
+        });
+
+        // Analyze 비동기 실행
+        CompletableFuture<AnalyzeResponse> analyzeFuture = CompletableFuture.supplyAsync(() -> {
+            long t0 = System.currentTimeMillis();
+            try {
+                AnalyzeResponse res = analyzeFacadeService.analyze(user.getId(), downUrl.toString());
+                long elapsed = System.currentTimeMillis() - t0;
+                log.info("[PostProcess] Analyze completed: categoryId={}, tagsCount={}, elapsed={} ms",
+                        res.getCategoryId(),
+                        res.getTags() != null ? res.getTags().size() : 0,
+                        elapsed);
+                return res;
+            } catch (Exception e) {
+                log.error("[PostProcess] Analyze failed", e);
+                throw new CompletionException(e);
+            }
+        });
+
+        String ocrText;
+        AnalyzeResponse analyzeResponse;
+        try {
+            // 병렬 실행
+            ocrText = ocrFuture.join();
+            analyzeResponse = analyzeFuture.join();
+        } catch (CompletionException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof Exception ex) {
+                throw ex;
+            }
+            throw e;
+        }
+
+        Long newCategoryId = analyzeResponse.getCategoryId();
+        log.info("[PostProcess] Analyze completed: newCategoryId={}", newCategoryId);
+
         sw.stop();
 
         sw.start("TagSave");
         fileTagService.addTagsToFile(fileId, analyzeResponse.getTags());
-        log.info("[PostProcess] Tags saved for fileId={}", fileId);
         sw.stop();
 
         sw.start("Embedding");
         float[] embedding = embeddingService.embedOcrAndContext(ocrText, analyzeResponse.getDescription());
-        log.info("[PostProcess] Embedding generated: dimension={}",
-                embedding != null ? embedding.length : 0);
         sw.stop();
 
         sw.start("EmbeddingDBSave");
-        FileEmbeddings fileEmbeddings = FileEmbeddings.builder()
-                .userId(user.getId())
-                .file(file)
-                .ocrText(ocrText)
-                .context(analyzeResponse.getDescription())
-                .embedding(embedding)
-                .build();
-
-        log.info("[PostProcess] FileEmbeddings entity created (pre-save)");
-
-        file.setVectorId(fileEmbeddings.getId());
-        fileEmbeddings = fileEmbeddingsRepository.save(fileEmbeddings);
-        log.info("[PostProcess] FileEmbeddings saved: embeddingId={}", fileEmbeddings.getId());
+        FileEmbeddings fileEmbeddings = fileEmbeddingsRepository.save(
+                FileEmbeddings.builder()
+                        .userId(user.getId())
+                        .file(file)
+                        .ocrText(ocrText)
+                        .context(analyzeResponse.getDescription())
+                        .embedding(embedding)
+                        .build()
+        );
         sw.stop();
 
         sw.start("FileUpdate");
         fileRepository.updatePostProcessing(
                 file.getId(),
                 user.getId(),
-                analyzeResponse.getCategoryId(),
+                newCategoryId,
                 analyzeResponse.getDescription(),
                 ocrText,
                 fileEmbeddings.getId()
         );
-        log.info("[PostProcess] File repository updated with new OCR/context/category");
+        sw.stop();
 
-        file.setCategoryId(analyzeResponse.getCategoryId());
-        file.setContext(fileEmbeddings.getContext());
+        /*  여기서 category 파일 개수 업데이트  */
+        if (!Objects.equals(oldCategoryId, newCategoryId)) {
+            Category oldCategory = categoryRepository.findById(oldCategoryId)
+                    .orElse(null); // 혹시 삭제된 카테고리 예외 처리
+
+            Category newCategory = categoryRepository.findById(newCategoryId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
+
+            if (oldCategory != null) {
+                oldCategory.decreaseCount(1);
+                categoryRepository.save(oldCategory);
+                log.info("[PostProcess] oldCategoryId={} decremented", oldCategoryId);
+            }
+
+            newCategory.increaseCount(1);
+            categoryRepository.save(newCategory);
+            log.info("[PostProcess] newCategoryId={} incremented", newCategoryId);
+        }
+
+        /* Entity 최신화 */
+        file.setCategoryId(newCategoryId);
+        file.setContext(analyzeResponse.getDescription());
         file.setOcrText(ocrText);
         file.setVectorId(fileEmbeddings.getId());
 
-        log.info("[PostProcess] File entity updated (in-memory): fileId={}, vectorId={}",
-                file.getId(), file.getVectorId());
-        sw.stop();
-
         sw.start("OpenSearch");
-        // OpenSearch 색인 추가
-        String categoryName = categoryRepository.findById(analyzeResponse.getCategoryId())
+        String categoryName = categoryRepository.findById(newCategoryId)
                 .map(Category::getCategoryName)
                 .orElse("미분류");
-        indexToOpenSearchAsync(file, categoryName);
-        log.info("[PostProcess] OpenSearch indexing initiated for fileId={}", fileId);
 
-        log.info("[PostProcess] Post-processing completed successfully for fileId={}", fileId);
+        indexToOpenSearchAsync(file, categoryName);
         sw.stop();
 
         log.info(sw.prettyPrint());
@@ -601,6 +675,7 @@ public class DataService {
 
         return file;
     }
+
     /**
      * OpenSearch 색인 (비동기 처리)
      * 파일 저장/수정 시 자동으로 검색 인덱스 업데이트
@@ -628,11 +703,27 @@ public class DataService {
                     .build();
 
             fileSearchService.save(fileSearch);
-            log.info("✅ OpenSearch 색인 완료: fileId={}", file.getId());
+            log.info(" OpenSearch 색인 완료: fileId={}", file.getId());
 
         } catch (Exception e) {
-            log.error("❌ OpenSearch 색인 실패: fileId={}", file.getId(), e);
+            log.error(" OpenSearch 색인 실패: fileId={}", file.getId(), e);
             // 실패해도 파일은 PostgreSQL에 저장되어 있음
+        }
+    }
+
+    /**
+     * OpenSearch 인덱스 삭제 (비동기 처리)
+     * 파일 삭제 시 자동으로 검색 인덱스에서 제거
+     */
+    @Async
+    public void deleteFromOpenSearchAsync(Long fileId) {
+        try {
+            fileSearchService.delete(fileId);
+            log.info(" OpenSearch 인덱스 삭제 완료: fileId={}", fileId);
+
+        } catch (Exception e) {
+            log.error(" OpenSearch 인덱스 삭제 실패: fileId={}", fileId, e);
+            // 실패해도 파일은 PostgreSQL에서 삭제되어 있음
         }
     }
 

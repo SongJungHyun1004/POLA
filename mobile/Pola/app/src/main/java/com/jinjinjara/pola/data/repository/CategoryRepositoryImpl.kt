@@ -215,7 +215,11 @@ class CategoryRepositoryImpl @Inject constructor(
 
                     val categories = body.data
                         .map { it.toDomain() }
-                        .sortedBy { it.sort }
+                        .sortedWith(
+                            compareByDescending<Category> { it.sort }
+                                .thenBy { if (it.name == "미분류") 1 else 0 }
+                                .thenBy { it.name }
+                        )
 
                     Result.Success(categories)
                 } else {
