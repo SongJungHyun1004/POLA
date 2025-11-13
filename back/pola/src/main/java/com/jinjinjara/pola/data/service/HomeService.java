@@ -26,7 +26,7 @@ public class HomeService {
     public HomeResponse getHomeData(Long userId) {
 
         // 3. 카테고리를 파일 개수 기준으로 정렬해서 가져오기
-        List<Category> categories = categoryRepository.findAllByUserIdOrderByFileCountDesc(userId);
+        List<Category> categories = categoryRepository.findAllSorted(userId);
 
         // 5. 파일들 한 번에 모아서 presigned URL 한 번에 생성
         List<File> allFiles = new ArrayList<>();

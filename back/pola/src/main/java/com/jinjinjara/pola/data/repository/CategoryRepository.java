@@ -26,6 +26,14 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     List<Category> findAllByUserIdOrderByFileCountDesc(Long userId);
 
 
+    @Query("SELECT c FROM Category c " +
+            "WHERE c.user.id = :userId " +
+            "ORDER BY c.fileCount DESC, " +
+            "CASE WHEN c.categoryName = '미분류' THEN 1 ELSE 0 END ASC, " +
+            "c.categoryName ASC")
+    List<Category> findAllSorted(Long userId);
+
+
     @Query("SELECT c.id FROM Category c WHERE c.user.id = :userId AND c.categoryName = :categoryName")
     Optional<Long> findIdByUserIdAndCategoryName(@Param("userId") Long userId, @Param("categoryName") String categoryName);
 
