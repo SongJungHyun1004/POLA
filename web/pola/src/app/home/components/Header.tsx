@@ -525,7 +525,11 @@ export default function Header() {
                       setShowProfileModal(false);
                     }}
                   />
-                  <MenuItem icon={<FileText />} text="이용약관" />
+                  <MenuItem
+                    icon={<FileText />}
+                    text="개인정보 처리방침"
+                    onClick={() => router.push("/privacy-policy")}
+                  />
                 </div>
 
                 <hr />
