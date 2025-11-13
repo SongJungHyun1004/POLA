@@ -23,8 +23,5 @@ data class CategoryWithTags(
     val categoryName: String,
 
     @Json(name = "tags")
-    val tags: List<String>,
-
-    @Json(name = "fileCount")
-    val fileCount: Int = 0
+    val tags: List<String>
 )

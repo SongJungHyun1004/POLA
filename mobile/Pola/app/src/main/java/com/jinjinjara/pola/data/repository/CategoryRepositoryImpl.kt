@@ -94,11 +94,8 @@ class CategoryRepositoryImpl @Inject constructor(
                     categories = categoriesWithTags.map { (categoryName, tags) ->
                         CategoryWithTags(
                             categoryName = categoryName,
-                            tags = tags,
-                            fileCount = 0
-                        ).also {
-                            Log.d("Category:Repo", "CategoryWithTags: name=$categoryName, fileCount=${it.fileCount}, tags=$tags")
-                        }
+                            tags = tags
+                        )
                     }
                 )
 
