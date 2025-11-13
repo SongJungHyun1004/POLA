@@ -55,6 +55,11 @@ fun TimelineScreen(
         derivedStateOf { listState.firstVisibleItemIndex > 0 }
     }
 
+    // 화면 진입 시 데이터 새로고침
+    LaunchedEffect(Unit) {
+        viewModel.refresh()
+    }
+
     // 에러 이벤트 수신
     LaunchedEffect(Unit) {
         viewModel.errorEvent.collect { message ->
