@@ -22,7 +22,6 @@ import com.jinjinjara.pola.s3.service.S3Service;
 import com.jinjinjara.pola.search.model.FileSearch;
 import com.jinjinjara.pola.search.service.FileSearchService;
 import com.jinjinjara.pola.user.entity.Users;
-import com.jinjinjara.pola.vision.dto.common.Embedding;
 import com.jinjinjara.pola.vision.dto.response.AnalyzeResponse;
 import com.jinjinjara.pola.vision.entity.FileEmbeddings;
 import com.jinjinjara.pola.vision.repository.FileEmbeddingsRepository;
@@ -38,7 +37,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.util.StopWatch;
 
 import java.net.URL;
 import java.time.format.DateTimeFormatter;
@@ -511,31 +510,46 @@ public class DataService {
 
     @Transactional
     public File postProcessingFile(Users user, Long fileId) throws Exception {
+
+        StopWatch sw = new StopWatch("postProcess");
         log.info("[PostProcess] Start post-processing fileId={}, userId={}", fileId, user.getId());
 
+        sw.start("Load File");
         File file = fileRepository.findById(fileId)
                 .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
         log.info("[PostProcess] File entity loaded: src={}", file.getSrc());
+        sw.stop();
 
+        sw.start("Load Url");
         URL downUrl = s3Service.generateDownloadUrl(file.getSrc());
         log.info("[PostProcess] S3 download URL generated: {}", downUrl);
+        sw.stop();
 
+        sw.start("OCR");
         String ocrText = visionService.extractTextFromS3Url(downUrl.toString());
         log.info("[PostProcess] OCR extraction completed: textLength={}",
                 ocrText != null ? ocrText.length() : 0);
+        sw.stop();
 
+        sw.start("Analyze");
         AnalyzeResponse analyzeResponse = analyzeFacadeService.analyze(user.getId(), downUrl.toString());
         log.info("[PostProcess] Analyze completed: categoryId={}, tagsCount={}",
                 analyzeResponse.getCategoryId(),
                 analyzeResponse.getTags() != null ? analyzeResponse.getTags().size() : 0);
+        sw.stop();
 
+        sw.start("TagSave");
         fileTagService.addTagsToFile(fileId, analyzeResponse.getTags());
         log.info("[PostProcess] Tags saved for fileId={}", fileId);
+        sw.stop();
 
+        sw.start("Embedding");
         float[] embedding = embeddingService.embedOcrAndContext(ocrText, analyzeResponse.getDescription());
         log.info("[PostProcess] Embedding generated: dimension={}",
                 embedding != null ? embedding.length : 0);
+        sw.stop();
 
+        sw.start("EmbeddingDBSave");
         FileEmbeddings fileEmbeddings = FileEmbeddings.builder()
                 .userId(user.getId())
                 .file(file)
@@ -549,7 +563,9 @@ public class DataService {
         file.setVectorId(fileEmbeddings.getId());
         fileEmbeddings = fileEmbeddingsRepository.save(fileEmbeddings);
         log.info("[PostProcess] FileEmbeddings saved: embeddingId={}", fileEmbeddings.getId());
+        sw.stop();
 
+        sw.start("FileUpdate");
         fileRepository.updatePostProcessing(
                 file.getId(),
                 user.getId(),
@@ -567,8 +583,10 @@ public class DataService {
 
         log.info("[PostProcess] File entity updated (in-memory): fileId={}, vectorId={}",
                 file.getId(), file.getVectorId());
+        sw.stop();
 
-        // ✅ OpenSearch 색인 추가
+        sw.start("OpenSearch");
+        // OpenSearch 색인 추가
         String categoryName = categoryRepository.findById(analyzeResponse.getCategoryId())
                 .map(Category::getCategoryName)
                 .orElse("미분류");
@@ -576,6 +594,11 @@ public class DataService {
         log.info("[PostProcess] OpenSearch indexing initiated for fileId={}", fileId);
 
         log.info("[PostProcess] Post-processing completed successfully for fileId={}", fileId);
+        sw.stop();
+
+        log.info(sw.prettyPrint());
+        log.info("[PostProcess] total={} ms", sw.getTotalTimeMillis());
+
         return file;
     }
     /**
