@@ -216,3 +216,34 @@ export async function searchFiles(query: string): Promise<FileResult[]> {
   return json?.data?.results ?? [];
 }
 export type { FileResult };
+
+export async function fetchTagSuggestions(keyword: string) {
+  const res = await apiClient(
+    `/search/tag-suggestions?keyword=${encodeURIComponent(keyword)}`,
+    {
+      method: "GET",
+    }
+  );
+
+  if (!res.ok) {
+    console.error("/search/tag-suggestions 요청 실패:", res.status);
+    return [];
+  }
+
+  const json = await res.json();
+  return json?.data?.tags ?? [];
+}
+
+export async function searchTags(tag: string): Promise<FileResult[]> {
+  const res = await apiClient(`/search/tags?tag=${encodeURIComponent(tag)}`, {
+    method: "GET",
+  });
+
+  if (!res.ok) {
+    console.error("/search/tags 요청 실패:", res.status);
+    return [];
+  }
+
+  const json = await res.json();
+  return json?.data?.results ?? [];
+}
