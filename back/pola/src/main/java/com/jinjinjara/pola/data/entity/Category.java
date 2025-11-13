@@ -30,13 +30,14 @@ public class Category {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "category_sort", nullable = false)
-    private Integer categorySort;
+    @Column(name = "file_count", nullable = false)
+    private Integer fileCount;
 
-    @PrePersist
-    private void prePersist() {
-        if (categorySort == null) {
-            categorySort = 0;
-        }
+    public void increaseCount(int delta) {
+        this.fileCount += delta;
+    }
+    public void decreaseCount(int delta) {
+        this.fileCount -= delta;
+        if (this.fileCount < 0) this.fileCount = 0;
     }
 }
