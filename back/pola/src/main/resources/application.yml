@@ -24,11 +24,13 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
         dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          time_zone: Asia/Seoul
     database-platform: org.hibernate.dialect.PostgreSQLDialect
 
   # ===============================
@@ -94,6 +96,10 @@ logging:
   level:
     org.springframework: INFO
     com.jinjinjara: DEBUG
+    # Hibernate SQL 로그 최소화
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+    org.hibernate.orm.jdbc.bind: WARN
 
 # ===============================
 # Swagger
@@ -201,11 +207,3 @@ embedding:
     maxChars: 8000     # 한 번에 임베딩할 최대 문자 수
     window: 3000       # 청크 크기
     overlap: 400       # 청크 간 중복 영역
-
-rag:
-  similarity:
-    min: 0.2
-    keepRatio: 0.6
-  context:
-    maxDocs: 6
-    maxChars: 3000

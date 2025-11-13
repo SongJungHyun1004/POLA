@@ -16,6 +16,8 @@ import com.jinjinjara.pola.vision.dto.response.AnalyzeTestResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StopWatch;
+
 
 import java.time.Instant;
 import java.util.*;
@@ -23,10 +25,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-/**
- * 전체 파이프라인 오케스트레이션:
- * S3 URL -> LLM 태그 -> 센트로이드(캐시 or 계산) -> 분류 -> 응답
- */
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -43,16 +42,24 @@ public class AnalyzeFacadeService {
 
     public AnalyzeResponse analyze(Long userId, String s3Url) throws Exception {
 
+        StopWatch sw = new StopWatch("analyze");
+
         // (1) Vertex
+        sw.start("Vertex");
         String vertexBody = vertexService.analyzeImageFromUrl(s3Url);
         var parsed = parseVertexJson(vertexBody);
         List<String> inputTags = parsed.getTags();
         String description = parsed.getDescription();
         log.debug("[Analyze] Parsed from Vertex -> tags({}): {}, descLen={}",
                 inputTags.size(), inputTags, description.length());
+        sw.stop();
 
         if (inputTags.isEmpty()) {
             log.warn("[Analyze] No tags extracted. url={}", s3Url);
+
+            log.info(sw.prettyPrint());
+            log.info("[Analyze] total={} ms", sw.getTotalTimeMillis());
+
             return AnalyzeResponse.builder()
                     .categoryId(null).categoryName(null)
                     .tags(List.of()).description(description)
@@ -60,10 +67,17 @@ public class AnalyzeFacadeService {
         }
 
         // (2) Centroids
+        sw.start("Centroids");
         Map<String, float[]> centroids = loadCentroidsOrBuild(userId);
         log.debug("[Analyze] Centroids loaded. size={}", centroids.size());
+        sw.stop();
+
         if (centroids.isEmpty()) {
             log.warn("[Analyze] No centroids for user={}", userId);
+
+            log.info(sw.prettyPrint());
+            log.info("[Analyze] total={} ms", sw.getTotalTimeMillis());
+
             return AnalyzeResponse.builder()
                     .categoryId(null).categoryName(null)
                     .tags(inputTags).description(description)
@@ -71,19 +85,28 @@ public class AnalyzeFacadeService {
         }
 
         // (3) Category->Tags evidence
+        sw.start("Evidence");
         Map<String, List<String>> categoryTags = loadCategoryTagsMap(userId);
         log.debug("[Analyze] CategoryTags loaded. size={}", categoryTags.size());
+        sw.stop();
 
         // (4) Classify
+        sw.start("Classify");
         Result result = classifierService.classifyWithCentroids(inputTags, centroids, categoryTags, 3);
         String topCategory = result.getTopCategory();
         log.debug("[Analyze] Classify results top={}, scoresTopK={}",
                 topCategory, result.getResults());
+        sw.stop();
 
         // (5) categoryId 매핑
+        sw.start("Category Lookup");
         CategoryIdResponse categoryInfo = categoryService.findCategoryIdByName(userId, topCategory);
         log.info("[Analyze] Matched category {}({}) for user={}",
                 categoryInfo.getCategoryName(), categoryInfo.getCategoryId(), userId);
+        sw.stop();
+
+        log.info(sw.prettyPrint());
+        log.info("[Analyze] total={} ms", sw.getTotalTimeMillis());
 
         // (6) 응답
         return AnalyzeResponse.builder()

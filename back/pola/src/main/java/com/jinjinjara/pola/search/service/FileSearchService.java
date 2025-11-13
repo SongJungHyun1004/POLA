@@ -44,32 +44,6 @@ public class FileSearchService {
         client.delete(d -> d.index(INDEX_NAME).id(String.valueOf(id)));
     }
 
-    /** userId로 검색 (정확 매칭) */
-    public List<FileSearch> searchByUserId(Long userId) throws IOException {
-        SearchResponse<FileSearch> res = client.search(s -> s
-                .index(INDEX_NAME)
-                .query(q -> q.term(t -> t
-                        .field("userId")
-                        .value(FieldValue.of(userId))
-                )), FileSearch.class);
-
-        return res.hits().hits().stream().map(hit -> hit.source())
-                .collect(Collectors.toList());
-    }
-
-    /** category 텍스트 검색 (match) */
-    public List<FileSearch> searchByCategory(String category) throws IOException {
-        SearchResponse<FileSearch> res = client.search(s -> s
-                .index(INDEX_NAME)
-                .query(q -> q.match(m -> m
-                        .field("category")
-                        .query(FieldValue.of(category))
-                )), FileSearch.class);
-
-        return res.hits().hits().stream().map(hit -> hit.source())
-                .collect(Collectors.toList());
-    }
-
     // ========== Nori 토큰 분석 ==========
 
     /**

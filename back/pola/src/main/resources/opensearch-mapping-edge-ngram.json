@@ -96,6 +96,12 @@
       "createdAt": {
         "type": "date",
         "format": "yyyy-MM-dd'T'HH:mm:ss.SSSSSS||yyyy-MM-dd'T'HH:mm:ss||strict_date_optional_time||epoch_millis"
+      },
+      "favorite": {
+        "type": "boolean"
+      },
+      "fileType": {
+        "type": "keyword"
       }
     }
   }

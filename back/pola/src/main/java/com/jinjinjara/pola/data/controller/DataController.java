@@ -9,6 +9,7 @@ import com.jinjinjara.pola.data.dto.request.FileUpdateRequest;
 import com.jinjinjara.pola.data.dto.request.FileUploadCompleteRequest;
 import com.jinjinjara.pola.data.dto.response.*;
 import com.jinjinjara.pola.data.entity.File;
+import com.jinjinjara.pola.data.service.CategoryCountCacheService;
 import com.jinjinjara.pola.data.service.DataService;
 import com.jinjinjara.pola.user.dto.response.UserInfoResponse;
 import com.jinjinjara.pola.user.entity.Users;
@@ -30,7 +31,6 @@ import java.util.List;
 public class DataController {
 
     private final DataService dataService;
-
     // ==========================================
     // Presigned 업로드 완료
     // ==========================================
@@ -51,6 +51,7 @@ public class DataController {
         }
 
         File savedFile = dataService.saveUploadedFile(user, request);
+
         return ApiResponse.ok(savedFile, "파일이 성공적으로 등록되었습니다.");
     }
 
