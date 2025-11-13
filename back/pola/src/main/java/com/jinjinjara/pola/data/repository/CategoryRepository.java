@@ -28,7 +28,9 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
                 LEFT JOIN File f ON f.categoryId = c.id
                 WHERE c.user.id = :userId
                 GROUP BY c.id
-                ORDER BY COUNT(f.id) DESC
+                ORDER BY 
+                    COUNT(f.id) DESC,
+                    CASE WHEN c.categoryName = '미분류' THEN 1 ELSE 0 END ASC
             """)
     List<Category> findAllByUserIdOrderByFileCountDesc(Long userId);
 
