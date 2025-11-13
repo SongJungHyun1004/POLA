@@ -158,6 +158,64 @@ li:last-child {
 }
 
 /* ============================================
+   이미지 업로드
+============================================ */
+.drop-zone {
+  border: 2px dashed #dadce0;
+  border-radius: 8px;
+  padding: 32px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: #fafafa;
+}
+
+.drop-zone:hover {
+  border-color: #B0804C;
+  background: #fff;
+}
+
+.drop-zone.drag-over {
+  border-color: #B0804C;
+  background: #FFF9F0;
+  transform: scale(1.02);
+}
+
+.drop-zone svg {
+  color: #5f6368;
+  margin-bottom: 12px;
+}
+
+.drop-zone p {
+  margin: 0;
+  color: #5f6368;
+  font-size: 14px;
+}
+
+#uploadStatus {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  text-align: center;
+}
+
+#uploadStatus.success {
+  background: #e6f4ea;
+  color: #1e8e3e;
+}
+
+#uploadStatus.error {
+  background: #fce8e6;
+  color: #c5221f;
+}
+
+#uploadStatus.uploading {
+  background: #e8f0fe;
+  color: #1967d2;
+}
+
+/* ============================================
    상태 표시
 ============================================ */
 .status {
