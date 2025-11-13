@@ -15,45 +15,40 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
-
 @Service
 @RequiredArgsConstructor
 public class HomeService {
 
     private final FileRepository fileRepository;
     private final CategoryRepository categoryRepository;
-    private final S3Service s3Service; //  추가
+    private final S3Service s3Service;
 
     public HomeResponse getHomeData(Long userId) {
-        // --- 카테고리별 파일 ---
-//        List<Category> categories = categoryRepository.findAllByUserId(userId);
-        List<Category> categories = categoryRepository.findAllByUserIdOrderByFileCountDesc(userId);
 
-        // 먼저 모든 파일을 모아두고, 한 번에 presigned URL 생성 (효율성 ↑)
+        // 3. 카테고리를 파일 개수 기준으로 정렬해서 가져오기
+        List<Category> categories = categoryRepository.findAllSorted(userId);
+
+        // 5. 파일들 한 번에 모아서 presigned URL 한 번에 생성
         List<File> allFiles = new ArrayList<>();
-
-        // 카테고리별 최근 5개
         Map<Long, List<File>> categoryFileMap = new HashMap<>();
+
         for (Category c : categories) {
             List<File> files = fileRepository.findTop5ByUserIdAndCategoryIdOrderByCreatedAtDesc(userId, c.getId());
             categoryFileMap.put(c.getId(), files);
             allFiles.addAll(files);
         }
 
-        // 즐겨찾기 3개
         List<File> favorites = fileRepository.findTop3ByUserIdAndFavoriteTrueOrderByCreatedAtDesc(userId);
         allFiles.addAll(favorites);
 
-        // 리마인드 3개 (7일 이상 안 본 파일)
         LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
         List<File> reminds = fileRepository.findRemindPreview(userId, sevenDaysAgo, PageRequest.of(0, 3));
         allFiles.addAll(reminds);
 
-        // 타임라인 최근 10개
         List<File> timeline = fileRepository.findTop10ByUserIdOrderByCreatedAtDesc(userId);
         allFiles.addAll(timeline);
 
-        // --- Presigned URL 생성 (한 번에 처리) ---
+        // 6. presigned url 생성(한 번에)
         Map<Long, S3Service.FileMeta> fileMetaMap = allFiles.stream()
                 .filter(f -> f.getSrc() != null)
                 .collect(Collectors.toMap(
@@ -64,7 +59,7 @@ public class HomeService {
 
         Map<Long, String> previewUrls = s3Service.generatePreviewUrls(fileMetaMap);
 
-        // --- DTO 변환 ---
+        // 7. DTO 변환
         List<CategorySection> categorySections = categories.stream()
                 .map(c -> CategorySection.builder()
                         .categoryId(c.getId())
@@ -78,34 +73,18 @@ public class HomeService {
                         .build())
                 .toList();
 
-        List<DataResponse> favoriteDtos = favorites.stream()
-                .map(f -> toDataResponse(f, previewUrls))
-                .toList();
-
-        List<DataResponse> remindDtos = reminds.stream()
-                .map(f -> toDataResponse(f, previewUrls))
-                .toList();
-
-        List<DataResponse> timelineDtos = timeline.stream()
-                .map(f -> toDataResponse(f, previewUrls))
-                .toList();
-
-        // --- 응답 빌드 ---
         return HomeResponse.builder()
                 .categories(categorySections)
-                .favorites(favoriteDtos)
-                .reminds(remindDtos)
-                .timeline(timelineDtos)
+                .favorites(favorites.stream().map(f -> toDataResponse(f, previewUrls)).toList())
+                .reminds(reminds.stream().map(f -> toDataResponse(f, previewUrls)).toList())
+                .timeline(timeline.stream().map(f -> toDataResponse(f, previewUrls)).toList())
                 .build();
     }
 
-    /**
-     *  File → DataResponse 변환 (Presigned URL 주입)
-     */
     private DataResponse toDataResponse(File f, Map<Long, String> previewUrls) {
         return DataResponse.builder()
                 .id(f.getId())
-                .src(previewUrls.get(f.getId())) // 접근 가능한 URL
+                .src(previewUrls.get(f.getId()))
                 .type(f.getType())
                 .ocrText(f.getOcrText())
                 .context(f.getContext())
