@@ -1,6 +1,7 @@
 "use client";
 
 import { fileEditService } from "@/services/fileService";
+import { updateFileCategory } from "@/services/categoryService";
 import { X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
@@ -36,15 +37,15 @@ export default function EditModal({
 
   useEffect(() => {
     setContext(defaultContext);
-    setTags(defaultTags.map((t) => t.replace(/^#/, ""))); // 다시 '#' 제거
+    setTags(defaultTags.map((t) => t.replace(/^#/, "")));
     setSelectedCategory(defaultCategoryId);
   }, [defaultContext, defaultTags, defaultCategoryId]);
 
-  /** ✅ 태그 추가 시 '#' 제거하고 중복 방지 */
+  /** 태그 추가 */
   const handleAddTag = (val: string) => {
     const parts = val
       .split(" ")
-      .map((t) => t.trim().replace(/^#/, "")) // '#' 제거
+      .map((t) => t.trim().replace(/^#/, ""))
       .filter(Boolean);
 
     const newOnes = parts.filter((t) => !tags.includes(t));
@@ -58,31 +59,34 @@ export default function EditModal({
     setTagInput("");
   };
 
-  /** ✅ 태그 제거 */
+  /** 태그 삭제 */
   const handleRemoveTag = (tag: string) => {
     setTags(tags.filter((t) => t !== tag));
   };
 
-  /** ✅ 저장 버튼 클릭 */
+  /** 저장 */
   const handleSave = async () => {
     if (!fileId || saving) return;
     setSaving(true);
 
     try {
-      // 1️⃣ context 수정
+      /** 1️⃣ 카테고리 변경 */
+      await updateFileCategory(fileId, selectedCategory);
+
+      /** 2️⃣ context(내용) 수정 */
       await fileEditService.updateFileContext(fileId, context);
 
-      // 2️⃣ 기존 태그 재조회
+      /** 3️⃣ 태그 수정 로직 */
       const existing = await fileEditService.getFileTags(fileId);
       const existingNames = existing.map((t: any) => t.tagName);
-      const existingMap: Record<string, number> = {};
-      existing.forEach((t: any) => (existingMap[t.tagName] = t.id));
 
-      // 3️⃣ 추가해야 할 태그
+      // 추가할 태그
       const toAdd = tags.filter((t) => !existingNames.includes(t));
-      if (toAdd.length > 0) await fileEditService.addFileTags(fileId, toAdd);
+      if (toAdd.length > 0) {
+        await fileEditService.addFileTags(fileId, toAdd);
+      }
 
-      // 4️⃣ 삭제해야 할 태그
+      // 삭제할 태그
       const toDelete = existing.filter((t: any) => !tags.includes(t.tagName));
       for (const del of toDelete) {
         await fileEditService.removeFileTag(fileId, del.id);
@@ -132,7 +136,7 @@ export default function EditModal({
           </select>
         </div>
 
-        {/* 태그 */}
+        {/* 태그 입력 */}
         <label className="text-sm text-[#4C3D25] font-medium">
           태그 입력 (Space)
         </label>
