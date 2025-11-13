@@ -37,7 +37,7 @@ public class CategoryService {
     private final CategoryTagRepository categoryTagRepository;
     private final FileRepository fileRepository;
     private final ApplicationEventPublisher publisher;
-
+    private final CategoryCountCacheService categoryCountCacheService;
     /**
      * CREATE - 카테고리 생성
      */
@@ -143,33 +143,51 @@ public class CategoryService {
             Category category = categoryRepository.findById(id)
                     .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
 
-            Users user = category.getUser(); // Category 엔티티의 Users 참조
+            Users user = category.getUser();
+            Long userId = user.getId();
+            Long deletedCategoryId = id;
 
-            // 2. 해당 유저의 '미분류' 카테고리 찾기 (없으면 생성)
-            Category uncategorized = categoryRepository.findByUserIdAndCategoryName(user.getId(), "미분류")
+            // 2. '미분류' 카테고리 조회 또는 생성
+            Category uncategorized = categoryRepository.findByUserIdAndCategoryName(userId, "미분류")
                     .orElseGet(() -> {
                         Category newCategory = Category.builder()
-                                .user(user) // 올바른 필드 이름
+                                .user(user)
                                 .categoryName("미분류")
                                 .build();
                         return categoryRepository.save(newCategory);
                     });
 
-            // 3. 연결된 파일들의 category_id를 모두 '미분류'로 변경
+            Long uncategorizedId = uncategorized.getId();
+
+            // 3. 이 카테고리에 포함된 파일들 모두 "미분류"로 이동
             List<File> files = fileRepository.findAllByCategoryId(id);
+            int movedCount = files.size(); // Redis 반영에 중요
+
             for (File file : files) {
-                file.setCategoryId(uncategorized.getId());
+                file.setCategoryId(uncategorizedId);
             }
             fileRepository.saveAll(files);
 
-            // 4. category_tags 먼저 삭제
+            // 3-1. Redis 카운트 반영 (중요!)
+            // oldCategoryId → -movedCount
+            if (movedCount > 0) {
+                categoryCountCacheService.increment(userId, deletedCategoryId, -movedCount);
+
+                // uncategorized → +movedCount
+                categoryCountCacheService.increment(userId, uncategorizedId, +movedCount);
+            }
+
+            // old 카테고리 Redis field 삭제
+            categoryCountCacheService.deleteField(userId, deletedCategoryId);
+
+            // 4. category_tags 삭제
             categoryTagRepository.deleteByCategoryId(id);
 
-            // 5. 카테고리 삭제
+            // 5. 실제 카테고리 삭제
             categoryRepository.deleteById(id);
 
-            // 6. 유저 캐시 삭제
-            publisher.publishEvent(new CategoryChangedEvent(user.getId()));
+            // 6. 캐시 재계산 또는 이벤트 발행
+            publisher.publishEvent(new CategoryChangedEvent(userId));
 
         } catch (CustomException e) {
             throw e;
@@ -177,6 +195,7 @@ public class CategoryService {
             throw new CustomException(ErrorCode.CATEGORY_DELETE_FAIL, e.getMessage());
         }
     }
+
 
 
 
