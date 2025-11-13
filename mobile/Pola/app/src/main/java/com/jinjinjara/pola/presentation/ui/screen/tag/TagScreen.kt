@@ -1,5 +1,6 @@
 package com.jinjinjara.pola.presentation.ui.screen.tag
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -74,6 +75,11 @@ fun TagScreen(
     onSearchBarClick: () -> Unit = {},
     onNavigateToContents: (Long) -> Unit = {},
 ) {
+    // 시스템 뒤로가기 버튼 처리
+    BackHandler {
+        onBackClick()
+    }
+
     var isMenuExpanded by remember { mutableStateOf(false) }
     var viewMode by remember { mutableStateOf(ViewMode.GRID_2) }
 

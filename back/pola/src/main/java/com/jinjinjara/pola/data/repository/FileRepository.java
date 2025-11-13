@@ -23,7 +23,21 @@ public interface FileRepository extends JpaRepository<File, Long> {
     Page<File> findAllByUserIdAndFavoriteTrueOrderByFavoriteSortAscFavoritedAtDesc(Long userId, Pageable pageable);
 
     Page<File> findAllByUserIdAndFavoriteTrue(Long userId, Pageable pageable);
+
     Optional<File> findByShareToken(String shareToken);
+
+    @Query(value = """
+            SELECT *
+            FROM (
+                SELECT f.*,
+                       ROW_NUMBER() OVER (PARTITION BY f.category_id ORDER BY f.created_at DESC) AS rn
+                FROM files f
+                WHERE f.user_id = :userId
+            ) sub
+            WHERE sub.rn <= 5
+            """, nativeQuery = true)
+    List<File> findTop5FilesPerCategory(@Param("userId") Long userId);
+
 
     // 즐겨찾기 정렬 순서 밀기 (+1)
     @Modifying
@@ -63,6 +77,16 @@ public interface FileRepository extends JpaRepository<File, Long> {
                                @Param("sevenDaysAgo") LocalDateTime sevenDaysAgo,
                                Pageable pageable);
 
+
+    @Query("""
+                SELECT f.categoryId, COUNT(f)
+                FROM File f
+                WHERE f.userId = :userId
+                GROUP BY f.categoryId
+            """)
+    List<Object[]> countFilesByCategory(Long userId);
+
+
     List<File> findTop5ByUserIdAndCategoryIdOrderByCreatedAtDesc(Long userId, Long categoryId);
 
     List<File> findTop3ByUserIdAndFavoriteTrueOrderByCreatedAtDesc(Long userId);
@@ -89,6 +113,7 @@ public interface FileRepository extends JpaRepository<File, Long> {
             @Param("categoryId") Long categoryId,
             @Param("tagId") Long tagId
     );
+
     List<File> findAllByCategoryId(Long categoryId);
 
     @Query("""
@@ -117,20 +142,20 @@ public interface FileRepository extends JpaRepository<File, Long> {
 
     @Modifying(clearAutomatically = true, flushAutomatically = true) //추가
     @Query(""" 
-        UPDATE File f SET 
-            f.categoryId = :categoryId, 
-            f.context    = :context,    
-            f.ocrText    = :ocrText,    
-            f.vectorId   = :vectorId    
-        WHERE f.id = :fileId            
-          AND f.userId = :userId        
-        """)
+            UPDATE File f SET 
+                f.categoryId = :categoryId, 
+                f.context    = :context,    
+                f.ocrText    = :ocrText,    
+                f.vectorId   = :vectorId    
+            WHERE f.id = :fileId            
+              AND f.userId = :userId        
+            """)
     int updatePostProcessing(
-                              @Param("fileId") Long fileId,
-                              @Param("userId") Long userId,
-                              @Param("categoryId") Long categoryId,
-                              @Param("context") String context,
-                              @Param("ocrText") String ocrText,
-                              @Param("vectorId") Long vectorId
+            @Param("fileId") Long fileId,
+            @Param("userId") Long userId,
+            @Param("categoryId") Long categoryId,
+            @Param("context") String context,
+            @Param("ocrText") String ocrText,
+            @Param("vectorId") Long vectorId
     );
 }

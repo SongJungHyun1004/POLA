@@ -49,6 +49,19 @@
         </ul>
       </div>
 
+      <!-- 이미지 업로드 -->
+      <div class="section">
+        <h3>이미지 업로드</h3>
+        <div id="dropZone" class="drop-zone">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" />
+          </svg>
+          <p>이미지를 드래그하거나 클릭하여 업로드</p>
+          <input type="file" id="fileInput" accept="image/*" style="display: none;">
+        </div>
+        <div id="uploadStatus" style="display: none;"></div>
+      </div>
+
       <!-- 상태 -->
       <div class="section">
         <h3>상태</h3>

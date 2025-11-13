@@ -166,7 +166,7 @@ public class FileTagService {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toMap(
                         File::getId,
-                        f -> s3Service.generatePreviewUrl(new S3Service.FileMeta(f.getSrc(), f.getType())),
+                        f -> s3Service.generatePreviewUrl(f.getSrc(), f.getType()).toString(),
                         (existing, replacement) -> existing
                 ));
 
