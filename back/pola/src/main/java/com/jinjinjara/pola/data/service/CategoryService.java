@@ -69,19 +69,25 @@ public class CategoryService {
     @Transactional(readOnly = true)
     public List<CategoryResponse> getCategoriesByUser(Users user) {
         try {
-            List<Category> categories = categoryRepository.findByUser(user);
+            // 정렬된 카테고리 조회 (fileCount DESC, 가나다순, 미분류는 마지막)
+            List<Category> categories = categoryRepository.findAllSortedByUser(user);
+
             if (categories.isEmpty()) {
                 throw new CustomException(ErrorCode.CATEGORY_NOT_FOUND);
             }
+
             return categories.stream()
                     .map(CategoryResponse::fromEntity)
                     .toList();
+
         } catch (CustomException e) {
             throw e;
+
         } catch (Exception e) {
             throw new CustomException(ErrorCode.DATA_NOT_FOUND, e.getMessage());
         }
     }
+
 
     /**
      * READ - 단일 조회

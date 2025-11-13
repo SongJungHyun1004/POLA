@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 public class CategoryResponse {
     private Long id;
     private String categoryName;
-    private Integer categorySort;
+    private Integer fileCount;
     private LocalDateTime createdAt;
     private String userEmail;
 
