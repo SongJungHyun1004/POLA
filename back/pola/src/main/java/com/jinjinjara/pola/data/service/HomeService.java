@@ -15,7 +15,6 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
-
 @Service
 @RequiredArgsConstructor
 public class HomeService {
@@ -23,40 +22,11 @@ public class HomeService {
     private final FileRepository fileRepository;
     private final CategoryRepository categoryRepository;
     private final S3Service s3Service;
-    private final CategoryCountCacheService categoryCountCacheService;
 
     public HomeResponse getHomeData(Long userId) {
 
-        // 1. Redis에서 카테고리 파일 개수 가져오기
-        Map<Long, Long> temp = categoryCountCacheService.getCategoryCounts(userId);
-
-        if (temp.isEmpty()) {
-            List<Object[]> rows = fileRepository.countFilesByCategory(userId);
-            temp = rows.stream().collect(Collectors.toMap(
-                    r -> (Long) r[0],
-                    r -> (Long) r[1]
-            ));
-            categoryCountCacheService.saveAll(userId, temp);
-        }
-
-        final Map<Long, Long> countMap = temp;
-
-
-        // 3. 카테고리 목록 가져오기
-        List<Category> categories = categoryRepository.findAllByUserId(userId);
-
-        // 4. Redis 카운트 기반 정렬 + 미분류를 맨 아래
-        categories.sort((c1, c2) -> {
-            long count1 = countMap.getOrDefault(c1.getId(), 0L);
-            long count2 = countMap.getOrDefault(c2.getId(), 0L);
-
-            int compare = Long.compare(count2, count1); // DESC
-            if (compare != 0) return compare;
-
-            boolean d1 = c1.getCategoryName().equals("미분류");
-            boolean d2 = c2.getCategoryName().equals("미분류");
-            return Boolean.compare(d1, d2);
-        });
+        // 3. 카테고리를 파일 개수 기준으로 정렬해서 가져오기
+        List<Category> categories = categoryRepository.findAllByUserIdOrderByFileCountDesc(userId);
 
         // 5. 파일들 한 번에 모아서 presigned URL 한 번에 생성
         List<File> allFiles = new ArrayList<>();

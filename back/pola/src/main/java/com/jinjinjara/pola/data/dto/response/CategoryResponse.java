@@ -22,7 +22,7 @@ public class CategoryResponse {
         return new CategoryResponse(
                 category.getId(),
                 category.getCategoryName(),
-                category.getCategorySort(),
+                category.getFileCount(),
                 category.getCreatedAt(),
                 category.getUser().getEmail()
         );

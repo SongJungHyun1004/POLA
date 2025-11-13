@@ -1,7 +1,6 @@
 package com.jinjinjara.pola.data.controller;
 
 import com.jinjinjara.pola.common.ApiResponse;
-import com.jinjinjara.pola.common.dto.FileResponseDto;
 import com.jinjinjara.pola.common.dto.PageRequestDto;
 import com.jinjinjara.pola.common.dto.PagedResponseDto;
 import com.jinjinjara.pola.data.dto.request.FileShareRequest;
@@ -9,9 +8,7 @@ import com.jinjinjara.pola.data.dto.request.FileUpdateRequest;
 import com.jinjinjara.pola.data.dto.request.FileUploadCompleteRequest;
 import com.jinjinjara.pola.data.dto.response.*;
 import com.jinjinjara.pola.data.entity.File;
-import com.jinjinjara.pola.data.service.CategoryCountCacheService;
 import com.jinjinjara.pola.data.service.DataService;
-import com.jinjinjara.pola.user.dto.response.UserInfoResponse;
 import com.jinjinjara.pola.user.entity.Users;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -21,7 +18,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Tag(name = "Data API", description = "파일 데이터 관리 API (업로드, 카테고리 변경, 즐겨찾기 등)")
