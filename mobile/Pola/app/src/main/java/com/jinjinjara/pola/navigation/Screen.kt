@@ -24,8 +24,8 @@ sealed class Screen(val route: String) {
     data object Category : Screen("category/{categoryId}") {
         fun createRoute(categoryId: Long) = "category/$categoryId"
     }
-    data object Tag : Screen("tag/{tagName}") {
-        fun createRoute(tagName: String) = "tag/$tagName"
+    data object Tag : Screen("tag/{tagName}?type={searchType}") {
+        fun createRoute(tagName: String, searchType: String = "tag") = "tag/$tagName?type=$searchType"
     }
     data object Contents : Screen("contents/{contentId}") {
         fun createRoute(contentId: Long) = "contents/$contentId"
@@ -34,7 +34,14 @@ sealed class Screen(val route: String) {
         fun createRoute(contentId: Long) = "contents/edit/$contentId"
     }
     data object Favorite : Screen("favorite")
-    data object SearchScreen : Screen("search_screen")
+    data object SearchScreen : Screen("search_screen?query={query}&tab={tab}") {
+        fun createRoute(query: String = "", tab: String = "") =
+            if (query.isNotEmpty() || tab.isNotEmpty()) {
+                "search_screen?query=$query&tab=$tab"
+            } else {
+                "search_screen"
+            }
+    }
     data object Chatbot : Screen("chatbot")
 
     // Timeline 탭 내부 화면들

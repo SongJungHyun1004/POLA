@@ -1,5 +1,6 @@
 package com.jinjinjara.pola.presentation.ui.screen.home
 
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
@@ -36,6 +37,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -65,6 +67,7 @@ data class Category(
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
+    onNavigateToContents: (Long) -> Unit = {},
     onNavigateToCategory: (Long) -> Unit = {},
     onNavigateToFavorite: () -> Unit = {},
     onNavigateToSearch: () -> Unit = {},
@@ -72,6 +75,10 @@ fun HomeScreen(
 ) {
 
     val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.loadHomeData()
+    }
 
     when (val state = uiState) {
         is HomeUiState.Loading -> {
@@ -82,6 +89,7 @@ fun HomeScreen(
                 CircularProgressIndicator()
             }
         }
+
         is HomeUiState.Error -> {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -96,9 +104,11 @@ fun HomeScreen(
                 }
             }
         }
+
         is HomeUiState.Success -> {
             HomeContent(
                 homeData = state.data,
+                onNavigateToContents = onNavigateToContents,
                 onNavigateToCategory = onNavigateToCategory,
                 onNavigateToFavorite = onNavigateToFavorite,
                 onNavigateToSearch = onNavigateToSearch,
@@ -112,13 +122,15 @@ fun HomeScreen(
 @Composable
 private fun HomeContent(
     homeData: HomeScreenData,
+    onNavigateToContents: (Long) -> Unit = {},
     onNavigateToCategory: (Long) -> Unit,
     onNavigateToFavorite: () -> Unit,
     onNavigateToSearch: () -> Unit,
     onNavigateToChatbot: () -> Unit
 ) {
 
-    val isEmpty = homeData.timeline.isEmpty() && homeData.categories.all { it.recentFiles.isEmpty() }
+    val isEmpty =
+        homeData.timeline.isEmpty() && homeData.categories.all { it.recentFiles.isEmpty() }
 
     if (isEmpty) {
         // Empty 상태 표시
@@ -130,7 +142,7 @@ private fun HomeContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 16.dp),
-                color = MaterialTheme.colorScheme.surface,
+                color = MaterialTheme.colorScheme.background,
             ) {
                 Row(
                     modifier = Modifier
@@ -207,7 +219,7 @@ private fun HomeContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 16.dp),
-            color = MaterialTheme.colorScheme.surface,
+            color = MaterialTheme.colorScheme.background,
         ) {
             Row(
                 modifier = Modifier
@@ -292,6 +304,12 @@ private fun HomeContent(
                                         .size(88.dp)
                                         .clip(RoundedCornerShape(5.dp))
                                         .align(Alignment.Center)
+                                        .clickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = null
+                                        ) {
+                                            onNavigateToContents(fileInfo.id)
+                                        }
                                 ) {
                                     when {
                                         it.type.startsWith("image") == true -> {
@@ -304,7 +322,11 @@ private fun HomeContent(
                                         }
 
                                         it.type.startsWith("text") == true -> {
-                                            var textContent by remember { mutableStateOf<String?>(null) }
+                                            var textContent by remember {
+                                                mutableStateOf<String?>(
+                                                    null
+                                                )
+                                            }
 
                                             LaunchedEffect(it.imageUrl) {
                                                 try {
@@ -398,7 +420,7 @@ private fun HomeContent(
             }
 
             // Categories Grid - LazyColumn items로 변경
-            items(homeData.categories.filter { it.recentFiles.isNotEmpty() }.chunked(2)) { rowItems ->
+            items(homeData.categories.chunked(2)) { rowItems ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -432,34 +454,37 @@ fun CategoryCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val files = category.recentFiles
+
     Column(
-        modifier = modifier
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick
-            ),
+        modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        val files = category.recentFiles
         // 카드 스택 영역
         Box(
             modifier = Modifier
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {
+                        if (files.isEmpty()) {
+                            Toast.makeText(context, "수집된 컨텐츠가 없습니다.", Toast.LENGTH_SHORT).show()
+                        } else {
+                            onClick()
+                        }
+                    }
+                ),
             contentAlignment = Alignment.Center
         ) {
-            // 뒤에서부터 3장의 카드를 겹쳐서 표시
-            // 오른쪽 뒤 카드
-            files.getOrNull(2)?.let { fileInfo ->
+            if (files.isEmpty()) {
+                // 파일이 없을 경우 흐린 폴라 한 장 표시
                 PolaCard(
                     modifier = Modifier
                         .height(120.dp)
-                        .graphicsLayer {
-                            rotationZ = 20f
-                            translationX = 55f
-                            translationY = -15f
-                            shadowElevation = 8.dp.toPx()
-                        },
+                        .alpha(0.4f)
+                        .shadow(elevation = 4.dp),
                     ratio = 0.7816f,
                     imageRatio = 0.9152f,
                     paddingValues = PaddingValues(
@@ -467,50 +492,74 @@ fun CategoryCard(
                         start = 8.dp,
                         end = 8.dp
                     ),
-                    imageUrl = fileInfo.imageUrl,
-                    type = fileInfo.type,
+                    imageResId = R.drawable.empty,
+                    type = null
                 )
-            }
+            } else {
+                // 뒤에서부터 3장의 카드를 겹쳐서 표시
+                // 오른쪽 뒤 카드
+                files.getOrNull(2)?.let { fileInfo ->
+                    PolaCard(
+                        modifier = Modifier
+                            .height(120.dp)
+                            .graphicsLayer {
+                                rotationZ = 20f
+                                translationX = 55f
+                                translationY = -15f
+                                shadowElevation = 8.dp.toPx()
+                            },
+                        ratio = 0.7816f,
+                        imageRatio = 0.9152f,
+                        paddingValues = PaddingValues(
+                            top = 8.dp,
+                            start = 8.dp,
+                            end = 8.dp
+                        ),
+                        imageUrl = fileInfo.imageUrl,
+                        type = fileInfo.type,
+                    )
+                }
 
-            // 왼쪽 뒤 카드
-            files.getOrNull(1)?.let { fileInfo ->
-                PolaCard(
-                    modifier = Modifier
-                        .height(120.dp)
-                        .graphicsLayer {
-                            rotationZ = -25f
-                            translationX = -45f
-                            translationY = -15f
-                            shadowElevation = 8.dp.toPx()
-                        },
-                    ratio = 0.7816f,
-                    imageRatio = 0.9152f,
-                    paddingValues = PaddingValues(
-                        top = 8.dp,
-                        start = 8.dp,
-                        end = 8.dp
-                    ),
-                    imageUrl = fileInfo.imageUrl,
-                    type = fileInfo.type,
-                )
-            }
+                // 왼쪽 뒤 카드
+                files.getOrNull(1)?.let { fileInfo ->
+                    PolaCard(
+                        modifier = Modifier
+                            .height(120.dp)
+                            .graphicsLayer {
+                                rotationZ = -25f
+                                translationX = -45f
+                                translationY = -15f
+                                shadowElevation = 8.dp.toPx()
+                            },
+                        ratio = 0.7816f,
+                        imageRatio = 0.9152f,
+                        paddingValues = PaddingValues(
+                            top = 8.dp,
+                            start = 8.dp,
+                            end = 8.dp
+                        ),
+                        imageUrl = fileInfo.imageUrl,
+                        type = fileInfo.type,
+                    )
+                }
 
-            // 중간 카드
-            files.getOrNull(0)?.let { fileInfo ->
-                PolaCard(
-                    modifier = Modifier
-                        .height(120.dp)
-                        .shadow(elevation = 8.dp),
-                    ratio = 0.7816f,
-                    imageRatio = 0.9152f,
-                    paddingValues = PaddingValues(
-                        top = 8.dp,
-                        start = 8.dp,
-                        end = 8.dp
-                    ),
-                    imageUrl = fileInfo.imageUrl,
-                    type = fileInfo.type,
-                )
+                // 중간 카드
+                files.getOrNull(0)?.let { fileInfo ->
+                    PolaCard(
+                        modifier = Modifier
+                            .height(120.dp)
+                            .shadow(elevation = 8.dp),
+                        ratio = 0.7816f,
+                        imageRatio = 0.9152f,
+                        paddingValues = PaddingValues(
+                            top = 8.dp,
+                            start = 8.dp,
+                            end = 8.dp
+                        ),
+                        imageUrl = fileInfo.imageUrl,
+                        type = fileInfo.type,
+                    )
+                }
             }
         }
 
@@ -518,6 +567,7 @@ fun CategoryCard(
 
         // 카테고리 이름
         Text(
+            modifier = if (files.isEmpty()) Modifier.alpha(0.4f) else Modifier,
             text = category.name,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
@@ -525,6 +575,7 @@ fun CategoryCard(
         )
     }
 }
+
 
 @Preview(showBackground = true, showSystemUi = true)
 @Composable

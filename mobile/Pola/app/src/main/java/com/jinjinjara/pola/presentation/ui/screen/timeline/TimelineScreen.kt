@@ -25,18 +25,23 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.jinjinjara.pola.R
 import com.jinjinjara.pola.domain.model.TimelineFile
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.net.URL
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimelineScreen(
     modifier: Modifier = Modifier,
+    onNavigateToContents: (Long) -> Unit = {},
     viewModel: TimelineViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
@@ -48,6 +53,11 @@ fun TimelineScreen(
 
     val showScrollToTopButton by remember {
         derivedStateOf { listState.firstVisibleItemIndex > 0 }
+    }
+
+    // 화면 진입 시 데이터 새로고침
+    LaunchedEffect(Unit) {
+        viewModel.refresh()
     }
 
     // 에러 이벤트 수신
@@ -193,7 +203,8 @@ fun TimelineScreen(
                                         dateLabel = dateKey,
                                         files = files,
                                         isFirst = index == 0,
-                                        isLast = index == dateKeys.lastIndex && !successState.canLoadMore
+                                        isLast = index == dateKeys.lastIndex && !successState.canLoadMore,
+                                        onNavigateToContents = onNavigateToContents,
                                     )
                                 }
                             }
@@ -308,7 +319,8 @@ fun TimelineItem(
     dateLabel: String,
     files: List<TimelineFile>,
     isFirst: Boolean,
-    isLast: Boolean
+    isLast: Boolean,
+    onNavigateToContents: (Long) -> Unit = {},
 ) {
     val filmHeight = 150.dp
 
@@ -409,13 +421,75 @@ fun TimelineItem(
                                     .size(110.dp)
                                     .clip(RoundedCornerShape(5.dp))
                                     .align(Alignment.Center)
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null
+                                    ) {
+                                        onNavigateToContents(file.id)
+                                    }
                             ) {
-                                AsyncImage(
-                                    model = file.imageUrl,
-                                    contentDescription = "Content Image",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                                )
+                                when {
+                                    file.type.startsWith("image") == true -> {
+                                        AsyncImage(
+                                            model = file.imageUrl,
+                                            contentDescription = "Content Image",
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                    }
+
+                                    file.type.startsWith("text") == true -> {
+                                        var textContent by remember {
+                                            mutableStateOf<String?>(
+                                                null
+                                            )
+                                        }
+
+                                        LaunchedEffect(file.imageUrl) {
+                                            try {
+                                                textContent = withContext(Dispatchers.IO) {
+                                                    URL(file.imageUrl).readText(Charsets.UTF_8)
+                                                }
+                                            } catch (e: Exception) {
+                                                e.printStackTrace()
+                                                textContent = "(텍스트 로드 실패)"
+                                            }
+                                        }
+
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .background(Color(0xFFF5F5F5))
+                                                .padding(6.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = textContent ?: "로딩 중...",
+                                                color = Color.DarkGray,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                maxLines = 4,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
+
+                                    else -> {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .background(Color(0xFFE0E0E0)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(R.drawable.empty),
+                                                contentDescription = "Unknown file",
+                                                tint = Color.DarkGray,
+                                                modifier = Modifier.size(28.dp)
+                                            )
+                                        }
+                                    }
+                                }
+
                             }
                         }
                     }

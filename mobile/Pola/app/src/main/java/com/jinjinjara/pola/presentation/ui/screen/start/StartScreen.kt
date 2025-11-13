@@ -31,6 +31,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -56,6 +59,14 @@ fun StartScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
+    // 초기 로딩 상태 (0.5초 대기)
+    var isInitialLoading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(500)
+        isInitialLoading = false
+    }
+
     // 에러 토스트 표시
     LaunchedEffect(uiState) {
         when (val state = uiState) {
@@ -67,6 +78,20 @@ fun StartScreen(
             }
             else -> Unit
         }
+    }
+
+    // 초기 로딩 또는 카테고리 체크 중일 때 전체 화면 로딩
+    if (isInitialLoading || uiState is StartUiState.CheckingCategories) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(48.dp),
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+        return
     }
 
     Column(
@@ -129,7 +154,7 @@ fun StartScreen(
         Spacer(modifier = Modifier.height(if (uiState is StartUiState.Error) 24.dp else 76.dp))
 
         // 구글 로그인 버튼
-        val isLoading = uiState is StartUiState.Loading
+        val isLoading = uiState is StartUiState.Loading || uiState is StartUiState.CheckingCategories
 
         Button(
             onClick = {
@@ -207,15 +232,6 @@ private fun ErrorMessageCard(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 에러 아이콘
-            Icon(
-                imageVector = Icons.Default.Error,
-                contentDescription = null,
-                tint = Color(0xFFD32F2F),
-                modifier = Modifier.size(32.dp)
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
 
             // 에러 메시지
             Text(
@@ -227,33 +243,13 @@ private fun ErrorMessageCard(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // 에러 타입별 설명
-            Spacer(modifier = Modifier.height(8.dp))
-            val helpText = when (errorType) {
-                ErrorType.NETWORK -> "인터넷 연결을 확인한 후 다시 시도해주세요."
-                ErrorType.SERVER -> "서버에 일시적인 문제가 있습니다."
-                ErrorType.TIMEOUT -> "요청 시간이 초과되었습니다. 다시 시도해주세요."
-                ErrorType.UNAUTHORIZED -> "인증에 실패했습니다."
-                ErrorType.GOOGLE_SIGN_IN_CANCELLED -> "로그인이 취소되었습니다."
-                ErrorType.GOOGLE_SIGN_IN_FAILED -> "Google 로그인에 실패했습니다."
-                else -> "다시 시도해주세요."
-            }
-
-            Text(
-                text = helpText,
-                fontSize = 13.sp,
-                color = Color(0xFF666666),
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
-
             Spacer(modifier = Modifier.height(16.dp))
 
             // 다시 시도 버튼
             Button(
                 onClick = onRetry,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(50),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFFD32F2F)
                 )

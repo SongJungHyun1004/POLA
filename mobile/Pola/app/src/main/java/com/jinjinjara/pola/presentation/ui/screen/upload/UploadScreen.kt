@@ -2,8 +2,10 @@ package com.jinjinjara.pola.presentation.ui.screen.upload
 
 import android.Manifest
 import android.content.Context
+import android.net.Uri
 import android.os.Build
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -24,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,9 +38,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import java.io.File
 
 @Composable
 fun UploadScreen(
@@ -71,6 +76,35 @@ fun UploadScreen(
         permissionLauncher.launch(permission)
     }
 
+    BackHandler(enabled = uiState.uploadState is UploadScreenState.Uploading) {
+        Toast
+            .makeText(context, "업로드 중입니다. 잠시만 기다려주세요.", Toast.LENGTH_SHORT)
+            .show()
+    }
+
+    val imageUri = remember { mutableStateOf<Uri?>(null) }
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success && imageUri.value != null) {
+            viewModel.selectCameraImage(imageUri.value!!)
+            Toast.makeText(context, "사진을 촬영했습니다.", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(context, "사진 촬영이 취소되었습니다.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun launchCamera() {
+        val photoFile = File.createTempFile("photo_", ".jpg", context.cacheDir)
+        val uri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            photoFile
+        )
+        imageUri.value = uri
+        cameraLauncher.launch(uri)
+    }
+
     // 업로드 상태 처리
     LaunchedEffect(uiState.uploadState) {
         when (val state = uiState.uploadState) {
@@ -84,6 +118,7 @@ fun UploadScreen(
                 viewModel.clearSelection()
                 onUploadSuccess()
             }
+
             is UploadScreenState.Error -> {
                 Toast.makeText(
                     context,
@@ -92,6 +127,7 @@ fun UploadScreen(
                 ).show()
                 viewModel.resetUploadState()
             }
+
             else -> {}
         }
     }
@@ -158,7 +194,7 @@ fun UploadScreen(
                     }
                 } else {
                     Text(
-                        text = "클립보드",
+                        text = "업로드",
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier
@@ -167,7 +203,7 @@ fun UploadScreen(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
                             ) {
-                                onClipboardClick()
+                                Toast.makeText(context,"사진을 선택해 주세요", Toast.LENGTH_SHORT).show()
                             }
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     )
@@ -193,7 +229,7 @@ fun UploadScreen(
             ) {
                 // 카메라 아이콘 셀 (첫 번째)
                 item {
-                    CameraCell(onClick = onCameraClick)
+                    CameraCell(onClick = { launchCamera() })
                 }
 
                 // 갤러리 이미지들
@@ -216,7 +252,11 @@ fun UploadScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.5f)),
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() }
+                    ) { /* 아무것도 안 함 */ },
                 contentAlignment = Alignment.Center
             ) {
                 Column(
@@ -234,6 +274,37 @@ fun UploadScreen(
                         style = MaterialTheme.typography.titleMedium
                     )
                 }
+            }
+        }
+    }
+    if (uiState.uploadState is UploadScreenState.Uploading) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                // 터치/클릭 모두 차단
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                ) { /* 아무것도 안 함 */ }
+                // 어두운 배경
+                .background(Color.Black.copy(alpha = 0.6f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(64.dp),
+                    color = Color.White,
+                    strokeWidth = 6.dp
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+                Text(
+                    text = "업로드 중입니다...",
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }

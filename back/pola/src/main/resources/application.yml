@@ -24,11 +24,13 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
         dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          time_zone: Asia/Seoul
     database-platform: org.hibernate.dialect.PostgreSQLDialect
 
   # ===============================
@@ -94,6 +96,10 @@ logging:
   level:
     org.springframework: INFO
     com.jinjinjara: DEBUG
+    # Hibernate SQL 로그 최소화
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+    org.hibernate.orm.jdbc.bind: WARN
 
 # ===============================
 # Swagger

@@ -6,6 +6,8 @@ package com.jinjinjara.pola.util
 object Constants {
     // API
     const val BASE_URL = "https://k13d204.p.ssafy.io/api/v1/"
+    const val SHARE_URL = "https://k13d204.p.ssafy.io/sharedfile/"
+
 
     // Network Timeout
     const val CONNECT_TIMEOUT = 30L

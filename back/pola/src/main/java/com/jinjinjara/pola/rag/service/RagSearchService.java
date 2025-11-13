@@ -1,14 +1,23 @@
 package com.jinjinjara.pola.rag.service;
 
+import com.jinjinjara.pola.data.service.FileTagService;
+import com.jinjinjara.pola.rag.dto.common.QueryPreprocessResult;
 import com.jinjinjara.pola.rag.dto.common.RagSearchSource;
 import com.jinjinjara.pola.rag.dto.common.SearchRow;
 import com.jinjinjara.pola.rag.dto.response.RagSearchResponse;
+import com.jinjinjara.pola.rag.util.QueryPreprocessor;
+import com.jinjinjara.pola.rag.util.RagPostProcessor;
+import com.jinjinjara.pola.rag.util.RagProperties;
 import com.jinjinjara.pola.s3.service.S3Service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -17,25 +26,120 @@ public class RagSearchService {
 
     private final EmbeddingSearchService embeddingSearchService;
     private final S3Service s3Service;
+    private final QueryPreprocessor queryPreprocessor;
+    private final RagPostProcessor ragPostProcessor;
+    private final FileTagService fileTagService;
+    private final RagProperties ragProperties;
 
     public RagSearchResponse search(Long userId, String query, int limit) {
         log.info("[RagSearch] userId={}, query='{}', limit={}", userId, query, limit);
 
-        List<SearchRow> rows = embeddingSearchService.searchSimilarFiles(userId, query, limit);
-        if (rows.isEmpty()) {
-            return new RagSearchResponse("검색 결과가 없습니다.", List.of());
-        }
+        // 1) 전처리 + 타입 라우팅
+        QueryPreprocessResult pre = queryPreprocessor.preprocess(query);
+        String cleaned = pre.getCleanedQuery();
+        LocalDate start = pre.getStartDate();
+        LocalDate end = pre.getEndDate();
+        var type = pre.getQueryType();
 
+        // 2) 검색
+        List<SearchRow> rows = embeddingSearchService.searchSimilarFiles(userId, cleaned, limit, start, end);
+        if (rows.isEmpty()) return new RagSearchResponse("검색 결과가 없습니다.", List.of());
+
+        // 3) 태그 병합
         List<RagSearchSource> sources = rows.stream()
-                .map(r -> new RagSearchSource(
-                        r.getId(),                                   // 파일 ID (쿼리에서 f.id AS id)
-                        s3Service.generateDownloadUrl(r.getSrc()),   // S3 프리사인드 URL
-                        r.getContext(),                              // 컨텍스트
-                        r.getRelevanceScore()                        // 유사도 스코어
-                ))
+                .map(r -> {
+                    List<String> tagNames = fileTagService.getTagsByFile(r.getId()).stream()
+                            .map(com.jinjinjara.pola.data.dto.response.TagResponse::getTagName)
+                            .filter(Objects::nonNull)
+                            .map(String::trim)
+                            .filter(s -> !s.isEmpty())
+                            .distinct()
+                            .toList();
+                    return RagSearchSource.builder()
+                            .id(r.getId())
+                            .src(s3Service.generateDownloadUrl(r.getSrc()))
+                            .context(r.getContext())
+                            .relevanceScore(r.getRelevanceScore())
+                            .tags(tagNames)
+                            .build();
+                })
                 .toList();
 
-        String answer = String.format("%d건의 관련 파일을 찾았습니다.", sources.size());
-        return new RagSearchResponse(answer, sources);
+        // 4) perType 정책 결정 (perType → 전역)
+        var sim = ragProperties.getSimilarity();
+        var tp  = sim.getPerType().get(type); // 없으면 전역 사용
+        double minSim    = (tp != null && tp.getMin() != null) ? tp.getMin() : sim.getMin();
+        double keepRatio = (tp != null && tp.getKeepRatio() != null) ? tp.getKeepRatio() : sim.getKeepRatio();
+
+        List<Double> backoff = (tp != null && tp.getBackoff() != null && !tp.getBackoff().isEmpty())
+                ? tp.getBackoff()
+                : (sim.getBackoff() != null ? sim.getBackoff() : Collections.emptyList());
+
+        double top1  = sources.get(0).getRelevanceScore() == null ? 0.0 : sources.get(0).getRelevanceScore();
+        double relCut = Math.max(minSim, top1 * keepRatio);
+        log.debug("[RagSearch] type={}, top1={}, min={}, keep={}, relCut={}, backoff={}",
+                type, top1, minSim, keepRatio, relCut, backoff);
+
+        // 5) 1차 컷 (2위 이하에 적용되는 기본 기준)
+        List<RagSearchSource> filtered = sources.stream()
+                .filter(s -> s.getRelevanceScore() != null && s.getRelevanceScore() >= relCut)
+                .toList();
+
+        // 6) 결과가 limit보다 부족하면 backoff로 보강
+        if (filtered.size() < limit && !backoff.isEmpty()) {
+            for (double b : backoff) {
+                double cut = Math.min(minSim, top1 * b);
+                List<RagSearchSource> candidates = sources.stream()
+                        .filter(s -> s.getRelevanceScore() != null && s.getRelevanceScore() >= cut)
+                        .toList();
+
+                int need = Math.max(0, limit - filtered.size());
+                if (need == 0) break;
+
+
+                List<RagSearchSource> current = filtered;
+
+                // 새 후보 중 기존 filtered에 없는 것만 추가
+                List<RagSearchSource> newOnes = candidates.stream()
+                        .filter(c -> current.stream().noneMatch(f -> Objects.equals(f.getId(), c.getId())))
+                        .sorted((a, b2) -> Double.compare(
+                                b2.getRelevanceScore() == null ? 0.0 : b2.getRelevanceScore(),
+                                a.getRelevanceScore() == null ? 0.0 : a.getRelevanceScore()))
+                        .limit(need)
+                        .toList();
+
+                if (!newOnes.isEmpty()) {
+                    List<RagSearchSource> merged = new ArrayList<>(filtered);
+                    merged.addAll(newOnes);
+                    filtered = merged;
+                }
+
+                log.debug("[RagSearch] backoff(ratio)={} → cut={} → added={} / total={}",
+                        b, cut, newOnes.size(), filtered.size());
+
+                if (filtered.size() >= limit) break;
+            }
+
+            // 6-2) (옵션) 절대 바닥 완화: 여전히 비었을 때만
+            if (filtered.isEmpty()) {
+                for (double floor : backoff) {
+                    if (floor >= minSim) continue;
+                    double cut = floor;
+                    filtered = sources.stream()
+                            .filter(s -> s.getRelevanceScore() != null && s.getRelevanceScore() >= cut)
+                            .toList();
+                    log.debug("[RagSearch] backoff(abs)={} → cut={}, remained={}", floor, cut, filtered.size());
+                    if (!filtered.isEmpty()) break;
+                }
+            }
+        }
+
+        if (filtered.isEmpty()) {
+            return new RagSearchResponse("관련도가 낮아 결과가 없습니다.", List.of());
+        }
+
+        // 7) LLM 후처리
+        String answer = ragPostProcessor.generateAnswer(query, filtered);
+        return new RagSearchResponse(answer, filtered);
     }
 }

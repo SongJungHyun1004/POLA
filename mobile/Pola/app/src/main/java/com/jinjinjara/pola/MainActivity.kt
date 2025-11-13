@@ -10,6 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -24,17 +25,26 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.jinjinjara.pola.data.local.datastore.PreferencesDataStore
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import com.jinjinjara.pola.domain.repository.AuthRepository
+import com.jinjinjara.pola.domain.repository.ChatRepository
 import com.jinjinjara.pola.domain.usecase.auth.AutoLoginUseCase
 import com.jinjinjara.pola.navigation.PolaNavHost
 import com.jinjinjara.pola.presentation.ui.theme.PolaTheme
@@ -43,6 +53,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -56,6 +67,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var autoLoginUseCase: AutoLoginUseCase
 
+    @Inject
+    lateinit var chatRepository: ChatRepository
+
     private val shareUploadViewModel: ShareUploadViewModel by viewModels()
 
     // 공유하기로 들어왔는지 확인
@@ -67,17 +81,25 @@ class MainActivity : ComponentActivity() {
     private var sharedContentType: String? = null
 
     private var hasStartedUpload = false
+    private var isAutoLoginCompleted by mutableStateOf(false)
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d("MainActivity", "onCreate started")
 
+        // 앱 재시작 시 채팅 메시지 삭제
+        lifecycleScope.launch {
+            Log.d("MainActivity", "Clearing chat messages on app restart")
+            chatRepository.clearAllMessages()
+        }
+
         // 자동 로그인 시도 (백그라운드에서 토큰 검증 및 재발급)
         lifecycleScope.launch {
             Log.d("MainActivity", "Starting auto login")
             val result = autoLoginUseCase()
             Log.d("MainActivity", "Auto login completed: ${if (result is com.jinjinjara.pola.util.Result.Success) "success" else "failed"}")
+            isAutoLoginCompleted = true
         }
 
         // 공유 인텐트인지 확인 및 데이터 추출
@@ -103,7 +125,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
+
             PolaTheme {
+                SystemBarsController()
 
                 // DataStore의 토큰 존재 여부와 온보딩 완료 여부를 관찰하여 상태 관리
                 // initial = null로 설정하여 로딩 상태 표시
@@ -128,7 +152,10 @@ class MainActivity : ComponentActivity() {
                                 modifier = Modifier.fillMaxSize(),
                                 contentAlignment = Alignment.Center
                             ) {
-                                CircularProgressIndicator()
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(48.dp),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
                             }
                         }
                         false -> {
@@ -289,17 +316,22 @@ class MainActivity : ComponentActivity() {
                 } else {
                     // 일반 실행: 기존 로그인 플로우
                     when {
-                        isLoggedIn == null || onboardingCompleted == null -> {
-                            // 둘 중 하나라도 로딩 중이면 로딩 표시
+                        !isAutoLoginCompleted || isLoggedIn == null || onboardingCompleted == null -> {
+                            // 자동 로그인 미완료 또는 데이터 로딩 중이면 로딩 표시
+                            Log.d("MainActivity", "Loading - autoLogin: $isAutoLoginCompleted, isLoggedIn: $isLoggedIn, onboarding: $onboardingCompleted")
                             Box(
                                 modifier = Modifier.fillMaxSize(),
                                 contentAlignment = Alignment.Center
                             ) {
-                                CircularProgressIndicator()
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(48.dp),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
                             }
                         }
                         else -> {
-                            // 둘 다 로드 완료되면 네비게이션 시작
+                            // 모든 초기화 완료되면 네비게이션 시작
+                            Log.d("MainActivity", "Ready to show UI - isLoggedIn: $isLoggedIn, onboarding: $onboardingCompleted")
                             PolaNavHost(
                                 modifier = Modifier.fillMaxSize(),
                                 isLoggedIn = isLoggedIn ?: false,
@@ -344,5 +376,20 @@ class MainActivity : ComponentActivity() {
                 finish()
             }
         }
+    }
+}
+
+@Composable
+fun SystemBarsController() {
+    val view = LocalView.current
+    val isDarkTheme = isSystemInDarkTheme()
+    val backgroundColor = MaterialTheme.colorScheme.background
+
+    SideEffect {
+        val window = (view.context as ComponentActivity).window
+        window.statusBarColor = backgroundColor.toArgb()
+
+        val wic = WindowInsetsControllerCompat(window, view)
+        wic.isAppearanceLightStatusBars = true
     }
 }

@@ -15,7 +15,9 @@ import com.jinjinjara.pola.data.repository.CategoryTagRepository;
 import com.jinjinjara.pola.data.repository.FileRepository;
 import com.jinjinjara.pola.data.repository.TagRepository;
 import com.jinjinjara.pola.user.entity.Users;
+import com.jinjinjara.pola.vision.dto.common.CategoryChangedEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
@@ -34,6 +36,7 @@ public class CategoryService {
     private final TagRepository tagRepository;
     private final CategoryTagRepository categoryTagRepository;
     private final FileRepository fileRepository;
+    private final ApplicationEventPublisher publisher;
     /**
      * CREATE - 카테고리 생성
      */
@@ -48,10 +51,10 @@ public class CategoryService {
             Category category = Category.builder()
                     .user(user)
                     .categoryName(categoryName)
-                    .categorySort(0)
                     .build();
 
             Category saved = categoryRepository.save(category);
+            publisher.publishEvent(new CategoryChangedEvent(user.getId()));
             return CategoryResponse.fromEntity(saved);
         } catch (CustomException e) {
             throw e; // 그대로 전달
@@ -66,19 +69,25 @@ public class CategoryService {
     @Transactional(readOnly = true)
     public List<CategoryResponse> getCategoriesByUser(Users user) {
         try {
-            List<Category> categories = categoryRepository.findByUser(user);
+            // 정렬된 카테고리 조회 (fileCount DESC, 가나다순, 미분류는 마지막)
+            List<Category> categories = categoryRepository.findAllSortedByUser(user);
+
             if (categories.isEmpty()) {
                 throw new CustomException(ErrorCode.CATEGORY_NOT_FOUND);
             }
+
             return categories.stream()
                     .map(CategoryResponse::fromEntity)
                     .toList();
+
         } catch (CustomException e) {
             throw e;
+
         } catch (Exception e) {
             throw new CustomException(ErrorCode.DATA_NOT_FOUND, e.getMessage());
         }
     }
+
 
     /**
      * READ - 단일 조회
@@ -114,7 +123,6 @@ public class CategoryService {
                     .id(category.getId())
                     .user(category.getUser())
                     .categoryName(newName)
-                    .categorySort(category.getCategorySort())
                     .createdAt(category.getCreatedAt())
                     .build();
 
@@ -138,30 +146,45 @@ public class CategoryService {
             Category category = categoryRepository.findById(id)
                     .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
 
-            Users user = category.getUser(); // Category 엔티티의 Users 참조
+            Users user = category.getUser();
+            Long userId = user.getId();
 
-            // 2. 해당 유저의 '미분류' 카테고리 찾기 (없으면 생성)
-            Category uncategorized = categoryRepository.findByUserIdAndCategoryName(user.getId(), "미분류")
+            // 2. '미분류' 카테고리 조회 또는 생성
+            Category uncategorized = categoryRepository.findByUserIdAndCategoryName(userId, "미분류")
                     .orElseGet(() -> {
                         Category newCategory = Category.builder()
-                                .user(user) // 올바른 필드 이름
+                                .user(user)
                                 .categoryName("미분류")
+                                .fileCount(0)
                                 .build();
                         return categoryRepository.save(newCategory);
                     });
 
-            // 3. 연결된 파일들의 category_id를 모두 '미분류'로 변경
+            Long uncategorizedId = uncategorized.getId();
+
+            // 3. 이 카테고리에 포함된 파일들 모두 "미분류"로 이동
             List<File> files = fileRepository.findAllByCategoryId(id);
+            int movedCount = files.size();
+
             for (File file : files) {
-                file.setCategoryId(uncategorized.getId());
+                file.setCategoryId(uncategorizedId);
             }
             fileRepository.saveAll(files);
 
-            // 4. category_tags 먼저 삭제
+            // 3-1. 미분류 카테고리에 파일 개수 반영
+            if (movedCount > 0) {
+                uncategorized.increaseCount(movedCount);
+                categoryRepository.save(uncategorized);
+            }
+
+            // 4. category_tags 삭제
             categoryTagRepository.deleteByCategoryId(id);
 
-            // 5. 카테고리 삭제
+            // 5. 실제 카테고리 삭제
             categoryRepository.deleteById(id);
+
+            // 6. 캐시 재계산 또는 이벤트 발행
+            publisher.publishEvent(new CategoryChangedEvent(userId));
 
         } catch (CustomException e) {
             throw e;
@@ -169,6 +192,7 @@ public class CategoryService {
             throw new CustomException(ErrorCode.CATEGORY_DELETE_FAIL, e.getMessage());
         }
     }
+
 
 
 

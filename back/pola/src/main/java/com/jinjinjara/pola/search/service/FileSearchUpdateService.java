@@ -60,16 +60,18 @@ public class FileSearchUpdateService {
                     .categoryName(categoryName)
                     .tags(String.join(", ", tagNames))
                     .context(file.getContext() != null ? file.getContext() : "")
-                    .ocrText(file.getOcrText() != null ? file.getOcrText() : "")  
+                    .ocrText(file.getOcrText() != null ? file.getOcrText() : "")
                     .imageUrl(file.getSrc())
                     .createdAt(file.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
+                    .favorite(file.getFavorite() != null ? file.getFavorite() : false)
+                    .fileType(file.getType())
                     .build();
 
             fileSearchService.save(fileSearch);
-            log.info("✅ AI 팀원: OpenSearch 업데이트 완료: fileId={}", fileId);
+            log.info(" OpenSearch 업데이트 완료: fileId={}", fileId);
 
         } catch (Exception e) {
-            log.error("❌ AI 팀원: OpenSearch 업데이트 실패: fileId={}", fileId, e);
+            log.error(" OpenSearch 업데이트 실패: fileId={}", fileId, e);
             throw new CustomException(ErrorCode.SEARCH_UPDATE_FAIL, e.getMessage());
         }
     }

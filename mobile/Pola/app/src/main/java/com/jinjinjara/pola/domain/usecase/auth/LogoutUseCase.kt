@@ -2,6 +2,7 @@ package com.jinjinjara.pola.domain.usecase.auth
 
 import com.jinjinjara.pola.data.local.datastore.PreferencesDataStore
 import com.jinjinjara.pola.domain.repository.AuthRepository
+import com.jinjinjara.pola.domain.repository.ChatRepository
 import com.jinjinjara.pola.util.Result
 import javax.inject.Inject
 
@@ -10,7 +11,8 @@ import javax.inject.Inject
 // 온보딩 플래그는 유지
 class LogoutUseCase @Inject constructor(
     private val authRepository: AuthRepository,
-    private val preferencesDataStore: PreferencesDataStore
+    private val preferencesDataStore: PreferencesDataStore,
+    private val chatRepository: ChatRepository
 ) {
 
     suspend operator fun invoke(): Result<Unit> {
@@ -21,7 +23,10 @@ class LogoutUseCase @Inject constructor(
             // 2. 사용자 정보 삭제
             preferencesDataStore.clearUserId()
 
-            // 3. 온보딩 플래그는 유지
+            // 3. 채팅 메시지 삭제
+            chatRepository.clearAllMessages()
+
+            // 4. 온보딩 플래그는 유지
 
             Result.Success(Unit)
         } catch (e: Exception) {

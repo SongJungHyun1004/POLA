@@ -28,7 +28,9 @@ interface CategoryRepository {
     suspend fun getFilesByCategory(
         categoryId: Long,
         page: Int = 0,
-        size: Int = 20
+        size: Int = 20,
+        sortBy: String,
+        direction: String
     ): Result<FilesPage>
 
     /**
@@ -41,5 +43,4 @@ interface CategoryRepository {
      */
     suspend fun getCategories(): Result<List<Category>>
 
-    suspend fun getFileDetail(fileId: Long): Result<FileDetail>
 }

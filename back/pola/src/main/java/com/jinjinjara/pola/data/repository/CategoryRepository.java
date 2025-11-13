@@ -17,12 +17,28 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     Optional<Category> findByUserAndCategoryName(Users user, String categoryName);
 
     boolean existsByUserAndCategoryName(Users user, String categoryName);
-    @Query("SELECT c FROM Category c WHERE c.user.id = :userId ORDER BY c.createdAt DESC")
-    List<Category> findAllByUserId(@Param("userId") Long userId);
-    Optional<Category> findByIdAndUserId(Long id, Long userId);
+
+    @Query("SELECT c FROM Category c " +
+            "WHERE c.user = :user " +
+            "ORDER BY c.fileCount DESC, " +
+            "CASE WHEN c.categoryName = '미분류' THEN 1 ELSE 0 END ASC, " +
+            "c.categoryName ASC")
+    List<Category> findAllSortedByUser(@Param("user") Users user);
+
+
+    @Query("SELECT c FROM Category c " +
+            "WHERE c.user.id = :userId " +
+            "ORDER BY c.fileCount DESC, " +
+            "CASE WHEN c.categoryName = '미분류' THEN 1 ELSE 0 END ASC, " +
+            "c.categoryName ASC")
+    List<Category> findAllSorted(Long userId);
+
 
     @Query("SELECT c.id FROM Category c WHERE c.user.id = :userId AND c.categoryName = :categoryName")
     Optional<Long> findIdByUserIdAndCategoryName(@Param("userId") Long userId, @Param("categoryName") String categoryName);
+
     Optional<Category> findByUserIdAndCategoryName(Long userId, String categoryName);
 
+    @Query("SELECT c.user.id FROM Category c WHERE c.id = :categoryId")
+    Long findOwnerUserIdByCategoryId(@Param("categoryId") Long categoryId);
 }

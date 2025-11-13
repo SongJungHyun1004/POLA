@@ -150,4 +150,21 @@ class UploadViewModel @Inject constructor(
     fun resetUploadState() {
         _uiState.update { it.copy(uploadState = UploadScreenState.Idle) }
     }
+
+    fun selectCameraImage(uri: Uri) {
+        val newImage = GalleryImage(
+            id = System.currentTimeMillis(),
+            uri = uri,
+            displayName = "Camera_${System.currentTimeMillis()}",
+            dateAdded = System.currentTimeMillis(),
+            isSelected = true
+        )
+        _uiState.update { state ->
+            state.copy(
+                selectedImage = newImage,
+                images = listOf(newImage) + state.images // 맨 앞에 추가
+            )
+        }
+    }
+
 }
