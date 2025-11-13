@@ -1,5 +1,7 @@
 package com.jinjinjara.pola.presentation.ui.screen
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -51,6 +53,7 @@ import com.jinjinjara.pola.presentation.ui.screen.upload.UploadScreen
 /**
  * Bottom Navigation이 있는 메인 화면
  */
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun MainScreen(
     modifier: Modifier = Modifier,
@@ -157,7 +160,7 @@ fun MainScreen(
 
             // 단일 화면들
             uploadScreen(navController)
-            remindScreen()
+            remindScreen(navController)
         }
     }
 }

@@ -67,6 +67,7 @@ data class Category(
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
+    onNavigateToContents: (Long) -> Unit = {},
     onNavigateToCategory: (Long) -> Unit = {},
     onNavigateToFavorite: () -> Unit = {},
     onNavigateToSearch: () -> Unit = {},
@@ -107,6 +108,7 @@ fun HomeScreen(
         is HomeUiState.Success -> {
             HomeContent(
                 homeData = state.data,
+                onNavigateToContents = onNavigateToContents,
                 onNavigateToCategory = onNavigateToCategory,
                 onNavigateToFavorite = onNavigateToFavorite,
                 onNavigateToSearch = onNavigateToSearch,
@@ -120,6 +122,7 @@ fun HomeScreen(
 @Composable
 private fun HomeContent(
     homeData: HomeScreenData,
+    onNavigateToContents: (Long) -> Unit = {},
     onNavigateToCategory: (Long) -> Unit,
     onNavigateToFavorite: () -> Unit,
     onNavigateToSearch: () -> Unit,
@@ -139,7 +142,7 @@ private fun HomeContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 16.dp),
-                color = MaterialTheme.colorScheme.surface,
+                color = MaterialTheme.colorScheme.background,
             ) {
                 Row(
                     modifier = Modifier
@@ -216,7 +219,7 @@ private fun HomeContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 16.dp),
-            color = MaterialTheme.colorScheme.surface,
+            color = MaterialTheme.colorScheme.background,
         ) {
             Row(
                 modifier = Modifier
@@ -301,6 +304,12 @@ private fun HomeContent(
                                         .size(88.dp)
                                         .clip(RoundedCornerShape(5.dp))
                                         .align(Alignment.Center)
+                                        .clickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = null
+                                        ) {
+                                            onNavigateToContents(fileInfo.id)
+                                        }
                                 ) {
                                     when {
                                         it.type.startsWith("image") == true -> {
@@ -558,6 +567,7 @@ fun CategoryCard(
 
         // 카테고리 이름
         Text(
+            modifier = if (files.isEmpty()) Modifier.alpha(0.4f) else Modifier,
             text = category.name,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,

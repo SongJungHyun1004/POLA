@@ -31,7 +31,7 @@ fun PolaSearchBar(
     onSearchClick: () -> Unit = {},
     focusRequester: FocusRequester? = null,
     iconRes: Int = R.drawable.search,
-    placeholder: String = "검색어를 입력하세요"
+    placeholder: String = "검색어를 입력하세요."
 ) {
     BasicTextField(
         value = searchText,

@@ -186,72 +186,87 @@ fun CategoryScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        if (uiState.files.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = headerHeightDp + 48.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
+        when {
+            uiState.isLoading -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = headerHeightDp + 48.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Image(
-                        painter = painterResource(R.drawable.empty),
-                        contentDescription = "Empty Content",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 32.dp),
-                        contentScale = ContentScale.Fit
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Text(
-                        text = "이 카테고리에 분류된 컨텐츠가 없어요",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.tertiary
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
-        } else {
-            when (viewMode) {
-                ViewMode.GRID_3 -> {
-                    ItemGrid3View(
-                        items = categories,
-                        onItemClick = { item ->
-                            onNavigateToContents(item.fileId)
-                        },
-                        onFavoriteToggle = { }, // 빈 람다 (기능 없음)
-                        state = gridState,
-                        contentPadding = PaddingValues(
-                            top = headerHeightDp + 8.dp,
-                            start = 16.dp,
-                            end = 16.dp,
-                            bottom = 16.dp
-                        ),
-                        showFavoriteIcon = false,
-                        modifier = Modifier.fillMaxSize()
-                    )
+            uiState.files.isEmpty() -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = headerHeightDp + 48.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.empty),
+                            contentDescription = "Empty Content",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 32.dp),
+                            contentScale = ContentScale.Fit
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Text(
+                            text = "이 카테고리에 분류된 컨텐츠가 없어요",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.tertiary
+                        )
+                    }
                 }
+            }
+            else -> {
+                when (viewMode) {
+                    ViewMode.GRID_3 -> {
+                        ItemGrid3View(
+                            items = categories,
+                            onItemClick = { item ->
+                                onNavigateToContents(item.fileId)
+                            },
+                            onFavoriteToggle = { }, // 빈 람다 (기능 없음)
+                            state = gridState,
+                            contentPadding = PaddingValues(
+                                top = headerHeightDp + 8.dp,
+                                start = 16.dp,
+                                end = 16.dp,
+                                bottom = 16.dp
+                            ),
+                            showFavoriteIcon = false,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
 
-                ViewMode.GRID_2 -> {
-                    ItemGrid2View(
-                        items = categories,
-                        onItemClick = { item ->
-                            onNavigateToContents(item.fileId)
-                        },
-                        onFavoriteToggle = { }, // 빈 람다 (기능 없음)
-                        state = gridState,
-                        contentPadding = PaddingValues(
-                            top = headerHeightDp + 8.dp,
-                            start = 16.dp,
-                            end = 16.dp,
-                            bottom = 16.dp
-                        ),
-                        showFavoriteIcon = false,
-                        modifier = Modifier.fillMaxSize()
-                    )
+                    ViewMode.GRID_2 -> {
+                        ItemGrid2View(
+                            items = categories,
+                            onItemClick = { item ->
+                                onNavigateToContents(item.fileId)
+                            },
+                            onFavoriteToggle = { }, // 빈 람다 (기능 없음)
+                            state = gridState,
+                            contentPadding = PaddingValues(
+                                top = headerHeightDp + 8.dp,
+                                start = 16.dp,
+                                end = 16.dp,
+                                bottom = 16.dp
+                            ),
+                            showFavoriteIcon = false,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
                 }
             }
         }

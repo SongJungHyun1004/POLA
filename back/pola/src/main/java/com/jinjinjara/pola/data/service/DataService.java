@@ -288,7 +288,7 @@ public class DataService {
                 .categoryId(uncategorized.getId())
                 .src(request.getKey())                     // S3 key
                 .type(request.getType())                   // MIME type
-                .context("Llava")
+                .context("AI가 파일을 해석 중입니다.")
                 .fileSize((long) request.getFileSize())
                 .originUrl(request.getOriginUrl())
                 .platform(request.getPlatform())
@@ -523,7 +523,7 @@ public class DataService {
         fileTagService.addTagsToFile(fileId, analyzeResponse.getTags());
         log.info("[PostProcess] Tags saved for fileId={}", fileId);
 
-        float[] embedding = embeddingService.embedOcrAndContext(file.getOcrText(), file.getContext());
+        float[] embedding = embeddingService.embedOcrAndContext(ocrText, analyzeResponse.getDescription());
         log.info("[PostProcess] Embedding generated: dimension={}",
                 embedding != null ? embedding.length : 0);
 
@@ -532,7 +532,7 @@ public class DataService {
                 .file(file)
                 .ocrText(ocrText)
                 .context(analyzeResponse.getDescription())
-                .embedding(embeddingService.embedOcrAndContext(ocrText, analyzeResponse.getDescription()))
+                .embedding(embedding)
                 .build();
 
         log.info("[PostProcess] FileEmbeddings entity created (pre-save)");
@@ -591,6 +591,8 @@ public class DataService {
                     .ocrText(file.getOcrText() != null ? file.getOcrText() : "")
                     .imageUrl(file.getSrc())
                     .createdAt(file.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
+                    .favorite(file.getFavorite() != null ? file.getFavorite() : false)
+                    .fileType(file.getType())
                     .build();
 
             fileSearchService.save(fileSearch);

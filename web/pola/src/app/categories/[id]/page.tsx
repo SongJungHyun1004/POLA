@@ -21,6 +21,8 @@ interface SelectedFile {
   created_at: string;
   category_id?: number;
   favorite: boolean;
+  type?: string; // "image/png" | "image/jpeg" | "text/plain"
+  ocr_text?: string;
 }
 
 interface SortableItemProps {
@@ -47,7 +49,11 @@ const PolaroidItem = memo(
             selectedId === file.id ? "opacity-90" : "opacity-100"
           }`}
         >
-          <PolaroidCard src={file.src || "/images/dummy_image_1.png"} />
+          <PolaroidCard
+            src={file.src || "/images/dummy_image_1.png"}
+            type={file.type}
+            ocr_text={file.ocr_text}
+          />
           {file.favorite && (
             <span className="absolute top-2 right-2 text-yellow-500 text-lg">
               ★
@@ -161,6 +167,8 @@ export default function CategoryPage() {
       tags: [],
       context: "",
       created_at: "",
+      type: file.type,
+      ocr_text: file.ocr_text,
     });
 
     try {
@@ -177,6 +185,8 @@ export default function CategoryPage() {
         created_at: detail.created_at,
         category_id: detail.category_id,
         favorite: detail.favorite,
+        type: detail.type ?? file.type,
+        ocr_text: detail.ocr_text ?? file.ocr_text,
       });
     } catch (e) {
       console.error(e);
@@ -247,6 +257,8 @@ export default function CategoryPage() {
           date={selectedFile?.created_at}
           categoryId={selectedFile?.category_id}
           favorite={selectedFile?.favorite}
+          type={selectedFile?.type}
+          ocr_text={selectedFile?.ocr_text}
           onCategoryUpdated={async () => {
             const updated = await getCategoryFiles(id, 0);
             setFiles(

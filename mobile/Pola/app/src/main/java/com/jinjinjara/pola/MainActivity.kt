@@ -10,6 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -24,7 +25,9 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,10 +36,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.jinjinjara.pola.data.local.datastore.PreferencesDataStore
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import com.jinjinjara.pola.domain.repository.AuthRepository
+import com.jinjinjara.pola.domain.repository.ChatRepository
 import com.jinjinjara.pola.domain.usecase.auth.AutoLoginUseCase
 import com.jinjinjara.pola.navigation.PolaNavHost
 import com.jinjinjara.pola.presentation.ui.theme.PolaTheme
@@ -45,6 +53,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -57,6 +66,9 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var autoLoginUseCase: AutoLoginUseCase
+
+    @Inject
+    lateinit var chatRepository: ChatRepository
 
     private val shareUploadViewModel: ShareUploadViewModel by viewModels()
 
@@ -75,6 +87,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d("MainActivity", "onCreate started")
+
+        // 앱 재시작 시 채팅 메시지 삭제
+        lifecycleScope.launch {
+            Log.d("MainActivity", "Clearing chat messages on app restart")
+            chatRepository.clearAllMessages()
+        }
 
         // 자동 로그인 시도 (백그라운드에서 토큰 검증 및 재발급)
         lifecycleScope.launch {
@@ -107,7 +125,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
+
             PolaTheme {
+                SystemBarsController()
 
                 // DataStore의 토큰 존재 여부와 온보딩 완료 여부를 관찰하여 상태 관리
                 // initial = null로 설정하여 로딩 상태 표시
@@ -356,5 +376,20 @@ class MainActivity : ComponentActivity() {
                 finish()
             }
         }
+    }
+}
+
+@Composable
+fun SystemBarsController() {
+    val view = LocalView.current
+    val isDarkTheme = isSystemInDarkTheme()
+    val backgroundColor = MaterialTheme.colorScheme.background
+
+    SideEffect {
+        val window = (view.context as ComponentActivity).window
+        window.statusBarColor = backgroundColor.toArgb()
+
+        val wic = WindowInsetsControllerCompat(window, view)
+        wic.isAppearanceLightStatusBars = true
     }
 }

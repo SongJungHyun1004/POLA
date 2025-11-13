@@ -15,7 +15,9 @@ import com.jinjinjara.pola.data.repository.CategoryTagRepository;
 import com.jinjinjara.pola.data.repository.FileRepository;
 import com.jinjinjara.pola.data.repository.TagRepository;
 import com.jinjinjara.pola.user.entity.Users;
+import com.jinjinjara.pola.vision.dto.common.CategoryChangedEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
@@ -34,6 +36,8 @@ public class CategoryService {
     private final TagRepository tagRepository;
     private final CategoryTagRepository categoryTagRepository;
     private final FileRepository fileRepository;
+    private final ApplicationEventPublisher publisher;
+
     /**
      * CREATE - 카테고리 생성
      */
@@ -52,6 +56,7 @@ public class CategoryService {
                     .build();
 
             Category saved = categoryRepository.save(category);
+            publisher.publishEvent(new CategoryChangedEvent(user.getId()));
             return CategoryResponse.fromEntity(saved);
         } catch (CustomException e) {
             throw e; // 그대로 전달
@@ -162,6 +167,9 @@ public class CategoryService {
 
             // 5. 카테고리 삭제
             categoryRepository.deleteById(id);
+
+            // 6. 유저 캐시 삭제
+            publisher.publishEvent(new CategoryChangedEvent(user.getId()));
 
         } catch (CustomException e) {
             throw e;

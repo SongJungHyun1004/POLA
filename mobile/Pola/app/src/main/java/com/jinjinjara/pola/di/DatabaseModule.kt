@@ -41,6 +41,13 @@ object DatabaseModule {
     }
 
     /**
+     * ChatMessageDao 제공
+     */
+    @Provides
+    @Singleton
+    fun provideChatMessageDao(database: PolaDatabase) = database.chatMessageDao()
+
+    /**
      * DAO 제공 예시
      */
     // @Provides
