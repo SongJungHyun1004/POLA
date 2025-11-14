@@ -20,6 +20,7 @@ export interface FileResult {
   fileId: number;
   userId: number;
   categoryName: string;
+  fileType: string;
   tags: string;
   context: string;
   ocrText: string;

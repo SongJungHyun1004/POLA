@@ -15,7 +15,6 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
-
 @Service
 @RequiredArgsConstructor
 public class HomeService {
@@ -23,52 +22,19 @@ public class HomeService {
     private final FileRepository fileRepository;
     private final CategoryRepository categoryRepository;
     private final S3Service s3Service;
-    private final CategoryCountCacheService categoryCountCacheService;
-
     public HomeResponse getHomeData(Long userId) {
 
-        // 1. Redis에서 카테고리 파일 개수 가져오기
-        Map<Long, Long> temp = categoryCountCacheService.getCategoryCounts(userId);
+        List<Category> categories = categoryRepository.findAllSorted(userId);
 
-        if (temp.isEmpty()) {
-            List<Object[]> rows = fileRepository.countFilesByCategory(userId);
-            temp = rows.stream().collect(Collectors.toMap(
-                    r -> (Long) r[0],
-                    r -> (Long) r[1]
-            ));
-            categoryCountCacheService.saveAll(userId, temp);
-        }
+        List<File> top5Files = fileRepository.findTop5FilesPerCategory(userId);
 
-        final Map<Long, Long> countMap = temp;
+        Map<Long, List<File>> categoryFileMap = top5Files.stream()
+                .collect(Collectors.groupingBy(File::getCategoryId));
 
+        List<File> allFiles = new ArrayList<>(top5Files);
 
-        // 3. 카테고리 목록 가져오기
-        List<Category> categories = categoryRepository.findAllByUserId(userId);
-
-        // 4. Redis 카운트 기반 정렬 + 미분류를 맨 아래
-        categories.sort((c1, c2) -> {
-            long count1 = countMap.getOrDefault(c1.getId(), 0L);
-            long count2 = countMap.getOrDefault(c2.getId(), 0L);
-
-            int compare = Long.compare(count2, count1); // DESC
-            if (compare != 0) return compare;
-
-            boolean d1 = c1.getCategoryName().equals("미분류");
-            boolean d2 = c2.getCategoryName().equals("미분류");
-            return Boolean.compare(d1, d2);
-        });
-
-        // 5. 파일들 한 번에 모아서 presigned URL 한 번에 생성
-        List<File> allFiles = new ArrayList<>();
-        Map<Long, List<File>> categoryFileMap = new HashMap<>();
-
-        for (Category c : categories) {
-            List<File> files = fileRepository.findTop5ByUserIdAndCategoryIdOrderByCreatedAtDesc(userId, c.getId());
-            categoryFileMap.put(c.getId(), files);
-            allFiles.addAll(files);
-        }
-
-        List<File> favorites = fileRepository.findTop3ByUserIdAndFavoriteTrueOrderByCreatedAtDesc(userId);
+        List<File> favorites = fileRepository
+                .findTop3ByUserIdAndFavoriteTrueOrderByCreatedAtDesc(userId);
         allFiles.addAll(favorites);
 
         LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
@@ -78,7 +44,6 @@ public class HomeService {
         List<File> timeline = fileRepository.findTop10ByUserIdOrderByCreatedAtDesc(userId);
         allFiles.addAll(timeline);
 
-        // 6. presigned url 생성(한 번에)
         Map<Long, S3Service.FileMeta> fileMetaMap = allFiles.stream()
                 .filter(f -> f.getSrc() != null)
                 .collect(Collectors.toMap(
@@ -89,14 +54,12 @@ public class HomeService {
 
         Map<Long, String> previewUrls = s3Service.generatePreviewUrls(fileMetaMap);
 
-        // 7. DTO 변환
         List<CategorySection> categorySections = categories.stream()
                 .map(c -> CategorySection.builder()
                         .categoryId(c.getId())
                         .categoryName(c.getCategoryName())
                         .files(
-                                categoryFileMap.getOrDefault(c.getId(), List.of())
-                                        .stream()
+                                categoryFileMap.getOrDefault(c.getId(), List.of()).stream()
                                         .map(f -> toDataResponse(f, previewUrls))
                                         .toList()
                         )
@@ -110,6 +73,7 @@ public class HomeService {
                 .timeline(timeline.stream().map(f -> toDataResponse(f, previewUrls)).toList())
                 .build();
     }
+
 
     private DataResponse toDataResponse(File f, Map<Long, String> previewUrls) {
         return DataResponse.builder()
