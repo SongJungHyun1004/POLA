@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,6 +42,10 @@ import com.jinjinjara.pola.util.parcelable
 @Composable
 fun MyScreen(
     modifier: Modifier = Modifier,
+    onNavigateToFavorite: () -> Unit = {},
+    onNavigateToMyType: () -> Unit = {},
+    onNavigateToEditCategory: () -> Unit = {},
+    onNavigateToTermsOfService: () -> Unit = {},
     viewModel: MyViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
@@ -68,8 +73,7 @@ fun MyScreen(
                 },
                 windowInsets = WindowInsets(0.dp),
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                    containerColor = MaterialTheme.colorScheme.background,
                 )
             )
         }
@@ -114,6 +118,7 @@ fun MyScreen(
                                     contentScale = ContentScale.Crop
                                 )
                             }
+
                             else -> {
                                 // 로딩 중이거나 에러일 때 기본 아이콘
                                 Icon(
@@ -140,14 +145,14 @@ fun MyScreen(
                         icon = Icons.Default.Bookmark,
                         title = "내 타입",
                         subtitle = "태그 한 우물",
-                        onClick = { /* 내 타입 화면으로 이동 */ }
+                        onClick = onNavigateToMyType
                     )
 
                     // 즐거찾기
                     MenuItemRow(
                         icon = Icons.Default.Star,
                         title = "즐거찾기",
-                        onClick = { /* 즐거찾기 화면으로 이동 */ }
+                        onClick = onNavigateToFavorite
                     )
                 }
             }
@@ -176,14 +181,14 @@ fun MyScreen(
                     MenuItemRow(
                         icon = Icons.Default.Edit,
                         title = "카테고리/태그 수정",
-                        onClick = { /* 카테고리 수정 화면으로 이동 */ }
+                        onClick = onNavigateToEditCategory
                     )
 
                     // 이용약관
                     MenuItemRow(
                         icon = Icons.Default.Description,
                         title = "이용약관",
-                        onClick = { /* 이용약관 화면으로 이동 */ }
+                        onClick = onNavigateToTermsOfService
                     )
 
                     // 로그아웃
@@ -196,9 +201,6 @@ fun MyScreen(
             }
         }
     }
-
-
-
 
 
     // 로그아웃 확인 다이얼로그
@@ -265,7 +267,12 @@ private fun MenuItemRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) {
+                onClick()
+            }
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween

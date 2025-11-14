@@ -30,7 +30,10 @@ import com.jinjinjara.pola.presentation.ui.screen.contents.ContentsEditScreen
 import com.jinjinjara.pola.presentation.ui.screen.contents.ContentsScreen
 import com.jinjinjara.pola.presentation.ui.screen.favorite.FavoriteScreen
 import com.jinjinjara.pola.presentation.ui.screen.home.HomeScreen
+import com.jinjinjara.pola.presentation.ui.screen.my.EditCategoryScreen
 import com.jinjinjara.pola.presentation.ui.screen.my.MyScreen
+import com.jinjinjara.pola.presentation.ui.screen.my.MyTypeScreen
+import com.jinjinjara.pola.presentation.ui.screen.my.TermsOfServiceScreen
 import com.jinjinjara.pola.presentation.ui.screen.remind.RemindScreen
 import com.jinjinjara.pola.presentation.ui.screen.search.ChatbotScreen
 import com.jinjinjara.pola.presentation.ui.screen.search.SearchScreen
@@ -391,6 +394,36 @@ fun NavGraphBuilder.myTabGraph(navController: NavHostController) {
                 // onNavigateToSettings = {
                 //     navController.navigate(Screen.Settings.route)
                 // }
+                onNavigateToFavorite = {
+                    navController.navigate(Screen.Favorite.route)
+                },
+                onNavigateToMyType = {
+                    navController.navigate(Screen.MyType.route)
+                },
+                onNavigateToEditCategory = {
+                    navController.navigate(Screen.EditCategory.route)
+                },
+                onNavigateToTermsOfService = {
+                    navController.navigate(Screen.TermsOfService.route)
+                },
+            )
+        }
+
+        composable(Screen.MyType.route) {
+            MyTypeScreen(
+
+            )
+        }
+
+        composable(Screen.EditCategory.route) {
+            EditCategoryScreen(
+
+            )
+        }
+
+        composable(Screen.TermsOfService.route) {
+            TermsOfServiceScreen(
+
             )
         }
 
