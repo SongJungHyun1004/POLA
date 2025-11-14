@@ -45,7 +45,7 @@ fun WidgetPolaCardContent(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(500.dp)
+            .height(490.dp)
             .background(ImageProvider(R.drawable.widget_card_background))
             .padding(24.dp)  // 원본 32dp의 75%
             .clickable(
@@ -71,7 +71,7 @@ fun WidgetPolaCardContent(
             Box(
                 modifier = GlanceModifier
                     .fillMaxWidth()
-                    .height(410.dp),
+                    .height(400.dp),
                 contentAlignment = Alignment.Center
             ) {
                 if (bitmap != null) {

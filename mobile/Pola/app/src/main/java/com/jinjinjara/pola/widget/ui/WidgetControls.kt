@@ -19,6 +19,7 @@ import androidx.glance.layout.width
 import com.jinjinjara.pola.R
 import com.jinjinjara.pola.widget.callback.NavigatePreviousCallback
 import com.jinjinjara.pola.widget.callback.NavigateNextCallback
+import com.jinjinjara.pola.widget.callback.RefreshCallback
 import com.jinjinjara.pola.widget.callback.ToggleFavoriteCallback
 
 /**
@@ -32,42 +33,63 @@ fun WidgetControlsContent(
 ) {
     Row(
         modifier = modifier
-            .fillMaxWidth(),
-        horizontalAlignment = Alignment.Horizontal.CenterHorizontally,
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp),
+        horizontalAlignment = Alignment.Horizontal.Start,
         verticalAlignment = Alignment.Vertical.CenterVertically
     ) {
+        Spacer(GlanceModifier.width(20.dp))
 
-        // ← 이전 버튼
+
+        // 왼쪽 3개 버튼 영역 (균등 간격 유지)
+        Row(
+            modifier = GlanceModifier.defaultWeight(),
+            horizontalAlignment = Alignment.Horizontal.CenterHorizontally,
+            verticalAlignment = Alignment.Vertical.CenterVertically
+        ) {
+
+            // ← 이전 버튼
+            Image(
+                provider = ImageProvider(R.drawable.arrow_left),
+                contentDescription = "Previous",
+                modifier = GlanceModifier
+                    .clickable(onClick = actionRunCallback<NavigatePreviousCallback>())
+                    .size(36.dp)
+            )
+
+            Spacer(GlanceModifier.width(48.dp))
+
+            // ★ 즐겨찾기 버튼
+            Image(
+                provider = ImageProvider(
+                    if (isFavorite) R.drawable.star_primary_solid else R.drawable.star_primary
+                ),
+                contentDescription = "Favorite",
+                modifier = GlanceModifier
+                    .clickable(onClick = actionRunCallback<ToggleFavoriteCallback>())
+                    .size(36.dp)
+            )
+
+            Spacer(GlanceModifier.width(48.dp))
+
+            // → 다음 버튼
+            Image(
+                provider = ImageProvider(R.drawable.arrow_right),
+                contentDescription = "Next",
+                modifier = GlanceModifier
+                    .clickable(onClick = actionRunCallback<NavigateNextCallback>())
+                    .size(36.dp)
+            )
+        }
+
+        // 오른쪽 끝 새로고침 버튼
         Image(
-            provider = ImageProvider(R.drawable.arrow_left),
-            contentDescription = "Previous",
+            provider = ImageProvider(R.drawable.ic_refresh),
+            contentDescription = "Refresh",
             modifier = GlanceModifier
-                .clickable(onClick = actionRunCallback<NavigatePreviousCallback>())
-                .size(30.dp)
-        )
-
-        Spacer(GlanceModifier.width(48.dp))
-
-        // ★ 즐겨찾기 버튼
-        Image(
-            provider = ImageProvider(
-                if (isFavorite) R.drawable.star_primary_solid else R.drawable.star_primary
-            ),
-            contentDescription = "Favorite",
-            modifier = GlanceModifier
-                .clickable(onClick = actionRunCallback<ToggleFavoriteCallback>())
-                .size(30.dp)
-        )
-
-        Spacer(GlanceModifier.width(48.dp))
-
-        // → 다음 버튼
-        Image(
-            provider = ImageProvider(R.drawable.arrow_right),
-            contentDescription = "Next",
-            modifier = GlanceModifier
-                .clickable(onClick = actionRunCallback<NavigateNextCallback>())
-                .size(30.dp)
+                .size(20.dp)
+                .clickable(onClick = actionRunCallback<RefreshCallback>())
         )
     }
 }
+
