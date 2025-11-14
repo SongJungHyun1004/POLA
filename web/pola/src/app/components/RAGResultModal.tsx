@@ -67,6 +67,7 @@ export default function RAGResultModal({
               contexts={data.sources[0].context}
               date={undefined}
               favorite={false}
+              platform={data.sources[0].platform}
             />
           )}
         </div>

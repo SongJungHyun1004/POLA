@@ -20,10 +20,12 @@ interface CardGroup {
     src: string;
     context: string;
     type: string;
+    platform?: string;
     ocr_text: string;
     favorite: boolean;
     tags: string[];
     rotate: number;
+    createdAt: string;
   }[];
 }
 
@@ -85,10 +87,12 @@ export default function RAGSearchPageInner() {
         src: s.src,
         context: s.context,
         type: s.type,
+        platform: s.platform,
         ocr_text: s.ocr_text,
         favorite: s.favorite,
         tags: s.tags || [],
         rotate: Math.random() * 8 - 4,
+        createdAt: s.createdAt,
       }));
 
       setCardGroups((prev) => [...prev, { answerIndex, cards: newCards }]);
@@ -103,7 +107,9 @@ export default function RAGSearchPageInner() {
           contexts: c.context,
           favorite: c.favorite,
           type: c.type,
+          platform: c.platform,
           ocr_text: c.ocr_text,
+          date: c.createdAt,
         });
       }
     } catch (err) {
@@ -209,7 +215,9 @@ export default function RAGSearchPageInner() {
                                 contexts: c.context,
                                 favorite: c.favorite,
                                 type: c.type,
+                                platform: c.platform,
                                 ocr_text: c.ocr_text,
+                                date: c.createdAt,
                               })
                             }
                             className="relative cursor-pointer transition-transform duration-200 hover:scale-105"
@@ -266,7 +274,7 @@ export default function RAGSearchPageInner() {
         <div
           className="flex-shrink-0 border-l border-[#E3DCC8] flex justify-center pt-8 overflow-y-auto pl-4 transition-all duration-500"
           style={{
-            width: layoutExpanded ? "480px" : "0px",
+            width: layoutExpanded ? "400px" : "0px",
             opacity: layoutExpanded ? 1 : 0,
             pointerEvents: layoutExpanded ? "auto" : "none",
           }}
@@ -277,8 +285,10 @@ export default function RAGSearchPageInner() {
               src={detail.src}
               tags={detail.tags}
               contexts={detail.contexts}
+              date={detail.date}
               favorite={detail.favorite}
               type={detail.type}
+              platform={detail.platform}
               ocr_text={detail.ocr_text}
               onFavoriteChange={handleFavoriteChange}
             />

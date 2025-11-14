@@ -65,6 +65,7 @@ export default function FilesPage() {
       created_at: file.createdAt,
       favorite: file.favorite,
       type: file.fileType,
+      platform: file.platform,
       ocr_text: file.fileType?.startsWith("text") ? file.ocrText : undefined,
     });
   };
@@ -87,7 +88,7 @@ export default function FilesPage() {
       <div className="w-full max-w-[1200px] h-full flex gap-8 px-6 pb-6">
         {/* ------- LEFT LIST AREA ------- */}
         <div className="flex flex-col flex-1 overflow-hidden">
-          <div className="mb-2 pl-2">
+          <div className="mb-2 pl-4">
             <h1 className="text-4xl font-bold mb-2">
               {tag ? `#${tag} 검색 결과` : `"${search}" 검색 결과`}
             </h1>
@@ -102,7 +103,7 @@ export default function FilesPage() {
           <div className="flex-1 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-[#CBBF9E]/50">
             <div
               className="
-                grid gap-6 p-6
+                grid gap-6 p-10
                 grid-cols-1
                 sm:grid-cols-2
                 md:grid-cols-3
@@ -165,7 +166,7 @@ export default function FilesPage() {
         </div>
 
         {/* ------- RIGHT DETAIL AREA ------- */}
-        <div className="w-[460px] flex-shrink-0 border-l border-[#E3DCC8] pl-6 flex flex-col items-center justify-center">
+        <div className="w-[400px] flex-shrink-0 border-l border-[#E3DCC8] pl-6 flex flex-col items-center justify-center">
           {selectedFile && (
             <PolaroidDetail
               id={selectedFile.id}
@@ -175,6 +176,7 @@ export default function FilesPage() {
               date={selectedFile.created_at}
               favorite={selectedFile.favorite}
               type={selectedFile.type}
+              platform={selectedFile.platform}
               ocr_text={selectedFile.ocr_text}
               onFavoriteChange={handleFavoriteChange}
             />
