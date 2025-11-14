@@ -166,14 +166,14 @@ private fun RemindContent(widgetState: WidgetState, currentBitmap: Bitmap?) {
             )
 
 
-            Spacer(GlanceModifier.height(12.dp))
+            Spacer(GlanceModifier.height(6.dp))
 
             // 2) 인덱스 표시 (2 / 5)
             Text(
                 text = "${widgetState.currentIndex + 1} / ${widgetState.remindItems.size}",
                 style = TextStyle(
                     color = ColorProvider(Color(0xFF999999)),  // 회색
-                    fontSize = 16.sp,
+                    fontSize = 14.sp,
                 )
             )
 

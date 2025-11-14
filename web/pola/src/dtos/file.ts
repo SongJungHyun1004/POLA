@@ -21,6 +21,7 @@ export interface FileResult {
   userId: number;
   categoryName: string;
   fileType: string;
+  platform?: string;
   tags: string;
   context: string;
   ocrText: string;
