@@ -123,6 +123,12 @@ public class S3Service {
             Long id = entry.getKey();
             FileMeta meta = entry.getValue();
 
+            // **텍스트 파일은 preview 사용 금지**
+            if (isTextType(meta.contentType())) {
+                result.put(id, presignedInlineUrl(meta.key(), meta.contentType()).toString());
+                continue;
+            }
+
             String previewKey = meta.key().replace("home/original/", "home/preview/");
 
             try {
@@ -133,6 +139,7 @@ public class S3Service {
         }
         return result;
     }
+
 
     /* 원본 미리보기 */
     public String generateOriginalPreviewUrl(String key, String contentType) {
@@ -215,6 +222,14 @@ public class S3Service {
         if (type.startsWith("image/")) return type;
         if (type.startsWith("text/")) return "text/plain; charset=utf-8";
         return type;
+    }
+    private boolean isTextType(String type) {
+        if (type == null) return false;
+        return type.startsWith("text/")
+                || type.equals("application/json")
+                || type.equals("application/xml")
+                || type.equals("application/javascript")
+                || type.equals("application/x-yaml");
     }
 
     public record FileMeta(String key, String contentType) {}
