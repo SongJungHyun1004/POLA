@@ -36,6 +36,7 @@ export default async function SharedFilePage({
     tags: sharedFile.tags?.map((t) => `#${t}`) ?? [],
     contexts: sharedFile.context ?? "",
     date: sharedFile.createdAt,
+    platform: sharedFile.platform,
   };
 
   return (
@@ -50,6 +51,7 @@ export default async function SharedFilePage({
         tags={detail.tags}
         date={detail.date}
         contexts={detail.contexts}
+        platform={detail.platform}
         sharedView
         downloadUrl={sharedFile.downloadUrl}
       />

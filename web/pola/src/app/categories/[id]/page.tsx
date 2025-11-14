@@ -31,6 +31,7 @@ interface SelectedFile {
   category_id?: number;
   favorite: boolean;
   type?: string;
+  platform?: string;
   ocr_text?: string;
 }
 
@@ -185,6 +186,7 @@ export default function CategoryPage() {
       context: "",
       created_at: "",
       type: file.type,
+      platform: file.platform,
       ocr_text: file.ocr_text,
     });
 
@@ -200,6 +202,7 @@ export default function CategoryPage() {
         category_id: detail.category_id,
         favorite: detail.favorite,
         type: detail.type,
+        platform: detail.platform ?? file.platform,
         ocr_text: detail.ocr_text,
       });
     } catch {}
@@ -262,7 +265,7 @@ export default function CategoryPage() {
           {/* ---------------- LEFT CONTENT AREA ---------------- */}
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* 상단 타이틀 */}
-            <div className="flex items-center justify-between mb-2 pl-2">
+            <div className="flex items-center justify-between mb-2 pl-4">
               <div>
                 <h1 className="text-4xl font-bold mb-2">{categoryName}</h1>
                 <p className="text-xl text-[#7A6A48]">
@@ -299,7 +302,7 @@ export default function CategoryPage() {
               ) : (
                 <div
                   className="
-                    grid gap-6 p-6
+                    grid gap-6 p-10
                     grid-cols-1
                     sm:grid-cols-2
                     md:grid-cols-3
@@ -339,7 +342,7 @@ export default function CategoryPage() {
           {/* ---------------- RIGHT DETAIL PANEL ---------------- */}
           <div
             className="
-            w-[460px] 
+            w-[400px] 
             flex-shrink-0 
             border-l border-[#E3DCC8] 
             pl-6 
@@ -358,6 +361,7 @@ export default function CategoryPage() {
               categoryId={selectedFile?.category_id}
               favorite={selectedFile?.favorite}
               type={selectedFile?.type}
+              platform={selectedFile?.platform}
               ocr_text={selectedFile?.ocr_text}
               onFavoriteChange={handleFavoriteChange}
             />
