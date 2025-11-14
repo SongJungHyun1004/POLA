@@ -53,6 +53,9 @@ sealed class Screen(val route: String) {
     data object Profile : Screen("my/profile")
     data object Settings : Screen("my/settings")
     data object EditProfile : Screen("my/profile/edit")
+    data object MyType : Screen("my/type")
+    data object EditCategory : Screen("my/edit/category")
+    data object TermsOfService : Screen("my/termsOfService")
 
     // 인자를 받는 화면 예시
     data object Detail : Screen("detail/{itemId}") {
