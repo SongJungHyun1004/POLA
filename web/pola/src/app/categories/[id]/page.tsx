@@ -274,16 +274,43 @@ export default function CategoryPage() {
             ref={containerRef}
             className="flex-1 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-[#CBBF9E]/50"
           >
-            <div className="grid grid-cols-6 gap-6 overflow-visible p-6">
-              {files.map((file) => (
-                <PolaroidItem
-                  key={file.id}
-                  file={file}
-                  selectedId={selectedFile?.id ?? null}
-                  onSelect={handleSelectFile}
+            {files.length === 0 && !isFetching ? (
+              <div className="flex flex-col items-center justify-center py-20 opacity-80">
+                <img
+                  src="/images/POLA_file_empty.png"
+                  alt="empty"
+                  className="w-100 h-100 object-contain"
                 />
-              ))}
-            </div>
+                <p className="text-lg text-[#7A6A48]">
+                  더 이상 표시할 컨텐츠가 없습니다
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-6 gap-6 overflow-visible p-6">
+                {files.map((file) => (
+                  <PolaroidItem
+                    key={file.id}
+                    file={file}
+                    selectedId={selectedFile?.id ?? null}
+                    onSelect={handleSelectFile}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* 로딩 표시 */}
+            {isFetching && (
+              <div className="text-center text-[#7A6A48] py-4 animate-pulse">
+                불러오는 중...
+              </div>
+            )}
+
+            {/* 더 불러올 게 없을 때 (파일이 존재했을 경우) */}
+            {!isFetching && !hasMore && files.length > 0 && (
+              <div className="text-center text-[#7A6A48] py-4">
+                더 이상 데이터가 없습니다.
+              </div>
+            )}
           </div>
         </div>
 
