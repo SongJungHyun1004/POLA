@@ -151,7 +151,7 @@ fun MyScreen(
                     // 즐거찾기
                     MenuItemRow(
                         icon = Icons.Default.Star,
-                        title = "즐거찾기",
+                        title = "즐겨찾기",
                         onClick = onNavigateToFavorite
                     )
                 }
