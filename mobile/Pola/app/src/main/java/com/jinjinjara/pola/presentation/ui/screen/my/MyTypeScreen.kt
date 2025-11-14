@@ -1,24 +1,26 @@
 // presentation/ui/screen/my/MyTypeScreen.kt
 package com.jinjinjara.pola.presentation.ui.screen.my
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBackIosNew
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -27,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.jinjinjara.pola.R
 import com.jinjinjara.pola.domain.model.Report
 import com.jinjinjara.pola.presentation.viewmodel.MyTypeUiState
 import com.jinjinjara.pola.presentation.viewmodel.MyTypeViewModel
@@ -60,7 +63,8 @@ fun MyTypeScreen(
                     IconButton(onClick = onBackClick) {
                         Icon(
                             imageVector = Icons.Default.ArrowBackIosNew,
-                            contentDescription = "닫기"
+                            contentDescription = "닫기",
+                            tint = MaterialTheme.colorScheme.tertiary
                         )
                     }
                 },
@@ -138,7 +142,7 @@ private fun SuccessContent(
             fontSize = 32.sp,
             fontWeight = FontWeight.Bold,
             lineHeight = 36.sp,
-            modifier = Modifier.padding(top = 16.dp, bottom = 24.dp, start = 24.dp)
+            modifier = Modifier.padding(top = 16.dp, bottom = 48.dp, start = 24.dp)
         )
 
         if (reports.isEmpty()) {
@@ -228,55 +232,108 @@ fun ReportCard(
         Card(
             modifier = modifier
                 .width(280.dp)
-                .height(420.dp),
+                .height(396.dp),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
                 containerColor = backgroundColor
             ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
-
-
-            // Type name
-            Text(
-                text = report.title,
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(20.dp)
-            )
-
-            // Icon or Image
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                contentAlignment = Alignment.Center
+                    .fillMaxSize()
             ) {
                 if (!report.imageUrl.isNullOrEmpty()) {
                     AsyncImage(
                         model = report.imageUrl,
-                        contentDescription = report.title,
-                        modifier = Modifier.size(120.dp),
-                        contentScale = ContentScale.Fit
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.Person,
                         contentDescription = null,
-                        modifier = Modifier.size(120.dp),
-                        tint = Color.Black
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.matchParentSize()
                     )
+                }
+
+                // 임시 이미지 테스트
+                Image(
+                    painter = painterResource(id = R.drawable.temp_type2),
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.matchParentSize()
+                )
+
+                Column(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    // Type name
+                    Box(Modifier.padding(20.dp)) {
+                        repeat(5) {
+                            Text(
+                                text = report.title,
+                                fontSize = 32.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Transparent,
+                                style = TextStyle(
+                                    shadow = Shadow(
+                                        color = Color.White,
+                                        offset = Offset(0f, 0f),
+                                        blurRadius = 50f
+                                    )
+                                )
+                            )
+                        }
+
+                        Text(
+                            text = report.title,
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
+                        )
+                    }
+
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    // Description
+                    Box(
+                        modifier = Modifier.padding(20.dp)
+                    ) {
+
+                        // Glow layers (문단 전체에 퍼짐)
+                        val glowOffsets = listOf(
+                            Offset(0f, 0f),
+                            Offset(1f, 1f),
+                            Offset(-1f, -1f),
+                            Offset(2f, 2f),
+                            Offset(-2f, -2f)
+                        )
+
+                        glowOffsets.forEach { off ->
+                            Text(
+                                text = report.description,
+                                fontSize = 18.sp,
+                                lineHeight = 24.sp,
+                                color = Color.Transparent,
+                                style = TextStyle(
+                                    shadow = Shadow(
+                                        color = Color.White,
+                                        offset = off,
+                                        blurRadius = 30f   // blurRadius 자체는 작게
+                                    )
+                                )
+                            )
+                        }
+
+                        // 실제 텍스트 레이어
+                        Text(
+                            text = report.description,
+                            fontSize = 16.sp,
+                            lineHeight = 24.sp,
+                            color = Color.Black
+                        )
+                    }
+
                 }
             }
 
-            // Description
-            Text(
-                text = report.description,
-                fontSize = 16.sp,
-                color = Color.Black,
-                lineHeight = 24.sp,
-                modifier = Modifier.padding(20.dp)
-            )
         }
     }
 }

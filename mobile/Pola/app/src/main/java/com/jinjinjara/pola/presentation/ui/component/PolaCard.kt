@@ -125,11 +125,11 @@ fun PolaCard(
     // 전체 폴라로이드 카드
     Card(
         modifier = modifier
-            .aspectRatio(ratio)
-            .border(
-                BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary),
-                RoundedCornerShape(5.dp)
-            ),
+            .aspectRatio(ratio),
+//            .border(
+//                BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary),
+//                RoundedCornerShape(5.dp)
+//            ),
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
         shape = RoundedCornerShape(5.dp)
     ) {
@@ -143,8 +143,8 @@ fun PolaCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(imageRatio)
-                    .clip(RoundedCornerShape(5.dp))
-                    .border(1.dp, borderColor, RoundedCornerShape(5.dp)),
+                    .clip(RoundedCornerShape(5.dp)),
+//                    .border(1.dp, borderColor, RoundedCornerShape(5.dp)),
                 contentAlignment = Alignment.TopCenter
             ) {
                 when {
