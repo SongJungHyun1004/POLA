@@ -25,7 +25,7 @@ import {
   fileService,
 } from "@/services/fileService";
 
-interface PolaroidDetailProps {
+export interface PolaroidDetailProps {
   id?: number;
   src?: string;
   type?: string;
