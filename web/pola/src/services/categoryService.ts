@@ -136,15 +136,20 @@ export async function updateCategoryName(
   return res.json();
 }
 
-export async function fetchCategoryTags(categoryId: number | string) {
-  const res = await apiClient(`/categories/${categoryId}/tags`, {
-    method: "GET",
-  });
+export async function fetchCategoryTags(categoryId: number) {
+  try {
+    const res = await apiClient(`/categories/${categoryId}/tags`, {
+      method: "GET",
+    });
 
-  if (!res.ok) throw new Error("Failed to fetch tags");
-  const json = await res.json();
+    if (res.status === 404) return [];
+    if (!res.ok) throw new Error("Failed to fetch tags");
 
-  return json.data ?? [];
+    const json = await res.json();
+    return json.data ?? [];
+  } catch {
+    return [];
+  }
 }
 
 export async function addCategoryTags(
@@ -170,4 +175,19 @@ export async function removeCategoryTag(
 
   if (!res.ok) throw new Error("Failed to delete tag");
   return res.json();
+}
+
+export async function fetchMyCategories() {
+  const res = await apiClient(`/users/me/categories`, { method: "GET" });
+  if (!res.ok) throw new Error("Failed to load category list");
+  const json = await res.json();
+  return json.data ?? [];
+}
+
+export async function deleteMyCategory(categoryId: number) {
+  const res = await apiClient(`/users/me/categories/${categoryId}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error("Failed to delete category");
+  return true;
 }
