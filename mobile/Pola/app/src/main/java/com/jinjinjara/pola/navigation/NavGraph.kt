@@ -411,7 +411,7 @@ fun NavGraphBuilder.myTabGraph(navController: NavHostController) {
 
         composable(Screen.MyType.route) {
             MyTypeScreen(
-
+                onBackClick = { navController.popBackStack() },
             )
         }
 
