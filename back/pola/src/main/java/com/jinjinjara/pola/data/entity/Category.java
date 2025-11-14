@@ -40,4 +40,9 @@ public class Category {
         this.fileCount -= delta;
         if (this.fileCount < 0) this.fileCount = 0;
     }
+
+    @PrePersist
+    public void prePersist() {
+        fileCount = 0;
+    }
 }
