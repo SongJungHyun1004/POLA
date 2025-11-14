@@ -42,21 +42,26 @@ interface SortableItemProps {
 
 const PolaroidItem = memo(
   ({ file, selectedId, onSelect }: SortableItemProps) => {
+    const isSelected = selectedId === file.id;
+
     return (
       <div
-        style={{
-          transform: file.rotation,
-          transition: "transform 0.2s ease",
-          transformOrigin: "center bottom",
-          willChange: "transform",
-        }}
-        className="w-fit overflow-visible"
+        className="
+          flex justify-center
+          w-full
+          overflow-visible
+        "
       >
         <button
           onClick={() => onSelect(file)}
-          className={`relative hover:scale-[1.08] transition-transform ${
-            selectedId === file.id ? "opacity-90" : "opacity-100"
-          }`}
+          className={`
+            relative transition-transform
+            ${isSelected ? "scale-110 z-20" : "hover:scale-[1.07]"}
+          `}
+          style={{
+            transform: `${file.rotation} ${isSelected ? "scale(1.1)" : ""}`,
+            transformOrigin: "center bottom",
+          }}
         >
           <PolaroidCard
             src={file.src || "/images/dummy_image_1.png"}
@@ -251,86 +256,116 @@ export default function CategoryPage() {
 
   return (
     <>
-      <div className="flex h-full bg-[#FFFEF8] text-[#4C3D25] px-8 py-6 gap-8">
-        <div className="flex flex-col flex-1 overflow-hidden">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-6xl font-bold mb-2">{categoryName}</h1>
-              <p className="text-2xl text-[#7A6A48]">
-                {tags.map((t) => `#${t}`).join(" ")}
-              </p>
-            </div>
-
-            {/* 모달 오픈 */}
-            <button
-              className="p-2 rounded-full hover:bg-[#EDE6D8]"
-              onClick={() => setIsModalOpen(true)}
-            >
-              <Pencil className="w-5 h-5" />
-            </button>
-          </div>
-
-          <div
-            ref={containerRef}
-            className="flex-1 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-[#CBBF9E]/50"
-          >
-            {files.length === 0 && !isFetching ? (
-              <div className="flex flex-col items-center justify-center py-20 opacity-80">
-                <img
-                  src="/images/POLA_file_empty.png"
-                  alt="empty"
-                  className="w-100 h-100 object-contain"
-                />
-                <p className="text-lg text-[#7A6A48]">
-                  더 이상 표시할 컨텐츠가 없습니다
+      {/* 전체 화면 중앙 정렬 + 최대 너비 1300px */}
+      <div className="w-full h-full flex justify-center bg-[#FFFEF8] text-[#4C3D25]">
+        <div className="w-full max-w-[1200px] h-full flex gap-8 px-6 pb-6">
+          {/* ---------------- LEFT CONTENT AREA ---------------- */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* 상단 타이틀 */}
+            <div className="flex items-center justify-between mb-2 pl-2">
+              <div>
+                <h1 className="text-4xl font-bold mb-2">{categoryName}</h1>
+                <p className="text-xl text-[#7A6A48]">
+                  {tags.map((t) => `#${t}`).join(" ")}
                 </p>
               </div>
-            ) : (
-              <div className="grid grid-cols-6 gap-6 overflow-visible p-6">
-                {files.map((file) => (
-                  <PolaroidItem
-                    key={file.id}
-                    file={file}
-                    selectedId={selectedFile?.id ?? null}
-                    onSelect={handleSelectFile}
+
+              {/* 모달 버튼 */}
+              <button
+                className="p-2 rounded-full hover:bg-[#EDE6D8]"
+                onClick={() => setIsModalOpen(true)}
+              >
+                <Pencil className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* 리스트 스크롤 영역 */}
+            <div
+              ref={containerRef}
+              className="flex-1 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-[#CBBF9E]/50"
+            >
+              {/* 비어있는 경우 */}
+              {files.length === 0 && !isFetching ? (
+                <div className="flex flex-col items-center justify-center py-20 opacity-80">
+                  <img
+                    src="/images/POLA_file_empty.png"
+                    alt="empty"
+                    className="w-40 h-40 object-contain"
                   />
-                ))}
-              </div>
-            )}
+                  <p className="text-lg text-[#7A6A48] mt-4">
+                    더 이상 표시할 컨텐츠가 없습니다
+                  </p>
+                </div>
+              ) : (
+                <div
+                  className="
+                    grid gap-6 p-6
+                    grid-cols-1
+                    sm:grid-cols-2
+                    md:grid-cols-3
+                    lg:grid-cols-4
+                    xl:grid-cols-5
+                    place-items-center
+                    overflow-x-hidden
+                  "
+                >
+                  {files.map((file) => (
+                    <PolaroidItem
+                      key={file.id}
+                      file={file}
+                      selectedId={selectedFile?.id ?? null}
+                      onSelect={handleSelectFile}
+                    />
+                  ))}
+                </div>
+              )}
 
-            {/* 로딩 표시 */}
-            {isFetching && (
-              <div className="text-center text-[#7A6A48] py-4 animate-pulse">
-                불러오는 중...
-              </div>
-            )}
+              {/* 로딩 */}
+              {isFetching && (
+                <div className="text-center text-[#7A6A48] py-4 animate-pulse">
+                  불러오는 중...
+                </div>
+              )}
 
-            {/* 더 불러올 게 없을 때 (파일이 존재했을 경우) */}
-            {!isFetching && !hasMore && files.length > 0 && (
-              <div className="text-center text-[#7A6A48] py-4">
-                더 이상 데이터가 없습니다.
-              </div>
-            )}
+              {/* 더 이상 없음 */}
+              {!isFetching && !hasMore && files.length > 0 && (
+                <div className="text-center text-[#7A6A48] py-4">
+                  더 이상 데이터가 없습니다.
+                </div>
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* 우측 상세 */}
-        <div className="w-2/7 border-l border-[#E3DCC8] pl-6 flex flex-col items-center justify-center">
-          <PolaroidDetail
-            id={selectedFile?.id}
-            src={selectedFile?.src}
-            tags={selectedFile?.tags ?? []}
-            contexts={selectedFile?.context ?? ""}
-            date={selectedFile?.created_at}
-            categoryId={selectedFile?.category_id}
-            favorite={selectedFile?.favorite}
-            type={selectedFile?.type}
-            ocr_text={selectedFile?.ocr_text}
-            onFavoriteChange={handleFavoriteChange}
-          />
+          {/* ---------------- RIGHT DETAIL PANEL ---------------- */}
+          <div
+            className="
+            w-[460px] 
+            flex-shrink-0 
+            border-l border-[#E3DCC8] 
+            pl-6 
+            flex 
+            items-start
+            justify-center
+            pt-4
+          "
+          >
+            <PolaroidDetail
+              id={selectedFile?.id}
+              src={selectedFile?.src}
+              tags={selectedFile?.tags ?? []}
+              contexts={selectedFile?.context ?? ""}
+              date={selectedFile?.created_at}
+              categoryId={selectedFile?.category_id}
+              favorite={selectedFile?.favorite}
+              type={selectedFile?.type}
+              ocr_text={selectedFile?.ocr_text}
+              onFavoriteChange={handleFavoriteChange}
+            />
+          </div>
         </div>
       </div>
 
+      {/* EDIT MODAL */}
       <CategoryModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
