@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import { useState, useRef, useEffect } from "react";
 import PolaroidDetail from "../categories/[id]/components/PolaroidDetail";
 import PolaroidCard from "../home/components/PolaroidCard";
 import { Send } from "lucide-react";
@@ -12,17 +12,18 @@ interface ChatMessage {
   content: string;
 }
 
-// 카드 그룹 (assistant 답변 1개에서 생성된 카드 리스트)
+// 카드 그룹
 interface CardGroup {
-  answerIndex: number; // messages[] 의 index
+  answerIndex: number;
   cards: {
     id: number;
     src: string;
     context: string;
     type: string;
     ocr_text: string;
+    favorite: boolean;
     tags: string[];
-    rotate: number; // 랜덤 회전 고정
+    rotate: number;
   }[];
 }
 
@@ -41,13 +42,9 @@ export default function RAGSearchPageInner() {
   const hasRun = useRef(false);
 
   useEffect(() => {
-    if (detail && !layoutExpanded) {
-      // detail이 처음 세팅된 순간
-      setLayoutExpanded(true);
-    }
+    if (detail && !layoutExpanded) setLayoutExpanded(true);
   }, [detail]);
 
-  /** 자동 스크롤 */
   useEffect(() => {
     scrollRef.current?.scrollTo({
       top: scrollRef.current.scrollHeight,
@@ -55,7 +52,7 @@ export default function RAGSearchPageInner() {
     });
   }, [messages, cardGroups]);
 
-  /** 첫 진입 시 자동 검색 */
+  // 초기 자동 검색
   useEffect(() => {
     if (hasRun.current) return;
     hasRun.current = true;
@@ -71,29 +68,32 @@ export default function RAGSearchPageInner() {
     setLoading(true);
 
     try {
-      const data = await ragSearch(text);
-      const { answer, sources } = data;
+      const response = await ragSearch(text);
+
+      // ★ API 구조 변경 반영
+      const answer = response.data.answer;
+      const sources = response.data.sources;
 
       // AI 답변 추가
       setMessages((prev) => [...prev, { role: "assistant", content: answer }]);
 
-      const answerIndex = messages.length; // 방금 추가될 assistant message index
+      const answerIndex = messages.length;
 
-      // 카드 rotate 값을 생성하며 저장
+      // 카드 그룹 생성
       const newCards = (sources || []).map((s: any) => ({
         id: s.id,
         src: s.src,
         context: s.context,
         type: s.type,
         ocr_text: s.ocr_text,
+        favorite: s.favorite,
         tags: s.tags || [],
-        rotate: Math.random() * 8 - 4, // -4 ~ +4도
+        rotate: Math.random() * 8 - 4,
       }));
 
-      // 카드 그룹 추가
       setCardGroups((prev) => [...prev, { answerIndex, cards: newCards }]);
 
-      // detail 초기 설정
+      // detail 설정
       if (newCards.length > 0) {
         const c = newCards[0];
         setDetail({
@@ -101,8 +101,7 @@ export default function RAGSearchPageInner() {
           src: c.src,
           tags: c.tags.map((t: string) => `#${t}`),
           contexts: c.context,
-          date: "",
-          favorite: false,
+          favorite: c.favorite,
           type: c.type,
           ocr_text: c.ocr_text,
         });
@@ -118,7 +117,25 @@ export default function RAGSearchPageInner() {
     }
   };
 
-  /** 유저 입력 전송 */
+  /** Detail에서 favorite 변경 → 카드/상세同步 */
+  const handleFavoriteChange = (newState: boolean) => {
+    if (!detail) return;
+
+    // detail 업데이트
+    setDetail((prev: any) => ({ ...prev, favorite: newState }));
+
+    // 카드 리스트에도 반영
+    setCardGroups((prev) =>
+      prev.map((group) => ({
+        ...group,
+        cards: group.cards.map((c) =>
+          c.id === detail.id ? { ...c, favorite: newState } : c
+        ),
+      }))
+    );
+  };
+
+  /** 입력 전송 */
   const handleSend = () => {
     const text = query.trim();
     if (!text) return;
@@ -131,27 +148,23 @@ export default function RAGSearchPageInner() {
   return (
     <div className="w-full h-[calc(100vh-100px)] flex justify-center bg-[#FFFEF8] text-[#4C3D25] overflow-hidden">
       <div
-        className={`h-full flex flex-row gap-6 pb-6 pl-6 transition-all duration-500`}
-        style={{
-          width: layoutExpanded ? "1200px" : "720px",
-        }}
+        className="h-full flex flex-row gap-6 pb-6 pl-6 transition-all duration-500"
+        style={{ width: layoutExpanded ? "1200px" : "720px" }}
       >
         {/* LEFT AREA */}
         <div
           className="flex-1 h-full flex flex-col transition-all duration-500"
-          style={{
-            width: layoutExpanded ? "720px" : "720px", // 폭은 같지만 위치가 움직임
-          }}
+          style={{ width: "720px" }}
         >
           <div className="flex flex-col bg-[#F4EFE2] rounded-2xl shadow-sm flex-1 overflow-hidden">
             <div
               ref={scrollRef}
               className="flex-1 overflow-y-auto p-6 pr-2 scrollbar-thin scrollbar-thumb-[#CBBF9E]/50"
             >
-              {/* 메시지 + 카드 그룹 렌더링 */}
+              {/* 메시지 + 카드 그룹 */}
               {messages.map((msg, i) => (
-                <div key={i} className="mb-8">
-                  {/* ====== 메시지 ====== */}
+                <div key={i} className="mb-10">
+                  {/* 메시지 */}
                   <div
                     className={`flex mb-4 ${
                       msg.role === "user" ? "justify-end" : "justify-start"
@@ -167,7 +180,7 @@ export default function RAGSearchPageInner() {
                     )}
 
                     <div
-                      className={`max-w-[70%] p-4 rounded-2xl text-base leading-relaxed shadow-sm ${
+                      className={`max-w-[70%] p-4 rounded-2xl text-base shadow-sm leading-relaxed ${
                         msg.role === "user"
                           ? "bg-[#4C3D25] text-white"
                           : "bg-white text-[#4C3D25] border border-[#E3DCC8]"
@@ -177,14 +190,13 @@ export default function RAGSearchPageInner() {
                     </div>
                   </div>
 
-                  {/* ====== 해당 메시지에 해당하는 카드 그룹 ====== */}
+                  {/* 카드 그룹 */}
                   {cardGroups
                     .filter((g) => g.answerIndex === i)
                     .map((group, gi) => (
                       <div
                         key={gi}
                         className="grid grid-cols-2 gap-4 ml-14 mt-3 w-[330px]"
-                        /* 330px 정도면 폴라로이드 2×2가 딱 맞음 */
                       >
                         {group.cards.map((c, idx) => (
                           <div
@@ -195,17 +207,21 @@ export default function RAGSearchPageInner() {
                                 src: c.src,
                                 tags: c.tags.map((t: string) => `#${t}`),
                                 contexts: c.context,
-                                date: "",
-                                favorite: false,
+                                favorite: c.favorite,
                                 type: c.type,
                                 ocr_text: c.ocr_text,
                               })
                             }
-                            className="cursor-pointer transition-transform duration-200 hover:scale-105"
-                            style={{
-                              transform: `rotate(${c.rotate}deg)`,
-                            }}
+                            className="relative cursor-pointer transition-transform duration-200 hover:scale-105"
+                            style={{ transform: `rotate(${c.rotate}deg)` }}
                           >
+                            {/* Favorite 별 표시 */}
+                            {c.favorite && (
+                              <span className="absolute top-2 right-6 text-yellow-500 text-lg z-50">
+                                ★
+                              </span>
+                            )}
+
                             <PolaroidCard
                               src={c.src}
                               type={c.type}
@@ -246,16 +262,27 @@ export default function RAGSearchPageInner() {
           </div>
         </div>
 
-        {/* RIGHT: DETAIL */}
+        {/* RIGHT DETAIL */}
         <div
-          className={`flex-shrink-0 border-l border-[#E3DCC8] flex justify-center pt-8 overflow-y-auto transition-all duration-500`}
+          className="flex-shrink-0 border-l border-[#E3DCC8] flex justify-center pt-8 overflow-y-auto pl-4 transition-all duration-500"
           style={{
             width: layoutExpanded ? "480px" : "0px",
             opacity: layoutExpanded ? 1 : 0,
             pointerEvents: layoutExpanded ? "auto" : "none",
           }}
         >
-          {layoutExpanded && detail && <PolaroidDetail {...detail} />}
+          {detail && (
+            <PolaroidDetail
+              id={detail.id}
+              src={detail.src}
+              tags={detail.tags}
+              contexts={detail.contexts}
+              favorite={detail.favorite}
+              type={detail.type}
+              ocr_text={detail.ocr_text}
+              onFavoriteChange={handleFavoriteChange}
+            />
+          )}
         </div>
       </div>
     </div>

@@ -12,5 +12,5 @@ export async function ragSearch(query: string) {
   if (!res.ok) throw new Error("RAG 검색 실패");
 
   const json = await res.json();
-  return json.data; // { answer, sources }
+  return json; // { answer, sources }
 }
