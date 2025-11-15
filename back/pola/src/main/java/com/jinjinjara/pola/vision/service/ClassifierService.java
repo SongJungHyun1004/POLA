@@ -125,29 +125,29 @@ public class ClassifierService {
         float[] q = weightedMean(inputVecs, weights);
 
         // 3) 근거 태그 임베딩(전체 카테고리 태그를 한 번에 배치 임베딩)
-        Map<String, float[]> tagVec = Collections.emptyMap();
-        if (categoryTags != null && !categoryTags.isEmpty()) {
-            LinkedHashSet<String> allTags = new LinkedHashSet<>();
-            categoryTags.values().forEach(list -> {
-                if (list != null) {
-                    list.stream()
-                            .filter(Objects::nonNull)
-                            .map(String::trim)
-                            .filter(s -> !s.isEmpty())
-                            .forEach(allTags::add);
-                }
-            });
-            if (!allTags.isEmpty()) {
-                List<String> tagList = new ArrayList<>(allTags);
-                List<float[]> tagEmbeds = embedding.embedTexts(tagList);
-                Map<String, float[]> m = new HashMap<>(tagList.size());
-                for (int i = 0; i < tagList.size(); i++) {
-                    float[] v = tagEmbeds.get(i);
-                    if (v != null && v.length > 0) m.put(tagList.get(i), v);
-                }
-                tagVec = m;
-            }
-        }
+//        Map<String, float[]> tagVec = Collections.emptyMap();
+//        if (categoryTags != null && !categoryTags.isEmpty()) {
+//            LinkedHashSet<String> allTags = new LinkedHashSet<>();
+//            categoryTags.values().forEach(list -> {
+//                if (list != null) {
+//                    list.stream()
+//                            .filter(Objects::nonNull)
+//                            .map(String::trim)
+//                            .filter(s -> !s.isEmpty())
+//                            .forEach(allTags::add);
+//                }
+//            });
+//            if (!allTags.isEmpty()) {
+//                List<String> tagList = new ArrayList<>(allTags);
+//                List<float[]> tagEmbeds = embedding.embedTexts(tagList);
+//                Map<String, float[]> m = new HashMap<>(tagList.size());
+//                for (int i = 0; i < tagList.size(); i++) {
+//                    float[] v = tagEmbeds.get(i);
+//                    if (v != null && v.length > 0) m.put(tagList.get(i), v);
+//                }
+//                tagVec = m;
+//            }
+//        }
 
         // 4) 카테고리 점수 및 근거 태그
         List<Score> scores = new ArrayList<>();
@@ -159,21 +159,21 @@ public class ClassifierService {
             double sim = cosine(q, centroid);
 
             List<Evidence> ev = new ArrayList<>();
-            List<String> tags = (categoryTags == null) ? null : categoryTags.get(cat);
-            if (tags != null && !tags.isEmpty() && !tagVec.isEmpty()) {
-                for (String t : tags) {
-                    String tt = (t == null) ? null : t.trim();
-                    if (tt == null || tt.isEmpty()) continue;
-                    float[] tv = tagVec.get(tt);
-                    if (tv != null) {
-                        double s = cosine(q, tv);
-                        if (GENERIC.contains(tt)) s *= genericDown;
-                        ev.add(new Evidence(tt, s));
-                    }
-                }
-                ev.sort((a,b)->Double.compare(b.getSimilarity(), a.getSimilarity()));
-                if (ev.size() > evidenceTopN) ev = ev.subList(0, evidenceTopN);
-            }
+//            List<String> tags = (categoryTags == null) ? null : categoryTags.get(cat);
+//            if (tags != null && !tags.isEmpty() && !tagVec.isEmpty()) {
+//                for (String t : tags) {
+//                    String tt = (t == null) ? null : t.trim();
+//                    if (tt == null || tt.isEmpty()) continue;
+//                    float[] tv = tagVec.get(tt);
+//                    if (tv != null) {
+//                        double s = cosine(q, tv);
+//                        if (GENERIC.contains(tt)) s *= genericDown;
+//                        ev.add(new Evidence(tt, s));
+//                    }
+//                }
+//                ev.sort((a,b)->Double.compare(b.getSimilarity(), a.getSimilarity()));
+//                if (ev.size() > evidenceTopN) ev = ev.subList(0, evidenceTopN);
+//            }
 
             scores.add(new Score(cat, sim, ev));
         }
@@ -241,5 +241,11 @@ public class ClassifierService {
         if (s == null) return "";
         String t = s.trim();
         return Normalizer.normalize(t, Normalizer.Form.NFC);
+    }
+
+    public boolean isGenericTag(String raw) {
+        if (raw == null) return false;
+        String t = normalize(raw.trim());
+        return GENERIC.contains(t);
     }
 }

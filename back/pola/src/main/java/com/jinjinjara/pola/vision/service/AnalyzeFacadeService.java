@@ -94,7 +94,7 @@ public class AnalyzeFacadeService {
         sw.start("Classify");
         Result result = classifierService.classifyWithCentroids(inputTags, centroids, categoryTags, 3);
         String topCategory = result.getTopCategory();
-        log.debug("[Analyze] Classify results top={}, scoresTopK={}",
+        log.info("[Analyze] Classify results top={}, scoresTopK={}",
                 topCategory, result.getResults());
         sw.stop();
 

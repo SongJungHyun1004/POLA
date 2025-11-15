@@ -64,31 +64,39 @@ public interface FileEmbeddingsRepository extends JpaRepository<FileEmbeddings, 
       SELECT
         f.id AS id,
         f.src AS src,
+        f.type AS type,
+        f.favorite AS favorite,
+        fe.ocr_text AS ocr_text,
         fe.context AS context,
-        1 - (fe.embedding <-> CAST(:vec AS vector(768))) AS relevance_score
+        1 - (fe.embedding <-> CAST(:vec AS vector(768))) AS relevance_score,
+        f.created_at AS created_at
       FROM file_embeddings fe
       JOIN files f ON f.id = fe.file_id
       WHERE fe.user_id = :userId
       ORDER BY fe.embedding <-> CAST(:vec AS vector(768))
       LIMIT :limit
-    """, nativeQuery = true)
+      """, nativeQuery = true)
     List<SearchRow> findSimilarFilesWithScore(@Param("userId") Long userId,
                                               @Param("vec") String vectorLiteral,
                                               @Param("limit") int limit);
 
     @Query(value = """
-    SELECT
-      f.id AS id,
-      f.src AS src,
-      fe.context AS context,
-      1 - (fe.embedding <-> CAST(:vec AS vector(768))) AS relevance_score
-    FROM file_embeddings fe
-    JOIN files f ON f.id = fe.file_id
-    WHERE fe.user_id = :userId
-      AND fe.created_at BETWEEN :startTs AND :endTs
-    ORDER BY fe.embedding <-> CAST(:vec AS vector(768))
-    LIMIT :limit
-    """, nativeQuery = true)
+      SELECT
+        f.id AS id,
+        f.src AS src,
+        f.type AS type,
+        f.favorite AS favorite,
+        fe.ocr_text AS ocr_text,
+        fe.context AS context,
+        1 - (fe.embedding <-> CAST(:vec AS vector(768))) AS relevance_score,
+        f.created_at AS created_at
+      FROM file_embeddings fe
+      JOIN files f ON f.id = fe.file_id
+      WHERE fe.user_id = :userId
+        AND fe.created_at BETWEEN :startTs AND :endTs
+      ORDER BY fe.embedding <-> CAST(:vec AS vector(768))
+      LIMIT :limit
+      """, nativeQuery = true)
     List<SearchRow> findSimilarFilesWithScoreAndDate(
             @Param("userId") Long userId,
             @Param("vec") String vectorLiteral,

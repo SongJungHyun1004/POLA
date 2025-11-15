@@ -52,6 +52,11 @@ fun RemindScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
+    // 화면 진입 시 데이터 새로고침
+    LaunchedEffect(Unit) {
+        viewModel.loadReminders()
+    }
+
     // 에러 토스트 처리
     LaunchedEffect(Unit) {
         viewModel.errorEvent.collect { errorMessage ->
@@ -421,6 +426,7 @@ private fun RemindScreenContent(
                                     imageList = imageList,
                                     frontIndex = frontIndex,
                                     prevIndex = prevIndex,
+                                    onNavigateToContents = onNavigateToContents,
                                     frontOffsetX = frontOffsetX.value,
                                     frontRotationZ = frontRotationZ.value,
                                     frontAlpha = frontAlpha.value,
@@ -433,6 +439,7 @@ private fun RemindScreenContent(
                                     imageList = imageList,
                                     frontIndex = frontIndex,
                                     prevIndex = prevIndex,
+                                    onNavigateToContents = onNavigateToContents,
                                     frontOffsetX = frontOffsetX.value,
                                     frontRotationZ = frontRotationZ.value,
                                     frontAlpha = frontAlpha.value,
@@ -611,6 +618,7 @@ private fun FrontThenPrevLayer(
     imageList: List<com.jinjinjara.pola.domain.model.RemindData>,
     frontIndex: Int,
     prevIndex: Int,
+    onNavigateToContents: (Long) -> Unit,
     frontOffsetX: Float,
     frontRotationZ: Float,
     frontAlpha: Float,
@@ -619,6 +627,7 @@ private fun FrontThenPrevLayer(
     prevAlpha: Float
 ) {
     RemindPolaCard(
+        onNavigateToContents = { onNavigateToContents(imageList[prevIndex].id) },
         imageUrl = imageList[prevIndex].imageUrl,
         tags = imageList[prevIndex].tags,
         translationX = prevOffsetX,
@@ -626,6 +635,7 @@ private fun FrontThenPrevLayer(
         alpha = prevAlpha
     )
     RemindPolaCard(
+        onNavigateToContents = { onNavigateToContents(imageList[frontIndex].id) },
         imageUrl = imageList[frontIndex].imageUrl,
         tags = imageList[frontIndex].tags,
         translationX = frontOffsetX,
@@ -639,6 +649,7 @@ private fun PrevThenFrontLayer(
     imageList: List<com.jinjinjara.pola.domain.model.RemindData>,
     frontIndex: Int,
     prevIndex: Int,
+    onNavigateToContents: (Long) -> Unit,
     frontOffsetX: Float,
     frontRotationZ: Float,
     frontAlpha: Float,
@@ -647,6 +658,7 @@ private fun PrevThenFrontLayer(
     prevAlpha: Float
 ) {
     RemindPolaCard(
+        onNavigateToContents = { onNavigateToContents(imageList[frontIndex].id) },
         imageUrl = imageList[frontIndex].imageUrl,
         tags = imageList[frontIndex].tags,
         translationX = frontOffsetX,
@@ -654,6 +666,7 @@ private fun PrevThenFrontLayer(
         alpha = frontAlpha
     )
     RemindPolaCard(
+        onNavigateToContents = { onNavigateToContents(imageList[prevIndex].id) },
         imageUrl = imageList[prevIndex].imageUrl,
         tags = imageList[prevIndex].tags,
         translationX = prevOffsetX,

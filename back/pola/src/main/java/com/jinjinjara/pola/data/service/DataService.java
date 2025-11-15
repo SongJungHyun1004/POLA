@@ -43,6 +43,8 @@ import java.net.URL;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.time.LocalDateTime;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -550,14 +552,58 @@ public class DataService {
         log.info("[PostProcess] S3 download URL generated: {}", downUrl);
         sw.stop();
 
-        sw.start("OCR");
-        String ocrText = visionService.extractTextFromS3Url(downUrl.toString());
-        sw.stop();
+        sw.start("OCR+Analyze");
 
-        sw.start("Analyze");
-        AnalyzeResponse analyzeResponse = analyzeFacadeService.analyze(user.getId(), downUrl.toString());
+        // OCR 비동기 실행
+        CompletableFuture<String> ocrFuture = CompletableFuture.supplyAsync(() -> {
+            long t0 = System.currentTimeMillis();
+            try {
+                String text = visionService.extractTextFromS3Url(downUrl.toString());
+                long elapsed = System.currentTimeMillis() - t0;
+                log.info("[PostProcess] OCR extraction completed: textLength={}, elapsed={} ms",
+                        text != null ? text.length() : 0,
+                        elapsed);
+                return text;
+            } catch (Exception e) {
+                log.error("[PostProcess] OCR failed", e);
+                throw new CompletionException(e);
+            }
+        });
+
+        // Analyze 비동기 실행
+        CompletableFuture<AnalyzeResponse> analyzeFuture = CompletableFuture.supplyAsync(() -> {
+            long t0 = System.currentTimeMillis();
+            try {
+                AnalyzeResponse res = analyzeFacadeService.analyze(user.getId(), downUrl.toString());
+                long elapsed = System.currentTimeMillis() - t0;
+                log.info("[PostProcess] Analyze completed: categoryId={}, tagsCount={}, elapsed={} ms",
+                        res.getCategoryId(),
+                        res.getTags() != null ? res.getTags().size() : 0,
+                        elapsed);
+                return res;
+            } catch (Exception e) {
+                log.error("[PostProcess] Analyze failed", e);
+                throw new CompletionException(e);
+            }
+        });
+
+        String ocrText;
+        AnalyzeResponse analyzeResponse;
+        try {
+            // 병렬 실행
+            ocrText = ocrFuture.join();
+            analyzeResponse = analyzeFuture.join();
+        } catch (CompletionException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof Exception ex) {
+                throw ex;
+            }
+            throw e;
+        }
+
         Long newCategoryId = analyzeResponse.getCategoryId();
         log.info("[PostProcess] Analyze completed: newCategoryId={}", newCategoryId);
+
         sw.stop();
 
         sw.start("TagSave");
