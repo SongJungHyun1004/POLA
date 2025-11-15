@@ -83,6 +83,9 @@ class MainActivity : ComponentActivity() {
     private var hasStartedUpload = false
     private var isAutoLoginCompleted by mutableStateOf(false)
 
+    // 위젯에서 전달받은 네비게이션 정보
+    private var pendingNavigationFileId by mutableStateOf<Long?>(null)
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -120,6 +123,24 @@ class MainActivity : ComponentActivity() {
                     Log.d("MainActivity", "Shared image URI: $sharedImageUri")
                 }
             }
+        }
+
+        // 위젯에서 콘텐츠 네비게이션 인텐트 확인
+        Log.d("Widget", "[Widget] Checking intent for widget navigation")
+        Log.d("Widget", "[Widget] Intent action: ${intent?.action}")
+        Log.d("Widget", "[Widget] Intent extras: ${intent?.extras?.keySet()?.joinToString()}")
+
+        if (intent?.hasExtra("navigate_to_contents") == true) {
+            val fileId = intent.getLongExtra("navigate_to_contents", -1L)
+            Log.d("Widget", "[Widget] ✓ Widget navigation intent detected! fileId: $fileId")
+            if (fileId != -1L) {
+                pendingNavigationFileId = fileId
+                Log.d("Widget", "[Widget] ✓ pendingNavigationFileId set to: $fileId")
+            } else {
+                Log.e("Widget", "[Widget] ✗ Invalid fileId: $fileId")
+            }
+        } else {
+            Log.d("Widget", "[Widget] No widget navigation intent found")
         }
 
         enableEdgeToEdge()
@@ -164,6 +185,7 @@ class MainActivity : ComponentActivity() {
                             PolaNavHost(
                                 modifier = Modifier.fillMaxSize(),
                                 isLoggedIn = false,
+                                pendingNavigationFileId = pendingNavigationFileId
                             )
 
                             // 로그인 완료 감지 후 업로드 시작
@@ -335,12 +357,35 @@ class MainActivity : ComponentActivity() {
                             PolaNavHost(
                                 modifier = Modifier.fillMaxSize(),
                                 isLoggedIn = isLoggedIn ?: false,
-                                onboardingCompleted = onboardingCompleted ?: false
+                                onboardingCompleted = onboardingCompleted ?: false,
+                                pendingNavigationFileId = pendingNavigationFileId,
+                                onNavigationHandled = { pendingNavigationFileId = null }
                             )
                         }
                     }
                 }
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        Log.d("Widget", "[Widget] onNewIntent called")
+        Log.d("Widget", "[Widget] Intent action: ${intent.action}")
+        Log.d("Widget", "[Widget] Intent extras: ${intent.extras?.keySet()?.joinToString()}")
+
+        // 위젯에서 콘텐츠 네비게이션 인텐트 확인 (앱이 이미 실행 중일 때)
+        if (intent.hasExtra("navigate_to_contents")) {
+            val fileId = intent.getLongExtra("navigate_to_contents", -1L)
+            Log.d("Widget", "[Widget] ✓ Widget navigation intent in onNewIntent! fileId: $fileId")
+            if (fileId != -1L) {
+                pendingNavigationFileId = fileId
+                Log.d("Widget", "[Widget] ✓ pendingNavigationFileId updated to: $fileId")
+            } else {
+                Log.e("Widget", "[Widget] ✗ Invalid fileId in onNewIntent: $fileId")
+            }
+        } else {
+            Log.d("Widget", "[Widget] No widget navigation intent in onNewIntent")
         }
     }
 
