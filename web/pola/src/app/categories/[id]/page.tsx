@@ -293,7 +293,7 @@ export default function CategoryPage() {
                   <img
                     src="/images/POLA_file_empty.png"
                     alt="empty"
-                    className="w-40 h-40 object-contain"
+                    className="w-80 h-80 object-contain"
                   />
                   <p className="text-lg text-[#7A6A48] mt-4">
                     더 이상 표시할 컨텐츠가 없습니다

@@ -1,9 +1,18 @@
 @import "tailwindcss";
 
+
 @font-face {
+    font-family: 'NanumSquareRound';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_two@1.0/NanumSquareRound.woff') format('woff');
+    font-weight: normal;
+    font-display: swap;
+}
+
+/* @font-face {
     font-family: 'memomentKkukkkuk';
     src: url('/fonts/memomentKkukkkuk.ttf') format('truetype');
-}
+    font-weight: 400;
+} */
 
 
 /* @font-face {
@@ -51,7 +60,7 @@
 body {
   background: #ffffff; /* 흰색 배경 */
   color: var(--foreground);
-  font-family:'memomentKkukkkuk','SchoolSafeOuting','IncheonEducationHimchan', 'DoolgiMayoGothic','OngleipParkDahyeon', Arial, Helvetica, sans-serif;
+  font-family:'NanumSquareRound','memomentKkukkkuk','SchoolSafeOuting','IncheonEducationHimchan', 'DoolgiMayoGothic','OngleipParkDahyeon', Arial, Helvetica, sans-serif;
 }
 
 /* 반응형 컨테이너 */
