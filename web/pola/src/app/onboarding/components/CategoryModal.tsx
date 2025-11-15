@@ -11,6 +11,7 @@ interface CategoryModalProps {
   defaultName: string;
   defaultTags: string[];
   isEditing: boolean;
+  showDeleteButton?: boolean;
 }
 
 export default function CategoryModal({
@@ -21,6 +22,7 @@ export default function CategoryModal({
   defaultName,
   defaultTags,
   isEditing,
+  showDeleteButton = true,
 }: CategoryModalProps) {
   const [name, setName] = useState(defaultName);
   const [tagInput, setTagInput] = useState("");
@@ -128,7 +130,7 @@ export default function CategoryModal({
         {/* Buttons */}
         <div className="flex justify-between items-center mt-4">
           {/* 삭제 버튼 — 편집시에만 */}
-          {isEditing && (
+          {isEditing && showDeleteButton && (
             <button
               onClick={onDelete}
               className="px-4 py-2 text-sm text-red-500 hover:text-red-700"

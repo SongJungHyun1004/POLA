@@ -100,6 +100,7 @@ class CategoryRepositoryImpl @Inject constructor(
                 )
 
                 Log.d("Category:Repo", "Request: $request")
+                Log.d("Category:Repo", "Request categories count: ${request.categories.size}")
                 val response = categoryApi.initCategoryTags(request)
 
                 Log.d("Category:Repo", "Response code: ${response.code()}")

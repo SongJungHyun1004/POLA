@@ -120,3 +120,74 @@ export async function createInitialCategories(categories: any[]) {
   const json = await res.json();
   return json.data;
 }
+
+export async function updateCategoryName(
+  categoryId: number | string,
+  name: string
+) {
+  const res = await apiClient(
+    `/users/me/categories/${categoryId}?name=${encodeURIComponent(name)}`,
+    {
+      method: "PUT",
+    }
+  );
+
+  if (!res.ok) throw new Error("Failed to update category name");
+  return res.json();
+}
+
+export async function fetchCategoryTags(categoryId: number) {
+  try {
+    const res = await apiClient(`/categories/${categoryId}/tags`, {
+      method: "GET",
+    });
+
+    if (res.status === 404) return [];
+    if (!res.ok) throw new Error("Failed to fetch tags");
+
+    const json = await res.json();
+    return json.data ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function addCategoryTags(
+  categoryId: number | string,
+  tags: string[]
+) {
+  const res = await apiClient(`/categories/${categoryId}/tags`, {
+    method: "POST",
+    body: JSON.stringify(tags),
+  });
+
+  if (!res.ok) throw new Error("Failed to add tags");
+  return res.json();
+}
+
+export async function removeCategoryTag(
+  categoryId: number | string,
+  tagId: number
+) {
+  const res = await apiClient(`/categories/${categoryId}/tags/${tagId}`, {
+    method: "DELETE",
+  });
+
+  if (!res.ok) throw new Error("Failed to delete tag");
+  return res.json();
+}
+
+export async function fetchMyCategories() {
+  const res = await apiClient(`/users/me/categories`, { method: "GET" });
+  if (!res.ok) throw new Error("Failed to load category list");
+  const json = await res.json();
+  return json.data ?? [];
+}
+
+export async function deleteMyCategory(categoryId: number) {
+  const res = await apiClient(`/users/me/categories/${categoryId}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error("Failed to delete category");
+  return true;
+}
