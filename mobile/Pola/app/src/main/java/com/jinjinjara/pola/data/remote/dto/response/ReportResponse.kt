@@ -48,3 +48,15 @@ data class ReportListResponse(
     @Json(name = "status")
     val status: String
 )
+
+@JsonClass(generateAdapter = true)
+data class LatestReportResponse(
+    @Json(name = "data")
+    val data: ReportDto?,
+
+    @Json(name = "message")
+    val message: String,
+
+    @Json(name = "status")
+    val status: String
+)

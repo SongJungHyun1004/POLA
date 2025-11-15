@@ -75,4 +75,36 @@ class ReportRepositoryImpl @Inject constructor(
             }
         }
     }
+
+    override suspend fun getLatestReport(): Result<Report?> {
+        return withContext(ioDispatcher) {
+            try {
+                val response = reportApi.getLatestReport()
+
+                if (response.isSuccessful && response.body() != null) {
+                    val body = response.body()!!
+                    if (body.status == "SUCCESS") {
+                        val report = body.data?.toDomain()
+                        Result.Success(report)
+                    } else {
+                        Result.Error(
+                            message = body.message,
+                            errorType = ErrorType.SERVER
+                        )
+                    }
+                } else {
+                    Result.Error(
+                        message = "최신 리포트를 가져올 수 없습니다.",
+                        errorType = ErrorType.SERVER
+                    )
+                }
+            } catch (e: Exception) {
+                Result.Error(
+                    exception = e,
+                    message = e.message ?: "네트워크 오류가 발생했습니다.",
+                    errorType = ErrorType.NETWORK
+                )
+            }
+        }
+    }
 }

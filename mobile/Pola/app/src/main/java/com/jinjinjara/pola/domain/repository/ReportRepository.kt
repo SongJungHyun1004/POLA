@@ -5,4 +5,5 @@ import com.jinjinjara.pola.util.Result
 
 interface ReportRepository {
     suspend fun getMyReports(): Result<List<Report>>
+    suspend fun getLatestReport(): Result<Report?>
 }

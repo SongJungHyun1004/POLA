@@ -1,5 +1,4 @@
-// presentation/viewmodel/MyTypeViewModel.kt
-package com.jinjinjara.pola.presentation.viewmodel
+package com.jinjinjara.pola.presentation.ui.screen.my
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -28,8 +27,25 @@ class MyTypeViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<MyTypeUiState>(MyTypeUiState.Loading)
     val uiState: StateFlow<MyTypeUiState> = _uiState.asStateFlow()
 
+    private val _latestReportType = MutableStateFlow<String?>(null)
+    val latestReportType: StateFlow<String?> = _latestReportType.asStateFlow()
+
     init {
+        loadLatestReport()
         loadReports()
+    }
+
+    private fun loadLatestReport() {
+        viewModelScope.launch {
+            when (val result = reportRepository.getLatestReport()) {
+                is Result.Success -> {
+                    _latestReportType.value = result.data?.title
+                }
+                else -> {
+                    _latestReportType.value = null
+                }
+            }
+        }
     }
 
     fun loadReports() {
