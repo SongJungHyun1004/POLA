@@ -31,8 +31,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.jinjinjara.pola.R
 import com.jinjinjara.pola.domain.model.Report
-import com.jinjinjara.pola.presentation.viewmodel.MyTypeUiState
-import com.jinjinjara.pola.presentation.viewmodel.MyTypeViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -151,12 +149,26 @@ private fun SuccessContent(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "아직 생성된 리포트가 없습니다.",
-                    fontSize = 16.sp,
-                    color = Color.Gray,
-                    textAlign = TextAlign.Center
-                )
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.empty),
+                        contentDescription = "No content",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 32.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "아직 생성된 리포트가 없습니다.",
+                        fontSize = 16.sp,
+                        color = Color.Gray,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
         } else {
             // Collection Type Cards
@@ -253,12 +265,12 @@ fun ReportCard(
                 }
 
                 // 임시 이미지 테스트
-                Image(
-                    painter = painterResource(id = R.drawable.temp_type2),
-                    contentDescription = null,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.matchParentSize()
-                )
+//                Image(
+//                    painter = painterResource(id = R.drawable.temp_type7),
+//                    contentDescription = null,
+//                    contentScale = ContentScale.Fit,
+//                    modifier = Modifier.matchParentSize()
+//                )
 
                 Column(
                     modifier = Modifier.fillMaxSize()
