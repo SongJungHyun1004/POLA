@@ -1,10 +1,12 @@
 package com.jinjinjara.pola.widget.callback
 
 import android.content.Context
+import android.content.Intent
 import android.util.Log
 import androidx.glance.GlanceId
 import androidx.glance.action.ActionParameters
 import androidx.glance.appwidget.action.ActionCallback
+import androidx.glance.appwidget.state.getAppWidgetState
 import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
@@ -25,6 +27,62 @@ import dagger.hilt.components.SingletonComponent
 @InstallIn(SingletonComponent::class)
 interface WidgetCallbackEntryPoint {
     fun toggleFavoriteUseCase(): ToggleFavoriteUseCase
+}
+
+/**
+ * 콘텐츠 상세 화면으로 이동 콜백
+ */
+class NavigateToContentCallback : ActionCallback {
+    companion object {
+        private const val TAG = "NavigateToContentCallback"
+    }
+
+    override suspend fun onAction(
+        context: Context,
+        glanceId: GlanceId,
+        parameters: ActionParameters
+    ) {
+        Log.d("Widget", "[Widget] ========================================")
+        Log.d("Widget", "[Widget] NavigateToContentCallback.onAction called")
+        Log.d("Widget", "[Widget] ========================================")
+
+        try {
+            // 현재 위젯 상태에서 fileId 가져오기
+            val currentState = getAppWidgetState(context, WidgetStateDefinition, glanceId)
+            val currentItem = currentState.remindItems.getOrNull(currentState.currentIndex)
+            val fileId = currentItem?.fileId ?: -1L
+
+            Log.d("Widget", "[Widget] Current index: ${currentState.currentIndex}")
+            Log.d("Widget", "[Widget] Total items: ${currentState.remindItems.size}")
+            Log.d("Widget", "[Widget] Current fileId: $fileId")
+
+            if (fileId == -1L) {
+                Log.e("Widget", "[Widget] ✗ Invalid fileId, cannot navigate")
+                return
+            }
+
+            // Intent 생성 - MainActivity 클래스 직접 참조
+            val intent = Intent(context, com.jinjinjara.pola.MainActivity::class.java).apply {
+                putExtra("navigate_to_contents", fileId)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+
+            Log.d("Widget", "[Widget] Intent created:")
+            Log.d("Widget", "[Widget]   - Target: MainActivity::class.java")
+            Log.d("Widget", "[Widget]   - Extra: navigate_to_contents = $fileId")
+            Log.d("Widget", "[Widget]   - Flags: NEW_TASK | CLEAR_TOP")
+            Log.d("Widget", "[Widget] Starting MainActivity...")
+
+            context.startActivity(intent)
+
+            Log.d("Widget", "[Widget] ✓ startActivity() called successfully!")
+            Log.d("Widget", "[Widget] ========================================")
+        } catch (e: Exception) {
+            Log.e("Widget", "[Widget] ✗ Error in NavigateToContentCallback", e)
+            Log.e("Widget", "[Widget] Exception: ${e.message}")
+            Log.e("Widget", "[Widget] Stack trace: ${e.stackTraceToString()}")
+        }
+    }
 }
 
 /**

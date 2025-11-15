@@ -120,8 +120,17 @@ private fun EmptyContent() {
         horizontalAlignment = Alignment.Horizontal.CenterHorizontally,
         verticalAlignment = Alignment.Vertical.CenterVertically
     ) {
+        // empty 이미지
+        Image(
+            provider = ImageProvider(R.drawable.empty),
+            contentDescription = "Empty",
+            modifier = GlanceModifier.size(300.dp)
+        )
+
+        Spacer(modifier = GlanceModifier.height(16.dp))
+
         Text(
-            text = "표시할 리마인드가 없습니다",
+            text = "리마인드 할 컨텐츠가 없어요",
             style = TextStyle(
                 color = GlanceTheme.colors.onBackground,
                 fontSize = 18.sp,

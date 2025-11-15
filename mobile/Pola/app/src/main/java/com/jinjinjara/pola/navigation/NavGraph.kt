@@ -146,9 +146,16 @@ fun NavGraphBuilder.authNavGraph(
  * Main 네비게이션 그래프
  */
 @RequiresApi(Build.VERSION_CODES.O)
-fun NavGraphBuilder.mainNavGraph(navController: NavHostController) {
+fun NavGraphBuilder.mainNavGraph(
+    navController: NavHostController,
+    pendingNavigationFileId: Long? = null,
+    onNavigationHandled: () -> Unit = {}
+) {
     composable(route = NavGraphs.MAIN) {
-        MainScreen()
+        MainScreen(
+            pendingNavigationFileId = pendingNavigationFileId,
+            onNavigationHandled = onNavigationHandled
+        )
         // MainViewModel이 카테고리 체크 후 필요시 DataStore 업데이트
         // PolaNavHost의 LaunchedEffect가 자동으로 네비게이션 처리
     }

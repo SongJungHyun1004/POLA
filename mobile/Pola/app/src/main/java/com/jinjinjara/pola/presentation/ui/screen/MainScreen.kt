@@ -57,11 +57,30 @@ import com.jinjinjara.pola.presentation.ui.screen.upload.UploadScreen
 @Composable
 fun MainScreen(
     modifier: Modifier = Modifier,
-    viewModel: MainViewModel = hiltViewModel()
+    viewModel: MainViewModel = hiltViewModel(),
+    pendingNavigationFileId: Long? = null,
+    onNavigationHandled: () -> Unit = {}
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
+
+    // 위젯에서 전달받은 fileId가 있으면 해당 콘텐츠 화면으로 이동
+    LaunchedEffect(pendingNavigationFileId) {
+        android.util.Log.d("Widget", "[Widget] MainScreen - LaunchedEffect triggered")
+        android.util.Log.d("Widget", "[Widget] MainScreen - pendingNavigationFileId: $pendingNavigationFileId")
+
+        pendingNavigationFileId?.let { fileId ->
+            val route = Screen.Contents.createRoute(fileId)
+            android.util.Log.d("Widget", "[Widget] MainScreen - Navigating to: $route")
+            navController.navigate(route)
+            android.util.Log.d("Widget", "[Widget] MainScreen - Navigation called, invoking onNavigationHandled")
+            onNavigationHandled()
+            android.util.Log.d("Widget", "[Widget] MainScreen - ✓ Widget navigation completed!")
+        } ?: run {
+            android.util.Log.d("Widget", "[Widget] MainScreen - No pending navigation")
+        }
+    }
 
     // MainViewModel이 카테고리를 체크하고 필요시 DataStore 업데이트
     // PolaNavHost의 LaunchedEffect가 자동으로 네비게이션 처리
