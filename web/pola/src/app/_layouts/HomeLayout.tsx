@@ -9,9 +9,9 @@ export const metadata: Metadata = {
 
 export default function HomeLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex flex-col h-screen bg-[#FFFEF8]">
+    <div className="flex flex-col h-screen bg-white">
       <Header />
-      <main className="flex-1 overflow-hidden">{children}</main>
+      <main className="flex-1 overflow-auto">{children}</main>
     </div>
   );
 }

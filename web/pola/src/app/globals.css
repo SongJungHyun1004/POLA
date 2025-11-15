@@ -1,5 +1,41 @@
 @import "tailwindcss";
 
+@font-face {
+    font-family: 'memomentKkukkkuk';
+    src: url('/fonts/memomentKkukkkuk.ttf') format('truetype');
+}
+
+
+/* @font-face {
+    font-family: 'SchoolSafeOuting';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-5@1.0/HakgyoansimNadeuriTTF-L.woff2') format('woff2');
+    font-weight: 400;
+    font-display: swap;
+} */
+
+
+/* @font-face {
+    font-family: 'IncheonEducationHimchan';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2307-2@1.0/iceHimchan-Rg.woff2') format('woff2');
+    font-weight: normal;
+    font-display: swap;
+} */
+
+/* 
+@font-face {
+    font-family: 'DoolgiMayoGothic';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2302@1.1/Dovemayo_gothic.woff2') format('woff2');
+    font-weight: normal;
+    font-display: swap;
+} */
+
+/* @font-face {
+    font-family: 'OngleipParkDahyeon';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2411-3@1.0/Ownglyph_ParkDaHyun.woff2') format('woff2');
+    font-weight: normal;
+    font-display: swap;
+} */
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -13,9 +49,24 @@
 }
 
 body {
-  background: var(--background);
+  background: #ffffff; /* 흰색 배경 */
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family:'memomentKkukkkuk','SchoolSafeOuting','IncheonEducationHimchan', 'DoolgiMayoGothic','OngleipParkDahyeon', Arial, Helvetica, sans-serif;
+}
+
+/* 반응형 컨테이너 */
+.max-w-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 768px) {
+  .max-w-container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
 }
 
 ::-webkit-scrollbar {
@@ -83,6 +134,23 @@ body {
 
   .animate-fade-slide-in {
     animation: fadeSlideIn 0.25s ease-out;
+  }
+
+  @keyframes scroll-x {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-100%);
+    }
+  }
+
+  .animate-scroll-x {
+    animation: scroll-x 60s linear infinite;
+  }
+
+  .animation-pause {
+    animation-play-state: paused;
   }
 }
 
