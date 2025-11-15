@@ -7,11 +7,14 @@ import com.jinjinjara.pola.data.remote.dto.response.CategoryRecommendationsRespo
 import com.jinjinjara.pola.data.remote.dto.response.FileDetailResponse
 import com.jinjinjara.pola.data.remote.dto.response.FilesListResponse
 import com.jinjinjara.pola.data.remote.dto.response.OAuthApiResponse
+import com.jinjinjara.pola.data.remote.dto.response.UserCategoriesWithTagsResponse
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 /**
  * Category related API
@@ -34,5 +37,14 @@ interface CategoryApi {
 
     @GET("users/me/categories")
     suspend fun getCategories(): Response<CategoryListResponse>
+
+    @GET("users/me/categories/tags")
+    suspend fun getUserCategoriesWithTags(): Response<UserCategoriesWithTagsResponse>
+
+    @PUT("users/me/categories/{id}")
+    suspend fun updateCategory(
+        @Path("id") categoryId: Long,
+        @Query("name") name: String
+    ): Response<Unit>
 
 }
