@@ -480,21 +480,30 @@ fun CategoryCard(
         ) {
             if (files.isEmpty()) {
                 // 파일이 없을 경우 흐린 폴라 한 장 표시
-                PolaCard(
+                Box(
                     modifier = Modifier
                         .height(120.dp)
-                        .alpha(0.4f)
-                        .shadow(elevation = 4.dp),
-                    ratio = 0.7816f,
-                    imageRatio = 0.9152f,
-                    paddingValues = PaddingValues(
-                        top = 8.dp,
-                        start = 8.dp,
-                        end = 8.dp
-                    ),
-                    imageResId = R.drawable.empty,
-                    type = null
-                )
+                        .shadow(
+                            elevation = 3.dp,
+                            shape = RoundedCornerShape(5.dp),
+                            clip = false
+                        )
+                ) {
+                    PolaCard(
+                        modifier = Modifier
+                            .matchParentSize(),
+                        contentAlpha = 0.4f,
+                        ratio = 0.7816f,
+                        imageRatio = 0.9152f,
+                        paddingValues = PaddingValues(
+                            top = 8.dp,
+                            start = 8.dp,
+                            end = 8.dp
+                        ),
+                        imageResId = R.drawable.empty,
+                        type = null
+                    )
+                }
             } else {
                 // 뒤에서부터 3장의 카드를 겹쳐서 표시
                 // 오른쪽 뒤 카드
@@ -547,8 +556,7 @@ fun CategoryCard(
                 files.getOrNull(0)?.let { fileInfo ->
                     PolaCard(
                         modifier = Modifier
-                            .height(120.dp)
-                            .shadow(elevation = 8.dp),
+                            .height(120.dp),
                         ratio = 0.7816f,
                         imageRatio = 0.9152f,
                         paddingValues = PaddingValues(

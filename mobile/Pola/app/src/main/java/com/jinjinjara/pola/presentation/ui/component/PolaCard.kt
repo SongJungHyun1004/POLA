@@ -24,10 +24,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.unit.Constraints
@@ -100,6 +104,7 @@ fun ClippedTagRowForCard(
 @Composable
 fun PolaCard(
     modifier: Modifier = Modifier,
+    contentAlpha: Float? = null,
     backgroundColor: Color = Color.White,
     imageResId: Int? = null,
     imageUrl: String? = null,
@@ -124,14 +129,35 @@ fun PolaCard(
 ) {
     // 전체 폴라로이드 카드
     Card(
+        shape = RoundedCornerShape(5.dp),
         modifier = modifier
+            .shadow(
+                elevation = 2.dp,
+                shape = RoundedCornerShape(5.dp),
+                clip = false
+            )
+            .shadow(
+                elevation = 2.dp,
+                shape = RoundedCornerShape(5.dp),
+                clip = false
+            )
+            .shadow(
+                elevation = 2.dp,
+                shape = RoundedCornerShape(5.dp),
+                clip = false
+            )
+            .shadow(
+                elevation = 2.dp,
+                shape = RoundedCornerShape(5.dp),
+                clip = false
+            )
             .aspectRatio(ratio),
 //            .border(
 //                BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary),
 //                RoundedCornerShape(5.dp)
 //            ),
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        shape = RoundedCornerShape(5.dp)
+
     ) {
         Column(
             modifier = Modifier
@@ -142,8 +168,53 @@ fun PolaCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .let { base ->
+                        if (contentAlpha != null) {
+                            base.alpha(contentAlpha)
+                        } else {
+                            base // alpha 적용 안함
+                        }
+                    }
                     .aspectRatio(imageRatio)
-                    .clip(RoundedCornerShape(5.dp)),
+                    .clip(RoundedCornerShape(5.dp))
+                    .drawWithContent {
+                        drawContent()
+
+                        // 인너섀도우
+                        val shadowColor = Color.Black.copy(alpha = 0.2f)  // 반투명 검정
+                        val cornerRadius = 5.dp.toPx()
+                        val shadowSize = 4.dp.toPx()
+
+                        // 네 방향 그라데이션
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(shadowColor, Color.Transparent),
+                                startY = 0f,
+                                endY = shadowSize
+                            )
+                        )
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(Color.Transparent, shadowColor),
+                                startY = size.height - shadowSize,
+                                endY = size.height
+                            )
+                        )
+                        drawRect(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(shadowColor, Color.Transparent),
+                                startX = 0f,
+                                endX = shadowSize
+                            )
+                        )
+                        drawRect(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(Color.Transparent, shadowColor),
+                                startX = size.width - shadowSize,
+                                endX = size.width
+                            )
+                        )
+                    },
 //                    .border(1.dp, borderColor, RoundedCornerShape(5.dp)),
                 contentAlignment = Alignment.TopCenter
             ) {
