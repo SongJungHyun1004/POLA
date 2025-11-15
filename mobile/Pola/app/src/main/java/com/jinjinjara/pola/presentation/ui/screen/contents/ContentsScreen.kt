@@ -739,7 +739,8 @@ private fun ContentsScreenContent(
                                 color = Color.White,
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .padding(16.dp)
+                                    .verticalScroll(rememberScrollState())
+                                    .padding(horizontal = 32.dp)
                             )
                         }
                     }
