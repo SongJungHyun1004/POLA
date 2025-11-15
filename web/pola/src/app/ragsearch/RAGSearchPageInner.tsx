@@ -6,6 +6,7 @@ import PolaroidDetail from "../categories/[id]/components/PolaroidDetail";
 import PolaroidCard from "../home/components/PolaroidCard";
 import { Send } from "lucide-react";
 import { ragSearch } from "@/services/ragService";
+import { Star } from "lucide-react";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -72,7 +73,7 @@ export default function RAGSearchPageInner() {
     try {
       const response = await ragSearch(text);
 
-      // ★ API 구조 변경 반영
+      //  API 구조 변경 반영
       const answer = response.data.answer;
       const sources = response.data.sources;
 
@@ -123,7 +124,7 @@ export default function RAGSearchPageInner() {
     }
   };
 
-  /** Detail에서 favorite 변경 → 카드/상세同步 */
+  /** Detail에서 favorite 변경 → 카드/상세 */
   const handleFavoriteChange = (newState: boolean) => {
     if (!detail) return;
 
@@ -225,9 +226,12 @@ export default function RAGSearchPageInner() {
                           >
                             {/* Favorite 별 표시 */}
                             {c.favorite && (
-                              <span className="absolute top-2 right-6 text-yellow-500 text-lg z-50">
-                                ★
-                              </span>
+                              <Star
+                                fill={c.favorite ? "#FFD700" : "transparent"}
+                                stroke="#FFD700"
+                                strokeWidth={2.5}
+                                className="absolute top-2 right-4 drop-shadow-sm w-6 h-6 z-10"
+                              />
                             )}
 
                             <PolaroidCard

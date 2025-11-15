@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import PolaroidCard from "@/app/home/components/PolaroidCard";
 import PolaroidDetail from "@/app/categories/[id]/components/PolaroidDetail";
 import { searchFiles, searchTags } from "@/services/fileService";
+import { Star } from "lucide-react";
 
 export default function FilesPage() {
   const params = useSearchParams();
@@ -147,9 +148,12 @@ export default function FilesPage() {
                       />
 
                       {f.favorite && (
-                        <span className="absolute top-2 right-2 text-yellow-500 text-lg z-10">
-                          ★
-                        </span>
+                        <Star
+                          fill={f.favorite ? "#FFD700" : "transparent"}
+                          stroke="#FFD700"
+                          strokeWidth={2.5}
+                          className="absolute top-2 right-2 drop-shadow-sm w-6 h-6 z-10"
+                        />
                       )}
                     </button>
                   </div>

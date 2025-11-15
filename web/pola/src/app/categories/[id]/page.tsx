@@ -4,7 +4,7 @@ import { useParams } from "next/navigation";
 import { useState, useEffect, useRef, memo } from "react";
 import PolaroidCard from "@/app/home/components/PolaroidCard";
 import PolaroidDetail from "./components/PolaroidDetail";
-import { Pencil } from "lucide-react";
+import { Pencil,Star } from "lucide-react";
 
 import {
   getCategoryInfo,
@@ -71,9 +71,12 @@ const PolaroidItem = memo(
           />
 
           {file.favorite && (
-            <span className="absolute top-2 right-2 text-yellow-500 text-lg z-10">
-              ★
-            </span>
+            <Star 
+              fill={file.favorite ? "#FFD700" : "transparent"}
+              stroke="#FFD700"
+              strokeWidth={2.5}
+              className="absolute top-2 right-2 drop-shadow-sm w-6 h-6 z-10"
+            />
           )}
         </button>
       </div>
@@ -200,7 +203,7 @@ export default function CategoryPage() {
         context: detail.context ?? "",
         created_at: detail.created_at,
         category_id: detail.category_id,
-        favorite: detail.favorite,
+        favorite: file.favorite,
         type: detail.type,
         platform: detail.platform ?? file.platform,
         ocr_text: detail.ocr_text,
@@ -267,10 +270,14 @@ export default function CategoryPage() {
             {/* 상단 타이틀 */}
             <div className="flex items-center justify-between mb-2 pl-4">
               <div>
-                <h1 className="text-4xl font-bold mb-2">{categoryName}</h1>
-                <p className="text-xl text-[#7A6A48]">
-                  {tags.map((t) => `#${t}`).join(" ")}
-                </p>
+                <h2 className="text-5xl font-bold mb-6 mt-8">{categoryName}</h2>
+                <div className="text-2xl text-[#7A6A48] flex flex-wrap gap-x-2 ">
+                     {tags.map((t, index) => (
+                     <span key={index} className="whitespace-nowrap">
+                      #{t}
+                    </span>
+                    ))}
+                  </div>
               </div>
 
               {/* 모달 버튼 */}
@@ -302,7 +309,7 @@ export default function CategoryPage() {
               ) : (
                 <div
                   className="
-                    grid gap-6 pt-16 px-10 pb-10
+                    grid gap-6 pt-12 px-10 pb-10
                     grid-cols-1
                     sm:grid-cols-2
                     md:grid-cols-3

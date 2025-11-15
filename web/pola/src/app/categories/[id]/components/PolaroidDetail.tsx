@@ -234,7 +234,7 @@ export default function PolaroidDetail({
             {/* 이미지 or OCR 텍스트 */}
             {isTextFile ? (
               <div
-              className="w-full h-full overflow-y-auto text-sm leading-tight text-[#4C3D25] whitespace-pre-line break-words scrollbar-none p-2 shadow-inner-custom"
+              className="w-full h-full overflow-y-auto text-base leading-tight text-[#4C3D25] whitespace-pre-line break-words scrollbar-none p-2 shadow-inner-custom"
               onWheel={(e) => e.stopPropagation()}              
                 >
                 {ocr_text || "(텍스트 없음)"}
@@ -328,8 +328,8 @@ export default function PolaroidDetail({
             </div>
           </div>
 
-          <textarea
-            className="flex-1 resize-none p-3 rounded-md text-sm text-[#4C3D25] focus:outline-none cursor-default"
+          <textarea 
+            className="flex-1 resize-none p-3 rounded-md text-base text-[#4C3D25] focus:outline-none cursor-default"
             value={context}
             readOnly
           />
@@ -338,12 +338,12 @@ export default function PolaroidDetail({
 
       {/* Tag + Date */}
       <div className="mt-4 text-center text-[#4C3D25] flex flex-col items-center w-80 max-w-full">
-        <div className="flex flex-wrap justify-center gap-2 mb-2 w-full">
+        <div className="flex flex-wrap justify-start gap-2 mb-2 w-full">
           {tagState.map((t, idx) => (
             <span
               key={idx}
               className="
-                          bg-[#CBBF9E]/60
+                          bg-[#D0A773]/95
                           px-3 py-1
                           rounded-full
                           font-bold

@@ -142,7 +142,7 @@ export default function HomePage() {
               <div
                 key={`${cat.categoryId}-${index}`}
                 onClick={() => router.push(`/categories/${cat.categoryId}`)}
-                className="cursor-pointer w-72 flex-shrink-0 mx-4"
+                className="cursor-pointer w-72 flex-shrink-0 mx-6"
               >
                 {/* 폴라로이드 카드 스택 (3장 겹침) */}
                 <div className="relative w-full aspect-[3/4]">
