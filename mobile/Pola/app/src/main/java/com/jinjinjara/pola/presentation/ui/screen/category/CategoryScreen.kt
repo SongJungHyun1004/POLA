@@ -121,7 +121,7 @@ fun CategoryScreen(
     }
     var isMenuExpanded by remember { mutableStateOf(false) }
     var selectedSort by remember { mutableStateOf("최신순") }
-    var viewMode by remember { mutableStateOf(ViewMode.GRID_3) }
+    var viewMode by remember { mutableStateOf(ViewMode.GRID_2) }
 
     val categories = uiState.files
 
