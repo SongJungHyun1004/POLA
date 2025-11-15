@@ -1,6 +1,5 @@
 package com.jinjinjara.pola.widget.ui
 
-import android.content.Intent
 import android.graphics.Bitmap
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -11,7 +10,7 @@ import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.action.clickable
-import androidx.glance.appwidget.action.actionStartActivity
+import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
@@ -29,6 +28,7 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.jinjinjara.pola.R
+import com.jinjinjara.pola.widget.callback.NavigateToContentCallback
 
 /**
  * 위젯 폴라 카드 컴포넌트 - 기존 앱 스타일
@@ -49,16 +49,7 @@ fun WidgetPolaCardContent(
             .background(ImageProvider(R.drawable.widget_card_background))
             .padding(24.dp)  // 원본 32dp의 75%
             .clickable(
-                onClick = actionStartActivity(
-                    Intent().apply {
-                        setClassName(
-                            "com.jinjinjara.pola",
-                            "com.jinjinjara.pola.MainActivity"
-                        )
-                        putExtra("navigate_to_contents", fileId)
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                    }
-                )
+                onClick = actionRunCallback<NavigateToContentCallback>()
             ),
         contentAlignment = Alignment.TopCenter
     ) {
@@ -74,6 +65,7 @@ fun WidgetPolaCardContent(
                     .height(400.dp),
                 contentAlignment = Alignment.Center
             ) {
+                // 먼저 이미지 렌더링
                 if (bitmap != null) {
                     Image(
                         provider = ImageProvider(bitmap),
@@ -84,6 +76,14 @@ fun WidgetPolaCardContent(
                 } else {
                     PlaceholderImage()
                 }
+
+                // 그 위에 테두리 오버레이
+                Image(
+                    provider = ImageProvider(R.drawable.widget_image_border),
+                    contentDescription = "Image Border",
+                    contentScale = ContentScale.FillBounds,
+                    modifier = GlanceModifier.fillMaxSize()
+                )
             }
 
             Spacer(modifier = GlanceModifier.height(12.dp))
