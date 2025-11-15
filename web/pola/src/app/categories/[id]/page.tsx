@@ -302,7 +302,7 @@ export default function CategoryPage() {
               ) : (
                 <div
                   className="
-                    grid gap-6 p-10
+                    grid gap-6 pt-16 px-10 pb-10
                     grid-cols-1
                     sm:grid-cols-2
                     md:grid-cols-3
@@ -350,6 +350,8 @@ export default function CategoryPage() {
             items-start
             justify-center
             pt-4
+            overflow-y-auto
+            scrollbar-thin scrollbar-thumb-[#CBBF9E]/50
           "
           >
             <PolaroidDetail

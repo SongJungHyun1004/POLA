@@ -7,6 +7,8 @@ import useAuthStore from "@/store/useAuthStore";
 import { Home, Star, Bell, Clock } from "lucide-react";
 import Link from "next/link";
 import Timeline from "./components/Timeline";
+import PolaroidCard from "./components/PolaroidCard";
+import CategoryDropdown from "../components/CategoryDropdown";
 
 export default function HomePage() {
   const router = useRouter();
@@ -78,6 +80,8 @@ export default function HomePage() {
             </div>
           </Link>
 
+          <CategoryDropdown />
+
           {/* Favorite */}
           <div
             onClick={() => {
@@ -127,12 +131,12 @@ export default function HomePage() {
         </Link> */}
 
         {/* Categories 제목 */}
-        <h2 className="text-5xl font-bold text-[#C9A870] mb-8">
-          Categories
+        <h2 className="text-5xl font-bold text-[#8B7355] mb-8">
+          Recent
         </h2>
 
         {/* 카테고리 카드 슬라이더 */}
-        <div className="w-full overflow-hidden group">
+        <div className="w-full overflow-x-hidden group py-6">
           <div className="flex whitespace-nowrap animate-scroll-x group-hover:animation-pause">
             {[...categories, ...categories].map((cat, index) => (
               <div
@@ -151,28 +155,23 @@ export default function HomePage() {
                   {/* 메인 카드 */}
                   <div className="absolute inset-0 bg-white border-2 border-[#E5DCC5] rounded-lg shadow-md overflow-hidden transform transition-transform hover:scale-105">
                     {/* 이미지 영역 (상단 75%) */}
-                    <div className="h-[75%] bg-gray-50 overflow-hidden">
+                    <div className="h-full bg-gray-50 overflow-hidden flex items-center justify-center">
                       {cat.files && cat.files.length > 0 ? (
-                        <img
+                        <PolaroidCard
                           src={cat.files[0].src || "/images/dummy_image_1.png"}
-                          alt={cat.categoryName}
-                          className="w-full h-full object-cover"
+                          type={cat.files[0].type}
+                          ocr_text={cat.files[0].ocr_text}
+                          large={true} // Use large size for the card
+                          categoryName={cat.categoryName}
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-300 text-3xl">
-                          <img
+                        <PolaroidCard
                           src={"/images/POLA_null.png"}
-                          className="w-full h-full object-cover"
-                          />
-                        </div>
+                          type={"image/png"}
+                          large={true}
+                          categoryName={cat.categoryName}
+                        />
                       )}
-                    </div>
-
-                    {/* 카테고리 이름 (하단 25%) */}
-                    <div className="h-[25%] flex items-center justify-center bg-white px-4">
-                      <p className="text-xl font-bold text-[#4C3D25] text-center line-clamp-2">
-                        {cat.categoryName}
-                      </p>
                     </div>
                   </div>
                 </div>

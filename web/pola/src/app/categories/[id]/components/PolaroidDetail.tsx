@@ -221,7 +221,7 @@ export default function PolaroidDetail({
     <div className="flex flex-col items-center w-full">
       {/* 카드 */}
       <div
-        className={`relative bg-white border border-[#8B857C] rounded-md shadow-sm w-[340px] h-[460px] flex items-center justify-center transition-transform duration-500 [transform-style:preserve-3d] ${
+        className={`relative bg-white rounded-md shadow-custom w-[340px] h-[460px] flex items-center justify-center transition-transform duration-500 [transform-style:preserve-3d] ${
           flipped ? "rotate-y-180" : ""
         }`}
       >
@@ -230,22 +230,25 @@ export default function PolaroidDetail({
           className="absolute w-full h-full backface-hidden flex flex-col items-center justify-center cursor-pointer"
           onClick={() => setOpen(true)}
         >
-          <div className="relative w-[85%] h-[78%] overflow-hidden rounded-sm border border-[#8B857C] bg-[#FFFEF8] p-2">
+          <div className="relative w-[85%] h-[78%] overflow-hidden rounded-sm bg-[#FFFEF8]">
             {/* 이미지 or OCR 텍스트 */}
             {isTextFile ? (
               <div
-                className="w-full h-full overflow-y-auto text-sm leading-tight text-[#4C3D25] whitespace-pre-line break-words scrollbar-none"
-                onWheel={(e) => e.stopPropagation()}
-              >
+              className="w-full h-full overflow-y-auto text-sm leading-tight text-[#4C3D25] whitespace-pre-line break-words scrollbar-none p-2 shadow-inner-custom"
+              onWheel={(e) => e.stopPropagation()}              
+                >
                 {ocr_text || "(텍스트 없음)"}
               </div>
             ) : (
+              <>
               <Image
                 src={displaySrc}
                 alt="selected polaroid"
                 fill
-                className="object-cover object-center"
+                className="object-cover object-center z-0"
               />
+              <div className="absolute inset-0 shadow-inner-custom z-10 pointer-events-none"></div>
+              </>
             )}
           </div>
 
