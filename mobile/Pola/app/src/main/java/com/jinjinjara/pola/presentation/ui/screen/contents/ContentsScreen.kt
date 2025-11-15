@@ -588,13 +588,13 @@ private fun ContentsScreenContent(
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 32.dp)
             ) {
+                Spacer(Modifier.height(8.dp))
                 val createdAtMillis = fileDetail.createdAt.atZone(java.time.ZoneId.systemDefault())
                     .toInstant().toEpochMilli()
                 val timeAgo = getTimeAgo(createdAtMillis)
                 // 메인 콘텐츠 카드
                 PolaCard(
                     modifier = Modifier
-                        .shadow(elevation = 8.dp)
                         .clickable { onImageClick() },
                     ratio = 0.7239f,
                     imageRatio = 0.7747f,
@@ -624,25 +624,24 @@ private fun ContentsScreenContent(
                 // item의 해시 태그 값 불러오기
                 val hashtags = fileDetail.tags
 
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                    maxLines = if (isExpanded) Int.MAX_VALUE else 1,
-                    overflow = FlowRowOverflow.Clip
-                ) {
-                    hashtags.forEach { tag ->
-                        TagChip(tag.name)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // 접기/펼치기 버튼
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
                 ) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.weight(1f),
+                        maxLines = if (isExpanded) Int.MAX_VALUE else 1,
+                        overflow = FlowRowOverflow.Clip
+                    ) {
+                        hashtags.forEach { tag ->
+                            TagChip(tag.name)
+                        }
+                    }
+
+                    // 접기/펼치기 버튼
                     Row(
                         modifier = Modifier
                             .clickable(
@@ -675,9 +674,7 @@ private fun ContentsScreenContent(
                     lineHeight = 20.sp,
                     color = MaterialTheme.colorScheme.tertiary
                 )
-
             }
-
         }
         // 전체 화면 이미지 뷰어
         if (showFullImage) {
