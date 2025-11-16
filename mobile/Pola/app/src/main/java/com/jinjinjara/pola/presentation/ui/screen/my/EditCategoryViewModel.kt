@@ -41,10 +41,6 @@ class EditCategoryViewModel @Inject constructor(
     // 카테고리 이름 -> ID 매핑 (업데이트 시 필요)
     private var categoryIdMap = mapOf<String, Long>()
 
-    init {
-        loadUserCategoriesWithTags()
-    }
-
     /**
      * 사용자의 기존 카테고리와 태그를 로드
      */
@@ -54,7 +50,7 @@ class EditCategoryViewModel @Inject constructor(
 
             when (val result = getUserCategoriesWithTagsUseCase()) {
                 is Result.Success -> {
-                    Log.d("EditCategory:VM", "User categories loaded: ${result.data.size}")
+                    Log.d("[Edit]", "User categories loaded: ${result.data.size}")
 
                     // 사용자 카테고리를 CategoryRecommendation 형식으로 변환
                     val categoryRecommendations = result.data.map { userCategory ->
@@ -81,7 +77,7 @@ class EditCategoryViewModel @Inject constructor(
                     _uiState.value = EditCategoryUiState.Success(categoryRecommendations)
                 }
                 is Result.Error -> {
-                    Log.e("EditCategory:VM", "Failed to load user categories: ${result.message}")
+                    Log.e("[Edit]", "Failed to load user categories: ${result.message}")
                     _uiState.value = EditCategoryUiState.Error(result.message ?: "Unknown error")
                 }
                 else -> Unit
@@ -98,12 +94,22 @@ class EditCategoryViewModel @Inject constructor(
         }
     }
 
+    // DB에서 로드된 전체 카테고리 정보 반환 (초기 상태 비교용)
+    fun getAllCategoriesWithTags(): Map<String, List<Tag>> {
+        return categoriesMap
+    }
+
     // 선택된 카테고리들의 정보를 반환 (카테고리 이름 -> Tag 객체 리스트, 커스텀 카테고리는 빈 리스트)
     fun getSelectedCategoriesWithTags(): Map<String, List<Tag>> {
         val selected = savedStateHandle.get<Set<String>>(KEY_SELECTED_CATEGORIES) ?: emptySet()
         return selected.associateWith { categoryName ->
             categoriesMap[categoryName] ?: emptyList() // 맵에 없으면 빈 리스트 (커스텀 카테고리)
         }
+    }
+
+    // 카테고리 ID 맵 반환
+    fun getCategoryIdMap(): Map<String, Long> {
+        return categoryIdMap
     }
 
     fun retry() {
@@ -117,23 +123,33 @@ class EditCategoryViewModel @Inject constructor(
         viewModelScope.launch {
             val categoryId = categoryIdMap[categoryName]
             if (categoryId == null) {
-                Log.e("EditCategory:VM", "Category ID not found for: $categoryName")
+                Log.e("[Edit]", "Category ID not found for: $categoryName")
                 return@launch
             }
 
             when (val result = updateCategoryUseCase(categoryId, newName)) {
                 is Result.Success -> {
-                    Log.d("EditCategory:VM", "Successfully updated category: $categoryName -> $newName")
+                    Log.d("[Edit]", "Successfully updated category: $categoryName -> $newName")
                     // 페이지 새로고침
                     loadUserCategoriesWithTags()
                 }
                 is Result.Error -> {
-                    Log.e("EditCategory:VM", "Failed to update category: ${result.message}")
+                    Log.e("[Edit]", "Failed to update category: ${result.message}")
                     // TODO: 에러 처리 (토스트 메시지 등)
                 }
                 else -> Unit
             }
         }
+    }
+
+    /**
+     * SavedStateHandle과 내부 상태를 완전히 초기화
+     */
+    fun clearSavedState() {
+        savedStateHandle[KEY_SELECTED_CATEGORIES] = emptySet<String>()
+        categoriesMap = emptyMap()
+        categoryIdMap = emptyMap()
+        Log.d("[Edit]", "Cleared all saved state in EditCategoryViewModel")
     }
 }
 

@@ -54,4 +54,24 @@ interface CategoryRepository {
      */
     suspend fun updateCategory(categoryId: Long, name: String): Result<Unit>
 
+    /**
+     * Create a new category
+     */
+    suspend fun createCategory(name: String): Result<Long>
+
+    /**
+     * Delete a category
+     */
+    suspend fun deleteCategory(categoryId: Long): Result<Unit>
+
+    /**
+     * Remove a tag from a category
+     */
+    suspend fun removeTagFromCategory(categoryId: Long, tagId: Long): Result<Unit>
+
+    /**
+     * Add tags to a category
+     */
+    suspend fun addTagsToCategory(categoryId: Long, tagNames: List<String>): Result<List<Long>>
+
 }
