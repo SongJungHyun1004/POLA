@@ -19,6 +19,14 @@ public interface FileRepository extends JpaRepository<File, Long> {
     // 즐겨찾기 전체 조회 (정렬용)
     List<File> findAllByUserIdAndFavoriteTrueOrderByFavoriteSortAscFavoritedAtDesc(Long userId);
 
+    @Query("SELECT f FROM File f " +
+            "WHERE f.userId = :userId " +
+            "ORDER BY f.views ASC, f.createdAt DESC")
+    List<File> findLeastViewedFiles(
+            @Param("userId") Long userId,
+            Pageable pageable
+    );
+
     // 즐겨찾기 페이지 조회 (페이징)
     Page<File> findAllByUserIdAndFavoriteTrueOrderByFavoriteSortAscFavoritedAtDesc(Long userId, Pageable pageable);
 
