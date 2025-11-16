@@ -32,5 +32,23 @@ data class UserCategoryWithTagsDto(
     @Json(name = "tags") val tags: List<TagDto>
 )
 
+// For creating a category
+@JsonClass(generateAdapter = true)
+data class CreateCategoryData(
+    @Json(name = "id") val id: Long,
+    @Json(name = "categoryName") val categoryName: String
+)
+
+// For adding tags to a category
+@JsonClass(generateAdapter = true)
+data class CategoryTagLinkDto(
+    @Json(name = "tagId") val tagId: Long?,
+    @Json(name = "tagName") val tagName: String?,
+    @Json(name = "categoryId") val categoryId: Long?,
+    @Json(name = "categoryName") val categoryName: String?
+)
+
 // OAuthApiResponse를 사용하여 타입 정의
 typealias UserCategoriesWithTagsResponse = OAuthApiResponse<List<UserCategoryWithTagsDto>>
+typealias CreateCategoryResponse = OAuthApiResponse<CreateCategoryData>
+typealias AddCategoryTagsResponse = OAuthApiResponse<List<CategoryTagLinkDto>>
