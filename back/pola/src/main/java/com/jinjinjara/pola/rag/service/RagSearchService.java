@@ -43,7 +43,20 @@ public class RagSearchService {
 
         // 2) 검색
         List<SearchRow> rows = embeddingSearchService.searchSimilarFiles(userId, cleaned, limit, start, end);
-        if (rows.isEmpty()) return new RagSearchResponse("검색 결과가 없습니다.", List.of());
+
+        log.info("[RagSearch] RAW SEARCH RESULTS (count={})", rows.size());
+        for (int i = 0; i < rows.size(); i++) {
+            SearchRow r = rows.get(i);
+            log.info("  [{}] id={} score={} context={}",
+                    i,
+                    r.getId(),
+                    r.getRelevanceScore(),
+                    r.getContext());
+        }
+
+        if (rows.isEmpty()) {
+            return new RagSearchResponse("검색 결과가 없습니다.", List.of());
+        }
 
         // 3) 태그 병합
         List<RagSearchSource> sources = rows.stream()
@@ -85,66 +98,67 @@ public class RagSearchService {
                 ? tp.getBackoff()
                 : (sim.getBackoff() != null ? sim.getBackoff() : Collections.emptyList());
 
-        double top1  = sources.get(0).getRelevanceScore() == null ? 0.0 : sources.get(0).getRelevanceScore();
-        double relCut = Math.max(minSim, top1 * keepRatio);
-        log.debug("[RagSearch] type={}, top1={}, min={}, keep={}, relCut={}, backoff={}",
-                type, top1, minSim, keepRatio, relCut, backoff);
+        // 5) Step A: top1 유효성 검사 (min + backoff)
+        double top1 = sources.get(0).getRelevanceScore() == null
+                ? 0.0
+                : sources.get(0).getRelevanceScore();
 
-        // 5) 1차 컷 (2위 이하에 적용되는 기본 기준)
-        List<RagSearchSource> filtered = sources.stream()
-                .filter(s -> s.getRelevanceScore() != null && s.getRelevanceScore() >= relCut)
-                .toList();
+        // top1이 0 이하고, minSim이 양수면 그냥 "관련 없음"으로 처리
+        if (top1 <= 0.0 && minSim > 0.0) {
+            log.debug("[RagSearch] type={}, top1={}, min={} → top1<=0, no result", type, top1, minSim);
+            return new RagSearchResponse("관련도가 낮아 결과가 없습니다.", List.of());
+        }
 
-        // 6) 결과가 limit보다 부족하면 backoff로 보강
-        if (filtered.size() < limit && !backoff.isEmpty()) {
-            for (double b : backoff) {
-                double cut = Math.min(minSim, top1 * b);
-                List<RagSearchSource> candidates = sources.stream()
-                        .filter(s -> s.getRelevanceScore() != null && s.getRelevanceScore() >= cut)
-                        .toList();
+        // factors: 1.0(기본) + backoff 계수들
+        List<Double> factors = new ArrayList<>();
+        factors.add(1.0);
+        factors.addAll(backoff);
 
-                int need = Math.max(0, limit - filtered.size());
-                if (need == 0) break;
+        Double appliedFactor = null;
+        double effectiveMin = 0.0;
 
-
-                List<RagSearchSource> current = filtered;
-
-                // 새 후보 중 기존 filtered에 없는 것만 추가
-                List<RagSearchSource> newOnes = candidates.stream()
-                        .filter(c -> current.stream().noneMatch(f -> Objects.equals(f.getId(), c.getId())))
-                        .sorted((a, b2) -> Double.compare(
-                                b2.getRelevanceScore() == null ? 0.0 : b2.getRelevanceScore(),
-                                a.getRelevanceScore() == null ? 0.0 : a.getRelevanceScore()))
-                        .limit(need)
-                        .toList();
-
-                if (!newOnes.isEmpty()) {
-                    List<RagSearchSource> merged = new ArrayList<>(filtered);
-                    merged.addAll(newOnes);
-                    filtered = merged;
-                }
-
-                log.debug("[RagSearch] backoff(ratio)={} → cut={} → added={} / total={}",
-                        b, cut, newOnes.size(), filtered.size());
-
-                if (filtered.size() >= limit) break;
-            }
-
-            // 6-2) (옵션) 절대 바닥 완화: 여전히 비었을 때만
-            if (filtered.isEmpty()) {
-                for (double floor : backoff) {
-                    if (floor >= minSim) continue;
-                    double cut = floor;
-                    filtered = sources.stream()
-                            .filter(s -> s.getRelevanceScore() != null && s.getRelevanceScore() >= cut)
-                            .toList();
-                    log.debug("[RagSearch] backoff(abs)={} → cut={}, remained={}", floor, cut, filtered.size());
-                    if (!filtered.isEmpty()) break;
-                }
+        for (double f : factors) {
+            double threshold = minSim * f;
+            if (top1 >= threshold) {
+                appliedFactor = f;
+                effectiveMin = threshold;
+                break;
             }
         }
 
+        // 어떤 단계에서도 통과 못 하면 → 검색 결과 없음
+        if (appliedFactor == null) {
+            log.debug("[RagSearch] type={}, top1={}, min={}, backoff={} → no factor passed",
+                    type, top1, minSim, backoff);
+            return new RagSearchResponse("관련도가 낮아 결과가 없습니다.", List.of());
+        }
+
+        // 6) Step B: 나머지 문서 필터링 기준 계산
+        double ratioCut = top1 * keepRatio;
+        double finalCut = Math.max(effectiveMin, ratioCut);
+
+        log.info("[RagSearch] type={}, top1={}, min={}, keep={}, appliedFactor={}, " +
+                        "effectiveMin={}, ratioCut={}, finalCut={}",
+                type, top1, minSim, keepRatio, appliedFactor, effectiveMin, ratioCut, finalCut);
+
+        // finalCut 이상인 문서만 사용
+        List<RagSearchSource> filtered = sources.stream()
+                .filter(s -> s.getRelevanceScore() != null
+                        && s.getRelevanceScore() >= finalCut)
+                .toList();
+
+        log.info("[RagSearch] FILTERED RESULTS (count={})", filtered.size());
+        for (int i = 0; i < filtered.size(); i++) {
+            var f = filtered.get(i);
+            log.info("  [{}] id={} score={} context={}",
+                    i,
+                    f.getId(),
+                    f.getRelevanceScore(),
+                    f.getContext());
+        }
+
         if (filtered.isEmpty()) {
+            log.debug("[RagSearch] filtered is empty after finalCut={}, type={}", finalCut, type);
             return new RagSearchResponse("관련도가 낮아 결과가 없습니다.", List.of());
         }
 

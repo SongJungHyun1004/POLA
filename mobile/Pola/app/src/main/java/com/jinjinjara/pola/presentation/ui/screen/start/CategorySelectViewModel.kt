@@ -5,6 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jinjinjara.pola.domain.model.CategoryRecommendation
+import com.jinjinjara.pola.domain.model.Tag
 import com.jinjinjara.pola.domain.usecase.category.GetCategoryRecommendationsUseCase
 import com.jinjinjara.pola.util.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -33,8 +34,8 @@ class CategorySelectViewModel @Inject constructor(
         initialValue = emptySet()
     )
 
-    // API에서 가져온 카테고리 정보 저장 (카테고리 이름 -> 태그 리스트)
-    private var apiCategoriesMap = mapOf<String, List<String>>()
+    // API에서 가져온 카테고리 정보 저장 (카테고리 이름 -> Tag 객체 리스트)
+    private var apiCategoriesMap = mapOf<String, List<Tag>>()
 
     init {
         loadCategories()
@@ -47,8 +48,14 @@ class CategorySelectViewModel @Inject constructor(
             when (val result = getCategoryRecommendationsUseCase()) {
                 is Result.Success -> {
                     Log.d("Category:VM", "Categories loaded: ${result.data.size}")
-                    // API 카테고리와 태그 정보 저장
-                    apiCategoriesMap = result.data.associate { it.categoryName to it.tags }
+                    // API 카테고리와 태그 정보 저장 (임시 ID 부여)
+                    var tempId = -1L
+                    apiCategoriesMap = result.data.associate { categoryRec ->
+                        val tags = categoryRec.tags.map { tagName ->
+                            Tag(id = tempId--, name = tagName)
+                        }
+                        categoryRec.categoryName to tags
+                    }
                     _uiState.value = CategoryUiState.Success(result.data)
                 }
                 is Result.Error -> {
@@ -69,8 +76,8 @@ class CategorySelectViewModel @Inject constructor(
         }
     }
 
-    // 선택된 카테고리들의 정보를 반환 (카테고리 이름 -> 태그 리스트, 커스텀 카테고리는 빈 리스트)
-    fun getSelectedCategoriesWithTags(): Map<String, List<String>> {
+    // 선택된 카테고리들의 정보를 반환 (카테고리 이름 -> Tag 객체 리스트, 커스텀 카테고리는 빈 리스트)
+    fun getSelectedCategoriesWithTags(): Map<String, List<Tag>> {
         val selected = savedStateHandle.get<Set<String>>(KEY_SELECTED_CATEGORIES) ?: emptySet()
         return selected.associateWith { categoryName ->
             apiCategoriesMap[categoryName] ?: emptyList() // API에 없으면 빈 리스트 (커스텀 카테고리)

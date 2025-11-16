@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.saveable.rememberSaveable
 import com.jinjinjara.pola.domain.model.CategoryRecommendation
+import com.jinjinjara.pola.domain.model.Tag
 
 data class Category(
     val id: String,
@@ -117,7 +118,7 @@ private fun getCategoryIcon(categoryName: String): ImageVector {
 
 @Composable
 fun CategorySelectScreen(
-    onCategorySelected: (Map<String, List<String>>) -> Unit,
+    onCategorySelected: (Map<String, List<Tag>>) -> Unit,
     viewModel: CategorySelectViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()

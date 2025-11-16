@@ -15,6 +15,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import androidx.navigation.navigation
 import com.jinjinjara.pola.data.local.datastore.PreferencesDataStore
+import com.jinjinjara.pola.domain.model.Tag
 import com.jinjinjara.pola.presentation.ui.screen.start.CategorySelectViewModel
 import com.jinjinjara.pola.presentation.ui.screen.start.TagSelectViewModel
 import dagger.hilt.android.EntryPointAccessors
@@ -31,6 +32,9 @@ import com.jinjinjara.pola.presentation.ui.screen.contents.ContentsScreen
 import com.jinjinjara.pola.presentation.ui.screen.favorite.FavoriteScreen
 import com.jinjinjara.pola.presentation.ui.screen.home.HomeScreen
 import com.jinjinjara.pola.presentation.ui.screen.my.EditCategoryScreen
+import com.jinjinjara.pola.presentation.ui.screen.my.EditCategoryViewModel
+import com.jinjinjara.pola.presentation.ui.screen.my.EditTagScreen
+import com.jinjinjara.pola.presentation.ui.screen.my.EditTagViewModel
 import com.jinjinjara.pola.presentation.ui.screen.my.MyScreen
 import com.jinjinjara.pola.presentation.ui.screen.my.MyTypeScreen
 import com.jinjinjara.pola.presentation.ui.screen.my.TermsOfServiceScreen
@@ -120,7 +124,7 @@ fun NavGraphBuilder.authNavGraph(
             // 이전 화면에서 전달받은 선택된 카테고리 정보
             val categoriesWithTags = navController.previousBackStackEntry
                 ?.savedStateHandle
-                ?.get<Map<String, List<String>>>("categoriesWithTags")
+                ?.get<Map<String, List<Tag>>>("categoriesWithTags")
                 ?: emptyMap()
 
             TagSelectScreen(
@@ -149,9 +153,16 @@ fun NavGraphBuilder.authNavGraph(
  * Main 네비게이션 그래프
  */
 @RequiresApi(Build.VERSION_CODES.O)
-fun NavGraphBuilder.mainNavGraph(navController: NavHostController) {
+fun NavGraphBuilder.mainNavGraph(
+    navController: NavHostController,
+    pendingNavigationFileId: Long? = null,
+    onNavigationHandled: () -> Unit = {}
+) {
     composable(route = NavGraphs.MAIN) {
-        MainScreen()
+        MainScreen(
+            pendingNavigationFileId = pendingNavigationFileId,
+            onNavigationHandled = onNavigationHandled
+        )
         // MainViewModel이 카테고리 체크 후 필요시 DataStore 업데이트
         // PolaNavHost의 LaunchedEffect가 자동으로 네비게이션 처리
     }
@@ -425,8 +436,51 @@ fun NavGraphBuilder.myTabGraph(navController: NavHostController) {
         }
 
         composable(Screen.EditCategory.route) {
-            EditCategoryScreen(
+            // MY_TAB 네비게이션 그래프 스코프의 공유 ViewModel 사용
+            val myTabBackStackEntry = remember(it) {
+                navController.getBackStackEntry(NavGraphs.MY_TAB)
+            }
+            val sharedCategoryViewModel: EditCategoryViewModel = hiltViewModel(myTabBackStackEntry)
 
+            EditCategoryScreen(
+                viewModel = sharedCategoryViewModel,
+                onEditComplete = { categoriesWithTags ->
+                    // 선택된 카테고리 정보를 저장
+                    navController.currentBackStackEntry?.savedStateHandle?.set(
+                        "categoriesWithTags",
+                        categoriesWithTags
+                    )
+                    // 태그 편집 화면으로 이동
+                    navController.navigate(Screen.EditTag.route)
+                },
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(Screen.EditTag.route) {
+            // MY_TAB 그래프 스코프의 ViewModel 사용 (상태 유지)
+            val myTabBackStackEntry = remember(it) {
+                navController.getBackStackEntry(NavGraphs.MY_TAB)
+            }
+            val sharedTagViewModel: EditTagViewModel = hiltViewModel(myTabBackStackEntry)
+
+            // 이전 화면에서 전달받은 선택된 카테고리 정보
+            val categoriesWithTags = navController.previousBackStackEntry
+                ?.savedStateHandle
+                ?.get<Map<String, List<Tag>>>("categoriesWithTags")
+                ?: emptyMap()
+
+            EditTagScreen(
+                categoriesWithTags = categoriesWithTags,
+                viewModel = sharedTagViewModel,
+                onEditComplete = { categories, selectedTags ->
+                    // 완료 버튼 기능은 비워둠 (사용자 요청)
+                },
+                onBackClick = {
+                    navController.popBackStack()
+                }
             )
         }
 

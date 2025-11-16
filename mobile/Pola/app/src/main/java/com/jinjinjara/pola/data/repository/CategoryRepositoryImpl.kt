@@ -14,7 +14,9 @@ import com.jinjinjara.pola.domain.model.Category
 import com.jinjinjara.pola.domain.model.CategoryRecommendation
 import com.jinjinjara.pola.domain.model.FileDetail
 import com.jinjinjara.pola.domain.model.FilesPage
+import com.jinjinjara.pola.domain.model.Tag
 import com.jinjinjara.pola.domain.model.UserCategory
+import com.jinjinjara.pola.domain.model.UserCategoryWithTags
 import com.jinjinjara.pola.domain.repository.CategoryRepository
 import com.jinjinjara.pola.util.ErrorType
 import com.jinjinjara.pola.util.Result
@@ -243,6 +245,96 @@ class CategoryRepositoryImpl @Inject constructor(
             }
         }
 
+    }
+
+    override suspend fun getUserCategoriesWithTags(): Result<List<UserCategoryWithTags>> {
+        return withContext(ioDispatcher) {
+            try {
+                Log.d("Category:Repo", "Fetching user categories with tags")
+                val response = categoryApi.getUserCategoriesWithTags()
+
+                Log.d("Category:Repo", "Response code: ${response.code()}")
+                Log.d("Category:Repo", "Is successful: ${response.isSuccessful}")
+
+                if (response.isSuccessful && response.body() != null) {
+                    val body = response.body()!!
+
+                    if (body.data != null) {
+                        Log.d("Category:Repo", "Successfully fetched ${body.data.size} categories with tags")
+
+                        val categoriesWithTags = body.data.map { dto ->
+                            UserCategoryWithTags(
+                                categoryId = dto.categoryId,
+                                categoryName = dto.categoryName,
+                                tags = dto.tags.map { tagDto ->
+                                    Tag(
+                                        id = tagDto.id,
+                                        name = tagDto.tagName
+                                    )
+                                }
+                            )
+                        }
+
+                        Result.Success(categoriesWithTags)
+                    } else {
+                        Log.e("Category:Repo", "Response data is null")
+                        Result.Error(
+                            message = "카테고리 및 태그 데이터가 없습니다",
+                            errorType = ErrorType.SERVER
+                        )
+                    }
+                } else {
+                    val errorBody = response.errorBody()?.string()
+                    Log.e("Category:Repo", "Failed to fetch categories with tags")
+                    Log.e("Category:Repo", "Error body: $errorBody")
+
+                    Result.Error(
+                        message = "카테고리 및 태그 목록을 불러올 수 없습니다",
+                        errorType = ErrorType.SERVER
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("Category:Repo", "Exception while fetching categories with tags", e)
+                Result.Error(
+                    exception = e,
+                    message = e.message ?: "알 수 없는 오류가 발생했습니다",
+                    errorType = ErrorType.NETWORK
+                )
+            }
+        }
+    }
+
+    override suspend fun updateCategory(categoryId: Long, name: String): Result<Unit> {
+        return withContext(ioDispatcher) {
+            try {
+                Log.d("Category:Repo", "Updating category: $categoryId with name: $name")
+                val response = categoryApi.updateCategory(categoryId, name)
+
+                Log.d("Category:Repo", "Response code: ${response.code()}")
+                Log.d("Category:Repo", "Is successful: ${response.isSuccessful}")
+
+                if (response.isSuccessful) {
+                    Log.d("Category:Repo", "Successfully updated category")
+                    Result.Success(Unit)
+                } else {
+                    val errorBody = response.errorBody()?.string()
+                    Log.e("Category:Repo", "Failed to update category")
+                    Log.e("Category:Repo", "Error body: $errorBody")
+
+                    Result.Error(
+                        message = "카테고리 수정에 실패했습니다",
+                        errorType = ErrorType.SERVER
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("Category:Repo", "Exception while updating category", e)
+                Result.Error(
+                    exception = e,
+                    message = e.message ?: "알 수 없는 오류가 발생했습니다",
+                    errorType = ErrorType.NETWORK
+                )
+            }
+        }
     }
 
 

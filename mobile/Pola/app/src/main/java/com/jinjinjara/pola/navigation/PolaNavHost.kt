@@ -20,13 +20,17 @@ import com.jinjinjara.pola.presentation.ui.screen.MainScreen
  * @param modifier Modifier
  * @param navController NavHostController (외부에서 주입 가능)
  * @param startDestination 시작 화면 (로그인 상태에 따라 변경)
+ * @param pendingNavigationFileId 위젯에서 전달받은 콘텐츠 ID (nullable)
+ * @param onNavigationHandled 네비게이션 처리 완료 후 콜백
  */
 @Composable
 fun PolaNavHost(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
     isLoggedIn: Boolean = false,
-    onboardingCompleted: Boolean = false
+    onboardingCompleted: Boolean = false,
+    pendingNavigationFileId: Long? = null,
+    onNavigationHandled: () -> Unit = {}
 ) {
 
     // 테스트용: 이미지 클릭 시 토큰 없이 메인으로 이동
@@ -35,6 +39,7 @@ fun PolaNavHost(
     // 로그인 상태와 온보딩 상태에 따라 동적으로 네비게이션
     LaunchedEffect(isLoggedIn, onboardingCompleted) {
         Log.d("PolaNavHost", "State changed - isLoggedIn: $isLoggedIn, onboardingCompleted: $onboardingCompleted")
+        Log.d("Widget", "[Widget] PolaNavHost - pendingNavigationFileId: $pendingNavigationFileId")
 
         val currentRoute = navController.currentBackStackEntry?.destination?.route
         Log.d("PolaNavHost", "Current route: $currentRoute")
@@ -84,7 +89,11 @@ fun PolaNavHost(
         )
 
         // Main 네비게이션 그래프
-        mainNavGraph(navController)
+        mainNavGraph(
+            navController = navController,
+            pendingNavigationFileId = pendingNavigationFileId,
+            onNavigationHandled = onNavigationHandled
+        )
     }
 }
 
