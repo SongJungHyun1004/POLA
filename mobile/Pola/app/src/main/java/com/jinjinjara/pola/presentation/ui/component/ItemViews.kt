@@ -105,7 +105,7 @@ fun ClippedTagRow(
 @Composable
 fun <T : DisplayItem> ItemListItem(
     item: T,
-    onFavoriteToggle: (T) -> Unit,
+    onFavoriteToggle: ((T) -> Unit)? = null,
     onItemClick: ((T) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -178,23 +178,25 @@ fun <T : DisplayItem> ItemListItem(
             )
         }
 
-        // 오른쪽: 즐겨찾기 토글 버튼
-        Icon(
-            painter = painterResource(
-                id = if (item.isFavorite) R.drawable.star_primary_solid
-                else R.drawable.star_primary
-            ),
-            contentDescription = "즐겨찾기",
-            tint = Color.Unspecified,
-            modifier = Modifier
-                .size(30.dp)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) {
-                    onFavoriteToggle(item)
-                }
-        )
+        // 오른쪽: 즐겨찾기 토글 버튼 (onFavoriteToggle이 null이 아닐 때만 표시)
+        if (onFavoriteToggle != null) {
+            Icon(
+                painter = painterResource(
+                    id = if (item.isFavorite) R.drawable.star_primary_solid
+                    else R.drawable.star_primary
+                ),
+                contentDescription = "즐겨찾기",
+                tint = Color.Unspecified,
+                modifier = Modifier
+                    .size(30.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {
+                        onFavoriteToggle(item)
+                    }
+            )
+        }
     }
 }
 
@@ -202,7 +204,7 @@ fun <T : DisplayItem> ItemListItem(
 @Composable
 fun <T : DisplayItem> ItemListView(
     items: List<T>,
-    onFavoriteToggle: (T) -> Unit,
+    onFavoriteToggle: ((T) -> Unit)? = null,
     onItemClick: ((T) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
