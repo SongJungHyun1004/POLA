@@ -1,10 +1,677 @@
 package com.jinjinjara.pola.presentation.ui.screen.my
 
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.jinjinjara.pola.domain.model.CategoryRecommendation
+import com.jinjinjara.pola.domain.model.Tag
+
+data class Category(
+    val id: String,
+    val name: String,
+    val icon: ImageVector,
+    val isAddBtn: Boolean = false
+)
+
+// Icon mapping function
+private fun getCategoryIcon(categoryName: String): ImageVector {
+    return when (categoryName.lowercase()) {
+        // 필수 카테고리
+        "맛집", "restaurant", "레스토랑" -> Icons.Default.Restaurant
+        "여행", "travel" -> Icons.Default.Flight
+        "운동", "exercise", "피트니스", "헬스", "fitness" -> Icons.Default.FitnessCenter
+        "뷰티", "beauty", "화장품", "미용" -> Icons.Default.Face
+        "취미", "hobby" -> Icons.Default.Palette
+        "간식", "snack", "디저트", "dessert" -> Icons.Default.BakeryDining
+        "학습", "study", "교육", "공부" -> Icons.Default.School
+        "사회", "society", "소셜", "모임" -> Icons.Default.Groups
+
+        // 음식/식사 관련
+        "음식", "food", "한식", "야식" -> Icons.Outlined.Restaurant
+        "카페", "cafe", "coffee" -> Icons.Default.Coffee
+        "술", "주점", "bar" -> Icons.Default.LocalBar
+
+        // 쇼핑/패션
+        "쇼핑", "shopping" -> Icons.Outlined.ShoppingBag
+        "패션", "fashion", "옷" -> Icons.Default.Checkroom
+
+        // 장소/위치
+        "장소", "place", "위치" -> Icons.Outlined.Place
+        "집", "home", "인테리어" -> Icons.Default.Home
+
+        // 사람/관계
+        "인물", "person", "사람" -> Icons.Outlined.Person
+        "가족", "family" -> Icons.Default.FamilyRestroom
+        "연애", "데이트", "couple" -> Icons.Default.Favorite
+
+        // 엔터테인먼트
+        "영화", "movie", "시네마" -> Icons.Default.Movie
+        "음악", "music" -> Icons.Default.MusicNote
+        "게임", "game" -> Icons.Default.SportsEsports
+        "책", "독서", "book" -> Icons.Default.MenuBook
+        "사진", "photo", "사진촬영" -> Icons.Default.PhotoCamera
+
+        // 건강/의료
+        "건강", "health", "병원" -> Icons.Default.HealthAndSafety
+        "의료", "medical" -> Icons.Default.LocalHospital
+
+        // 차/교통
+        "차", "자동차", "car" -> Icons.Default.DirectionsCar
+        "교통", "transport" -> Icons.Default.Train
+
+        // 반려동물
+        "반려동물", "pet", "애완동물" -> Icons.Default.Pets
+
+        // 업무/금융
+        "일", "업무", "work", "비즈니스" -> Icons.Default.Work
+        "금융", "돈", "money", "finance" -> Icons.Default.AccountBalance
+
+        // 기술/IT
+        "기술", "tech", "컴퓨터" -> Icons.Default.Computer
+        "it", "개발" -> Icons.Default.Code
+        "폰", "phone", "스마트폰" -> Icons.Default.PhoneAndroid
+
+        // 자연/환경
+        "자연", "nature", "공원" -> Icons.Default.Park
+        "환경", "eco" -> Icons.Default.Eco
+        "꽃", "식물", "plant" -> Icons.Default.LocalFlorist
+
+        // 기타
+        "정보", "info" -> Icons.Outlined.Info
+        "이벤트", "event" -> Icons.Default.Event
+        "선물", "gift" -> Icons.Default.CardGiftcard
+        "스포츠", "sport" -> Icons.Default.SportsSoccer
+        "예술", "art" -> Icons.Default.Brush
+
+        else -> Icons.Outlined.Category // Default icon
+    }
+}
 
 @Composable
-fun EditCategoryScreen() {
+fun EditCategoryScreen(
+    onEditComplete: (Map<String, List<Tag>>) -> Unit = {},
+    onBackClick: () -> Unit = {},
+    viewModel: EditCategoryViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    val selectedCategories by viewModel.selectedCategories.collectAsState()
 
-    Text("카테고리/태그 수정 화면")
+    // 뒤로가기 처리
+    BackHandler {
+        onBackClick()
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .padding(horizontal = 24.dp)
+    ) {
+        Spacer(modifier = Modifier.height(60.dp))
+
+        // Title
+        Text(
+            text = buildAnnotatedString {
+                append("원하는 ")
+                withStyle(
+                    style = SpanStyle(
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                ) {
+                    append("카테고리")
+                }
+                append("를\n선택하거나 해제하세요.")
+            },
+            fontSize = 32.sp,
+            fontWeight = FontWeight.Bold,
+            lineHeight = 36.sp,
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Handle different UI states
+        when (val state = uiState) {
+            is EditCategoryUiState.Loading -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+
+            is EditCategoryUiState.Error -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text(
+                            text = state.message,
+                            color = MaterialTheme.colorScheme.error,
+                            textAlign = TextAlign.Center
+                        )
+                        Button(onClick = { viewModel.retry() }) {
+                            Text("다시 시도")
+                        }
+                    }
+                }
+            }
+
+            is EditCategoryUiState.Success -> {
+                CategoryContent(
+                    categories = state.categories,
+                    selectedCategories = selectedCategories,
+                    onCategoryToggle = { viewModel.toggleCategory(it) },
+                    onCategorySelected = {
+                        // 선택된 카테고리와 해당 태그 정보를 전달
+                        val categoriesWithTags = viewModel.getSelectedCategoriesWithTags()
+                        onEditComplete(categoriesWithTags)
+                    },
+                    onCategoryUpdate = { oldName, newName ->
+                        viewModel.updateCategory(oldName, newName)
+                    },
+                    onBackClick = onBackClick
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CategoryContent(
+    categories: List<CategoryRecommendation>,
+    selectedCategories: Set<String>,
+    onCategoryToggle: (String) -> Unit,
+    onCategorySelected: () -> Unit,
+    onCategoryUpdate: (String, String) -> Unit = { _, _ -> },
+    onBackClick: () -> Unit = {}
+) {
+    var showAddDialog by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
+    var editingCategoryName by remember { mutableStateOf<String?>(null) }
+    // rememberSaveable을 사용하여 커스텀 카테고리 이름 저장 (재구성 시에도 유지)
+    var customCategoryNames by rememberSaveable { mutableStateOf(listOf<String>()) }
+
+    // 커스텀 카테고리 이름을 CategoryRecommendation으로 변환
+    val customCategories = remember(customCategoryNames) {
+        customCategoryNames.map { CategoryRecommendation(categoryName = it, tags = emptyList()) }
+    }
+
+    // Map API categories to UI categories with icons
+    val uiCategories = remember(categories, customCategories) {
+        (categories + customCategories).map { category ->
+            Category(
+                id = category.categoryName,
+                name = category.categoryName,
+                icon = getCategoryIcon(category.categoryName),
+                isAddBtn = false
+            )
+        } + Category(
+            id = "add",
+            name = "",
+            icon = Icons.Default.Add,
+            isAddBtn = true
+        )
+    }
+
+    Column {
+        Text(
+            text = "항목을 길게 눌러 카테고리명을 변경할 수 있습니다",
+            fontSize = 14.sp,
+            color = Color.Gray
+        )
+        // 카테고리 선택 검증 메시지
+        if (selectedCategories.size < 2) {
+            Text(
+                text = "2개 이상 선택해주세요",
+                fontSize = 14.sp,
+                color = Color.Red
+            )
+        } else {
+            Text(
+                text = " ",
+                fontSize = 14.sp,
+                color = Color.Red
+            )
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+
+        val rowCount = (uiCategories.size + 2) / 3
+        // Category Grid
+        Column(
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+        ) {
+            for (rowIndex in 0 until rowCount) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    for (colIndex in 0..2) {
+                        val index = rowIndex * 3 + colIndex
+                        if (index < uiCategories.size) {
+                            val category = uiCategories[index]
+                            CategoryItem(
+                                category = category,
+                                isSelected = selectedCategories.contains(category.id),
+                                onToggle = { onCategoryToggle(category.id) },
+                                onAddClick = { showAddDialog = true },
+                                onLongClick = {
+                                    editingCategoryName = category.id
+                                    showEditDialog = true
+                                },
+                                modifier = Modifier.weight(1f)
+                            )
+                        } else {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Buttons Row (이전, 다음)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // 이전 버튼
+            OutlinedButton(
+                onClick = onBackClick,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(48.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.primary
+                ),
+                border = androidx.compose.foundation.BorderStroke(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.primary
+                ),
+                shape = RoundedCornerShape(100.dp)
+            ) {
+                Text(
+                    text = "이전",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            // 다음 버튼
+            Button(
+                onClick = onCategorySelected,
+                enabled = selectedCategories.size >= 2,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(48.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                ),
+                shape = RoundedCornerShape(100.dp)
+            ) {
+                Text(
+                    text = "다음",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(40.dp))
+    }
+
+    if (showAddDialog) {
+        AddCategoryDialog(
+            onDismiss = { showAddDialog = false },
+            onConfirm = { categoryName ->
+                customCategoryNames = customCategoryNames + categoryName
+                showAddDialog = false
+            }
+        )
+    }
+
+    if (showEditDialog && editingCategoryName != null) {
+        EditCategoryDialog(
+            currentName = editingCategoryName!!,
+            onDismiss = {
+                showEditDialog = false
+                editingCategoryName = null
+            },
+            onConfirm = { newName ->
+                onCategoryUpdate(editingCategoryName!!, newName)
+                showEditDialog = false
+                editingCategoryName = null
+            }
+        )
+    }
+}
+
+@Composable
+private fun CategoryItem(
+    category: Category,
+    isSelected: Boolean,
+    onToggle: () -> Unit,
+    onAddClick: () -> Unit = {},
+    onLongClick: () -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    val backgroundColor = if (isSelected) {
+        Color(0xFFFFF6EA)
+    } else {
+        Color.White
+    }
+
+    val borderColor = if (isSelected) {
+        MaterialTheme.colorScheme.primary
+    } else if (category.isAddBtn) {
+        MaterialTheme.colorScheme.tertiary
+    } else {
+        Color(0xFFE3E3E3)
+    }
+
+    Box(
+        modifier = modifier
+            .aspectRatio(1f)
+            .clip(RoundedCornerShape(10.dp))
+            .background(backgroundColor)
+            .border(
+                width = 1.dp,
+                color = borderColor,
+                shape = RoundedCornerShape(10.dp)
+            )
+            .combinedClickable(
+                onClick = {
+                    if (category.isAddBtn) {
+                        onAddClick()
+                    } else {
+                        onToggle()
+                    }
+                },
+                onLongClick = {
+                    if (!category.isAddBtn) {
+                        onLongClick()
+                    }
+                }
+            )
+            .padding(8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        if (!category.isAddBtn) {
+            Column(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .align(alignment = Alignment.CenterStart)
+                    .padding(start = 8.dp, bottom = 8.dp)
+            ) {
+                Icon(
+                    imageVector = category.icon,
+                    contentDescription = category.name,
+                    modifier = Modifier.size(36.dp),
+                    tint = MaterialTheme.colorScheme.tertiary
+                )
+                Spacer(Modifier.weight(1f))
+                Text(
+                    text = category.name,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.tertiary
+                )
+            }
+        }
+        // 카테고리 추가 버튼
+        else {
+            Icon(
+                imageVector = category.icon,
+                contentDescription = category.name,
+                modifier = Modifier.size(36.dp),
+                tint = MaterialTheme.colorScheme.tertiary
+            )
+        }
+
+        // Checkmark for selected items
+        if (!category.isAddBtn) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .size(20.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.CheckCircle,
+                    contentDescription = "Selected",
+                    tint = if (isSelected) MaterialTheme.colorScheme.primary else Color(
+                        0xFFE3E3E3
+                    ),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AddCategoryDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var text by remember { mutableStateOf("") }
+    val maxLength = 8
+
+    AlertDialog(
+        modifier = Modifier.width(250.dp),
+        containerColor = MaterialTheme.colorScheme.background,
+        onDismissRequest = onDismiss,
+        title = {
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "카테고리 추가",
+                    color = MaterialTheme.colorScheme.tertiary,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        },
+        text = {
+            Column {
+                Spacer(Modifier.height(24.dp))
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = {
+                        if (it.length <= maxLength) text = it
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(
+                            width = 2.dp,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            shape = RoundedCornerShape(24.dp)
+                        ),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color.Transparent,
+                        unfocusedBorderColor = Color.Transparent,
+                    ),
+                    trailingIcon = {
+                        Text(
+                            text = "${text.length}/$maxLength",
+                            fontSize = 14.sp,
+                            color = Color.Gray,
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                    }
+                )
+            }
+        },
+        confirmButton = {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(onClick = onDismiss) {
+                    Text(
+                        "취소",
+                        color = Color.Gray,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
+                TextButton(
+                    onClick = {
+                        if (text.isNotBlank()) {
+                            onConfirm(text)
+                        }
+                    },
+                    enabled = text.isNotBlank()
+                ) {
+                    Text(
+                        "확인",
+                        color = if (text.isNotBlank()) MaterialTheme.colorScheme.tertiary else Color.Gray,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
+            }
+        },
+        dismissButton = null,
+        shape = RoundedCornerShape(16.dp)
+    )
+}
+
+@Composable
+private fun EditCategoryDialog(
+    currentName: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var text by remember { mutableStateOf(currentName) }
+    val maxLength = 8
+
+    AlertDialog(
+        modifier = Modifier.width(250.dp),
+        containerColor = MaterialTheme.colorScheme.background,
+        onDismissRequest = onDismiss,
+        title = {
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "카테고리 수정",
+                    color = MaterialTheme.colorScheme.tertiary,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        },
+        text = {
+            Column {
+                Spacer(Modifier.height(24.dp))
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = {
+                        if (it.length <= maxLength) text = it
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(
+                            width = 2.dp,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            shape = RoundedCornerShape(24.dp)
+                        ),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color.Transparent,
+                        unfocusedBorderColor = Color.Transparent,
+                    ),
+                    trailingIcon = {
+                        Text(
+                            text = "${text.length}/$maxLength",
+                            fontSize = 14.sp,
+                            color = Color.Gray,
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                    }
+                )
+            }
+        },
+        confirmButton = {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(onClick = onDismiss) {
+                    Text(
+                        "취소",
+                        color = Color.Gray,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
+                TextButton(
+                    onClick = {
+                        if (text.isNotBlank() && text != currentName) {
+                            onConfirm(text)
+                        }
+                    },
+                    enabled = text.isNotBlank() && text != currentName
+                ) {
+                    Text(
+                        "확인",
+                        color = if (text.isNotBlank() && text != currentName) MaterialTheme.colorScheme.tertiary else Color.Gray,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
+            }
+        },
+        dismissButton = null,
+        shape = RoundedCornerShape(16.dp)
+    )
 }

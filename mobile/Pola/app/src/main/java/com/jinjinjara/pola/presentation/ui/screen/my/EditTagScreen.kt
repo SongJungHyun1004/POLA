@@ -1,5 +1,6 @@
-package com.jinjinjara.pola.presentation.ui.screen.start
+package com.jinjinjara.pola.presentation.ui.screen.my
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,7 +19,6 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextAlign
@@ -27,19 +27,25 @@ import com.jinjinjara.pola.domain.model.Tag
 import com.jinjinjara.pola.util.ErrorType
 
 @Composable
-fun TagSelectScreen(
+fun EditTagScreen(
     categoriesWithTags: Map<String, List<Tag>> = emptyMap(),
-    onNextClick: () -> Unit = {},
+    onEditComplete: (Map<String, List<String>>, Set<String>) -> Unit = { _, _ -> },
     onBackClick: () -> Unit = {},
-    viewModel: TagSelectViewModel = hiltViewModel()
+    viewModel: EditTagViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // Success 상태 처리
-    LaunchedEffect(uiState) {
-        if (uiState is TagSelectUiState.Success) {
-            onNextClick()
+    // 모든 태그 ID를 초기 선택
+    LaunchedEffect(categoriesWithTags) {
+        if (categoriesWithTags.isNotEmpty()) {
+            val allTagIds = categoriesWithTags.values.flatten().map { it.id }
+            viewModel.initializeSelectedTagIds(allTagIds)
         }
+    }
+
+    // 뒤로가기 처리
+    BackHandler {
+        onBackClick()
     }
 
     Column(
@@ -58,7 +64,7 @@ fun TagSelectScreen(
             // Title
             Text(
                 text = buildAnnotatedString {
-                    append("카테고리에 담고 싶은\n")
+                    append("원하는 ")
                     withStyle(
                         style = SpanStyle(
                             color = MaterialTheme.colorScheme.primary,
@@ -66,7 +72,7 @@ fun TagSelectScreen(
                     ) {
                         append("태그")
                     }
-                    append("를 선택해주세요")
+                    append("를\n선택하거나 해제하세요.")
                 },
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
@@ -76,7 +82,7 @@ fun TagSelectScreen(
 
             // Handle different UI states
             when (val state = uiState) {
-                is TagSelectUiState.Loading -> {
+                is EditTagUiState.Loading -> {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -85,9 +91,9 @@ fun TagSelectScreen(
                     ) {
                         CircularProgressIndicator()
                     }
-                }
+            }
 
-                is TagSelectUiState.Error -> {
+                is EditTagUiState.Error -> {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -117,7 +123,7 @@ fun TagSelectScreen(
                     TagSelectContent(
                         categoriesWithTags = categoriesWithTags,
                         onSubmit = { categories, selectedTags ->
-                            viewModel.submitSelectedTags(categories, selectedTags)
+                            onEditComplete(categories, selectedTags)
                         },
                         onBackClick = onBackClick,
                         viewModel = viewModel
@@ -131,9 +137,9 @@ fun TagSelectScreen(
 @Composable
 private fun TagSelectContent(
     categoriesWithTags: Map<String, List<Tag>>,
-    onSubmit: (Map<String, List<Tag>>, Set<Long>) -> Unit,
+    onSubmit: (Map<String, List<String>>, Set<String>) -> Unit,
     onBackClick: () -> Unit = {},
-    viewModel: TagSelectViewModel = hiltViewModel()
+    viewModel: EditTagViewModel = hiltViewModel()
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
     var currentCategory by remember { mutableStateOf<TagCategory?>(null) }
@@ -201,7 +207,7 @@ private fun TagSelectContent(
             }
         }
 
-        // Buttons Row (이전, 다음)
+        // Buttons Row (이전, 완료)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -228,11 +234,11 @@ private fun TagSelectContent(
                 )
             }
 
-            // 다음 버튼
+            // 완료 버튼
             Button(
                 onClick = {
-                    // ViewModel을 통해 선택된 태그 전송
-                    onSubmit(categoriesWithTags, selectedTagIds)
+                    // 완료 버튼 기능은 비워둠
+                    //onEditComplete(categoriesWithTags, selectedTags)
                 },
                 enabled = allCategoriesMeetRequirement,
                 modifier = Modifier
@@ -244,7 +250,7 @@ private fun TagSelectContent(
                 shape = RoundedCornerShape(100.dp)
             ) {
                 Text(
-                    text = "다음",
+                    text = "완료",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.White
@@ -562,25 +568,3 @@ data class TagCategory(
     val title: String,
     val tags: List<Tag>,
 )
-
-@Preview(showBackground = true)
-@Composable
-fun TagSelectScreenPreview() {
-    MaterialTheme {
-        TagSelectScreen()
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun TagChipPreview() {
-    MaterialTheme {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            TagChip(text = "카페", isSelected = false, onClick = {})
-            TagChip(text = "음식점", isSelected = true, onClick = {})
-        }
-    }
-}

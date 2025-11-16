@@ -7,8 +7,15 @@ data class UserCategory(
     val createdAt: String = "",
     val userEmail: String = ""
 )
+
 data class Category(
     val id: Long,
     val name: String,
     val sort: Int
+)
+
+data class UserCategoryWithTags(
+    val categoryId: Long,
+    val categoryName: String,
+    val tags: List<Tag>
 )
