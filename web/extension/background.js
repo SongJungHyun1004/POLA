@@ -129,6 +129,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true; // 비동기 응답
   }
 
+  // 드래그앤드롭 이미지 업로드
+  if (request.action === 'uploadImageFromDrag') {
+    handleDragDropImageUpload(request, sendResponse);
+    return true; // 비동기 응답
+  }
+
   return true;
 });
 
@@ -919,5 +925,63 @@ async function handleImageUpload(info, tab) {
       '업로드 실패',
       error.message || '이미지 업로드 중 오류가 발생했습니다.'
     );
+  }
+}
+
+/**
+ * 드래그앤드롭 이미지 업로드 처리
+ */
+async function handleDragDropImageUpload(request, sendResponse) {
+  try {
+    console.log('드래그앤드롭 이미지 업로드 시작:', request.imageUrl);
+    
+    // 1. 이미지 URL을 Base64로 변환
+    const response = await fetch(request.imageUrl);
+    const blob = await response.blob();
+    
+    const base64 = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.readAsDataURL(blob);
+    });
+    
+    console.log('이미지 Base64 변환 완료');
+    
+    // 2. 이미지 업로드
+    const uploadResult = await uploadImage(base64, {
+      title: request.pageTitle || '드래그 업로드',
+      url: request.pageUrl
+    });
+    
+    console.log('✅ 드래그앤드롭 업로드 성공:', uploadResult);
+
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icons/icon128.png',
+      title: 'POLA - 이미지 저장 완료',
+      message: '드래그한 이미지가 성공적으로 저장되었습니다.',
+      priority: 2
+    });
+    
+    sendResponse({ 
+      success: true, 
+      data: uploadResult 
+    });
+    
+  } catch (error) {
+    console.error('❌ 드래그앤드롭 업로드 실패:', error);
+
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icons/icon128.png',
+      title: 'POLA - 이미지 저장 실패',
+      message: error.message || '이미지 저장 중 오류가 발생했습니다.',
+      priority: 2
+    });
+    
+    sendResponse({ 
+      success: false, 
+      error: error.message 
+    });
   }
 }
