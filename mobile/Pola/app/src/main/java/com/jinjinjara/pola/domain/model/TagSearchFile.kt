@@ -8,5 +8,6 @@ data class TagSearchFile(
     val context: String,
     val ocrText: String,
     val imageUrl: String,
+    val type: String,
     val createdAt: String
 )

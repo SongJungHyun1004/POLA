@@ -425,6 +425,7 @@ private fun RemindScreenContent(
                         if (frontIndex < imageList.lastIndex - 1 && back2Alpha.value > 0f)
                             RemindPolaCard(
                                 imageUrl = imageList[back2Index].imageUrl,
+                                type = imageList[back2Index].type,
                                 tags = imageList[back2Index].tags,
                                 translationX = back2OffsetX.value,
                                 rotationZ = back2RotationZ.value,
@@ -433,6 +434,7 @@ private fun RemindScreenContent(
                         if (frontIndex < imageList.lastIndex)
                             RemindPolaCard(
                                 imageUrl = imageList[backIndex].imageUrl,
+                                type = imageList[backIndex].type,
                                 tags = imageList[backIndex].tags,
                                 translationX = backOffsetX.value,
                                 rotationZ = backRotationZ.value,
@@ -471,6 +473,7 @@ private fun RemindScreenContent(
                             RemindPolaCard(
                                 onNavigateToContents = { onNavigateToContents(imageList[frontIndex].id) },
                                 imageUrl = imageList[frontIndex].imageUrl,
+                                type = imageList[frontIndex].type,
                                 tags = imageList[frontIndex].tags,
                                 translationX = frontOffsetX.value,
                                 rotationZ = frontRotationZ.value,
@@ -599,6 +602,7 @@ private fun RemindScreenContent(
 private fun RemindPolaCard(
     onNavigateToContents: () -> Unit = {},
     imageUrl: String,
+    type: String,
     tags: List<String>,
     translationX: Float,
     rotationZ: Float,
@@ -608,6 +612,7 @@ private fun RemindPolaCard(
 
     PolaCard(
         imageUrl = imageUrl,
+        type = type,
         textList = tags.map { it.removePrefix("#") },
         textSize = 24.sp,
         textSpacing = 8.dp,
@@ -649,6 +654,7 @@ private fun FrontThenPrevLayer(
     RemindPolaCard(
         onNavigateToContents = { onNavigateToContents(imageList[prevIndex].id) },
         imageUrl = imageList[prevIndex].imageUrl,
+        type = imageList[prevIndex].type,
         tags = imageList[prevIndex].tags,
         translationX = prevOffsetX,
         rotationZ = prevRotationZ,
@@ -657,6 +663,7 @@ private fun FrontThenPrevLayer(
     RemindPolaCard(
         onNavigateToContents = { onNavigateToContents(imageList[frontIndex].id) },
         imageUrl = imageList[frontIndex].imageUrl,
+        type = imageList[frontIndex].type,
         tags = imageList[frontIndex].tags,
         translationX = frontOffsetX,
         rotationZ = frontRotationZ,
@@ -680,6 +687,7 @@ private fun PrevThenFrontLayer(
     RemindPolaCard(
         onNavigateToContents = { onNavigateToContents(imageList[frontIndex].id) },
         imageUrl = imageList[frontIndex].imageUrl,
+        type = imageList[frontIndex].type,
         tags = imageList[frontIndex].tags,
         translationX = frontOffsetX,
         rotationZ = frontRotationZ,
@@ -688,6 +696,7 @@ private fun PrevThenFrontLayer(
     RemindPolaCard(
         onNavigateToContents = { onNavigateToContents(imageList[prevIndex].id) },
         imageUrl = imageList[prevIndex].imageUrl,
+        type = imageList[prevIndex].type,
         tags = imageList[prevIndex].tags,
         translationX = prevOffsetX,
         rotationZ = prevRotationZ,
