@@ -63,7 +63,7 @@ fun CategoryScreen(
     categoryId: Long = -1L,
     onBackClick: () -> Unit = {},
     onNavigateToFavorite: () -> Unit = {},
-    onNavigateToContents : (Long) -> Unit = {},
+    onNavigateToContents : (Long, String?) -> Unit = { _, _ -> },
     navController: NavHostController,
     viewModel: CategoryViewModel = hiltViewModel()
 ) {
@@ -121,7 +121,7 @@ fun CategoryScreen(
     }
     var isMenuExpanded by remember { mutableStateOf(false) }
     var selectedSort by remember { mutableStateOf("최신순") }
-    var viewMode by remember { mutableStateOf(ViewMode.GRID_3) }
+    var viewMode by remember { mutableStateOf(ViewMode.GRID_2) }
 
     val categories = uiState.files
 
@@ -234,7 +234,7 @@ fun CategoryScreen(
                         ItemGrid3View(
                             items = categories,
                             onItemClick = { item ->
-                                onNavigateToContents(item.fileId)
+                                onNavigateToContents(item.fileId, item.imageUrl)
                             },
                             onFavoriteToggle = { }, // 빈 람다 (기능 없음)
                             state = gridState,
@@ -253,7 +253,7 @@ fun CategoryScreen(
                         ItemGrid2View(
                             items = categories,
                             onItemClick = { item ->
-                                onNavigateToContents(item.fileId)
+                                onNavigateToContents(item.fileId, item.imageUrl)
                             },
                             onFavoriteToggle = { }, // 빈 람다 (기능 없음)
                             state = gridState,

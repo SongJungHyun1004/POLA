@@ -142,7 +142,7 @@ fun MainScreen(
                                                 saveState = true
                                             }
                                             launchSingleTop = true
-                                            restoreState = true
+                                            restoreState = item.route != Screen.Home.route
                                         }
                                     },
                                 contentAlignment = Alignment.Center

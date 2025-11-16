@@ -8,6 +8,7 @@ import com.jinjinjara.pola.data.repository.CategoryRepositoryImpl
 import com.jinjinjara.pola.data.repository.ContentRepositoryImpl
 import com.jinjinjara.pola.data.repository.RemindRepositoryImpl
 import com.jinjinjara.pola.data.repository.FavoriteRepositoryImpl
+import com.jinjinjara.pola.data.repository.ReportRepositoryImpl
 import com.jinjinjara.pola.data.repository.SearchRepositoryImpl
 import com.jinjinjara.pola.data.repository.TimelineRepositoryImpl
 import com.jinjinjara.pola.domain.repository.AuthRepository
@@ -18,6 +19,7 @@ import com.jinjinjara.pola.domain.repository.FileUploadRepository
 import com.jinjinjara.pola.domain.repository.HomeRepository
 import com.jinjinjara.pola.domain.repository.RemindRepository
 import com.jinjinjara.pola.domain.repository.FavoriteRepository
+import com.jinjinjara.pola.domain.repository.ReportRepository
 import com.jinjinjara.pola.domain.repository.SearchRepository
 import com.jinjinjara.pola.domain.repository.TimelineRepository
 import dagger.Binds
@@ -116,4 +118,10 @@ abstract class RepositoryModule {
     abstract fun bindChatRepository(
         chatRepositoryImpl: ChatRepositoryImpl
     ): ChatRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindReportRepository(
+        reportRepository: ReportRepositoryImpl
+    ): ReportRepository
 }

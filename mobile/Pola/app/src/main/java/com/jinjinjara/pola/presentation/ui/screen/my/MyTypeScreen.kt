@@ -1,55 +1,55 @@
+// presentation/ui/screen/my/MyTypeScreen.kt
 package com.jinjinjara.pola.presentation.ui.screen.my
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBackIosNew
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.jinjinjara.pola.presentation.ui.screen.home.HomeScreen
-
-data class CollectionType(
-    val period: String,
-    val typeName: String,
-    val description: String,
-    val backgroundColor: Color
-)
+import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
+import com.jinjinjara.pola.R
+import com.jinjinjara.pola.domain.model.Report
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyTypeScreen(
-    userName: String = "OO",
-    onBackClick: () -> Unit = {}
+    onBackClick: () -> Unit = {},
+    myViewModel: MyViewModel = hiltViewModel(),
+    viewModel: MyTypeViewModel = hiltViewModel()
 ) {
-    val collectionTypes = listOf(
-        CollectionType(
-            period = "10월 2주차",
-            typeName = "태그한우물",
-            description = "당신은 관심 분야가\n확고한 사람이에요.",
-            backgroundColor = Color(0xFFE3F2FD)
-        ),
-        CollectionType(
-            period = "10월 1주차",
-            typeName = "스크린샷 장인",
-            description = "당신은 관심 분야가\n확고한 사람이에요.",
-            backgroundColor = Color(0xFFFCE4EC)
-        )
-    )
+    val uiState by viewModel.uiState.collectAsState()
+
+    val userInfoState by myViewModel.userInfoState.collectAsState()
+
+    val userName = when (userInfoState) {
+        is UserInfoUiState.Success -> {
+            (userInfoState as UserInfoUiState.Success).user.displayName
+        }
+
+        else -> "사용자"
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -61,7 +61,8 @@ fun MyTypeScreen(
                     IconButton(onClick = onBackClick) {
                         Icon(
                             imageVector = Icons.Default.ArrowBackIosNew,
-                            contentDescription = "닫기"
+                            contentDescription = "닫기",
+                            tint = MaterialTheme.colorScheme.tertiary
                         )
                     }
                 },
@@ -72,115 +73,311 @@ fun MyTypeScreen(
             )
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            // Title
-            Text(
-                text = buildAnnotatedString {
-                    append("${userName}님의\n")
-                    withStyle(
-                        style = SpanStyle(
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
-                        )
-                    ) {
-                        append("수집 타입은?")
-                    }
-                },
-                color = MaterialTheme.colorScheme.tertiary,
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
-                lineHeight = 36.sp,
-                modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 24.dp)
-            )
+        when (uiState) {
+            is MyTypeUiState.Loading -> {
+                LoadingContent(paddingValues)
+            }
 
-            Spacer(Modifier.height(24.dp))
+            is MyTypeUiState.Success -> {
+                SuccessContent(
+                    paddingValues = paddingValues,
+                    userName = userName,
+                    reports = (uiState as MyTypeUiState.Success).reports
+                )
+            }
 
+            is MyTypeUiState.Error -> {
+                ErrorContent(
+                    paddingValues = paddingValues,
+                    message = (uiState as MyTypeUiState.Error).message,
+                    onRetry = { viewModel.retry() }
+                )
+            }
+
+            else -> {}
+        }
+    }
+}
+
+@Composable
+private fun LoadingContent(paddingValues: PaddingValues) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues),
+        contentAlignment = Alignment.Center
+    ) {
+        CircularProgressIndicator()
+    }
+}
+
+@Composable
+private fun SuccessContent(
+    paddingValues: PaddingValues,
+    userName: String,
+    reports: List<Report>
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+    ) {
+        // Title
+        Text(
+            text = buildAnnotatedString {
+                append("${userName}님의\n")
+                withStyle(
+                    style = SpanStyle(
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                ) {
+                    append("수집 타입")
+                }
+                append("은?")
+            },
+            color = MaterialTheme.colorScheme.tertiary,
+            fontSize = 32.sp,
+            fontWeight = FontWeight.Bold,
+            lineHeight = 36.sp,
+            modifier = Modifier.padding(top = 16.dp, bottom = 48.dp, start = 24.dp)
+        )
+
+        if (reports.isEmpty()) {
+            // Empty state
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.empty),
+                        contentDescription = "No content",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 32.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "아직 생성된 리포트가 없습니다.",
+                        fontSize = 16.sp,
+                        color = Color.Gray,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        } else {
             // Collection Type Cards
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 contentPadding = PaddingValues(bottom = 24.dp)
             ) {
                 item { Spacer(Modifier.width(8.dp)) }
-                items(collectionTypes) { type ->
-                    CollectionTypeCard(type = type)
+
+//                repeat(10) {
+
+                items(reports) { report ->
+                    ReportCard(report = report)
                 }
+//                }
+                item { Spacer(Modifier.width(8.dp)) }
             }
         }
     }
 }
 
 @Composable
-fun CollectionTypeCard(
-    type: CollectionType,
-    modifier: Modifier = Modifier
+private fun ErrorContent(
+    paddingValues: PaddingValues,
+    message: String,
+    onRetry: () -> Unit
 ) {
-    Card(
-        modifier = modifier
-            .width(280.dp)
-            .height(420.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = type.backgroundColor
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues),
+        contentAlignment = Alignment.Center
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(20.dp),
-            horizontalAlignment = Alignment.Start
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.padding(horizontal = 32.dp)
         ) {
-            // Period label
             Text(
-                text = type.period,
-                fontSize = 14.sp,
-                color = Color.Gray,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-
-            // Type name
-            Text(
-                text = type.typeName,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 32.dp)
-            )
-
-            // Icon
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = null,
-                    modifier = Modifier.size(120.dp),
-                    tint = Color.Black
-                )
-            }
-
-            // Description
-            Text(
-                text = type.description,
+                text = message,
                 fontSize = 16.sp,
-                color = Color.Black,
-                lineHeight = 24.sp,
-                modifier = Modifier.padding(top = 32.dp)
+                color = Color.Gray,
+                textAlign = TextAlign.Center
             )
+            Button(onClick = onRetry) {
+                Text("다시 시도")
+            }
         }
     }
 }
 
-@Preview(showBackground = true)
 @Composable
-fun MyTypeScreenPreview() {
-    MaterialTheme {
-        MyTypeScreen()
+fun ReportCard(
+    report: Report,
+    modifier: Modifier = Modifier
+) {
+    val backgroundColor = getBackgroundColorForType(report.reportType)
+    val periodText = formatReportWeek(report.reportWeek)
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize(),
+
+        horizontalAlignment = Alignment.Start
+    ) {
+        // Period label
+        Text(
+            text = periodText,
+            fontSize = 14.sp,
+            color = Color.Gray,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        Card(
+            modifier = modifier
+                .width(280.dp)
+                .height(396.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = backgroundColor
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+            ) {
+                if (!report.imageUrl.isNullOrEmpty()) {
+                    AsyncImage(
+                        model = report.imageUrl,
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.matchParentSize()
+                    )
+                }
+
+                // 임시 이미지 테스트
+//                Image(
+//                    painter = painterResource(id = R.drawable.temp_type7),
+//                    contentDescription = null,
+//                    contentScale = ContentScale.Fit,
+//                    modifier = Modifier.matchParentSize()
+//                )
+
+                Column(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    // Type name
+                    Box(Modifier.padding(20.dp)) {
+                        repeat(5) {
+                            Text(
+                                text = report.title,
+                                fontSize = 32.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Transparent,
+                                style = TextStyle(
+                                    shadow = Shadow(
+                                        color = Color.White,
+                                        offset = Offset(0f, 0f),
+                                        blurRadius = 50f
+                                    )
+                                )
+                            )
+                        }
+
+                        Text(
+                            text = report.title,
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
+                        )
+                    }
+
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    // Description
+                    Box(
+                        modifier = Modifier.padding(20.dp)
+                    ) {
+
+                        // Glow layers (문단 전체에 퍼짐)
+                        val glowOffsets = listOf(
+                            Offset(0f, 0f),
+                            Offset(1f, 1f),
+                            Offset(-1f, -1f),
+                            Offset(2f, 2f),
+                            Offset(-2f, -2f)
+                        )
+
+                        glowOffsets.forEach { off ->
+                            Text(
+                                text = report.description,
+                                fontSize = 18.sp,
+                                lineHeight = 24.sp,
+                                color = Color.Transparent,
+                                style = TextStyle(
+                                    shadow = Shadow(
+                                        color = Color.White,
+                                        offset = off,
+                                        blurRadius = 30f   // blurRadius 자체는 작게
+                                    )
+                                )
+                            )
+                        }
+
+                        // 실제 텍스트 레이어
+                        Text(
+                            text = report.description,
+                            fontSize = 16.sp,
+                            lineHeight = 24.sp,
+                            color = Color.Black
+                        )
+                    }
+
+                }
+            }
+
+        }
+    }
+}
+
+// Helper Functions
+private fun getBackgroundColorForType(reportType: String): Color {
+    return when (reportType) {
+        "SCREENSHOT_MASTER" -> Color(0xFFE3F2FD)
+        "TAG_SCHOLAR" -> Color(0xFFFCE4EC)
+        "BOOKMARK_HOARDER" -> Color(0xFFF3E5F5)
+        "NIGHT_OWL" -> Color(0xFFE8F5E9)
+        "VARIETY_SEEKER" -> Color(0xFFFFF9C4)
+        else -> Color(0xFFF5F5F5)
+    }
+}
+
+private fun formatReportWeek(reportWeek: String): String {
+    // "2025-W03" -> "1월 3주차"
+    return try {
+        val parts = reportWeek.split("-W")
+        if (parts.size == 2) {
+            val week = parts[1].toInt()
+
+            // 주차를 월로 변환 (대략적인 계산)
+            val month = ((week - 1) / 4) + 1
+            val weekOfMonth = ((week - 1) % 4) + 1
+
+            "${month}월 ${weekOfMonth}주차"
+        } else {
+            reportWeek
+        }
+    } catch (e: Exception) {
+        reportWeek
     }
 }

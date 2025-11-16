@@ -260,8 +260,8 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
                 onNavigateToFavorite = {
                     navController.navigate(Screen.Favorite.route)
                 },
-                onNavigateToContents = { contentId ->
-                    navController.navigate(Screen.Contents.createRoute(contentId))
+                onNavigateToContents = { contentId, imageUrl ->
+                    navController.navigate(Screen.Contents.createRoute(contentId, imageUrl))
                 }
             )
         }
@@ -310,13 +310,22 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
         composable(
             route = Screen.Contents.route,
             arguments = listOf(
-                navArgument("contentId") { type = NavType.LongType }
+                navArgument("contentId") { type = NavType.LongType },
+                navArgument("imageUrl") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
             )
         ) { backStackEntry ->
             val contentId = backStackEntry.arguments?.getLong("contentId") ?: -1L
+            val previewImageUrl = backStackEntry.arguments?.getString("imageUrl")?.let {
+                java.net.URLDecoder.decode(it, "UTF-8")
+            }
             ContentsScreen(
                 navController = navController,
                 fileId = contentId,
+                previewImageUrl = previewImageUrl,
                 onBackClick = { navController.popBackStack() },
                 onShareClick = { /* 내부 공유 기능 구현 */ },
                 onEditClick = {
@@ -422,7 +431,7 @@ fun NavGraphBuilder.myTabGraph(navController: NavHostController) {
 
         composable(Screen.MyType.route) {
             MyTypeScreen(
-
+                onBackClick = { navController.popBackStack() },
             )
         }
 

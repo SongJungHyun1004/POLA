@@ -59,6 +59,7 @@ import kotlin.time.Duration
 @Composable
 fun ContentsScreen(
     fileId: Long,
+    previewImageUrl: String? = null,
     onBackClick: () -> Unit = {},
     onShareClick: () -> Unit = {},
     onEditClick: () -> Unit = {},
@@ -143,6 +144,7 @@ fun ContentsScreen(
             is ContentsUiState.Success -> {
                 ContentsScreenContent(
                     fileDetail = state.fileDetail,
+                    previewImageUrl = previewImageUrl,
                     isBookmarked = isBookmarked,
                     showMenu = showMenu,
                     isExpanded = isExpanded,
@@ -370,6 +372,7 @@ fun ContentsScreen(
 @Composable
 private fun ContentsScreenContent(
     fileDetail: FileDetail,
+    previewImageUrl: String? = null,
     isBookmarked: Boolean,
     showMenu: Boolean,
     isExpanded: Boolean,
@@ -588,13 +591,13 @@ private fun ContentsScreenContent(
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 32.dp)
             ) {
+                Spacer(Modifier.height(8.dp))
                 val createdAtMillis = fileDetail.createdAt.atZone(java.time.ZoneId.systemDefault())
                     .toInstant().toEpochMilli()
                 val timeAgo = getTimeAgo(createdAtMillis)
                 // 메인 콘텐츠 카드
                 PolaCard(
                     modifier = Modifier
-                        .shadow(elevation = 8.dp)
                         .clickable { onImageClick() },
                     ratio = 0.7239f,
                     imageRatio = 0.7747f,
@@ -615,6 +618,7 @@ private fun ContentsScreenContent(
                     onFavoriteClick = { onBookmarkToggle() },
                     // item 받아서 넣기
                     imageUrl = fileDetail.src,
+                    placeholderImageUrl = previewImageUrl,
                     type = fileDetail.type
                 )
 
@@ -624,25 +628,24 @@ private fun ContentsScreenContent(
                 // item의 해시 태그 값 불러오기
                 val hashtags = fileDetail.tags
 
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                    maxLines = if (isExpanded) Int.MAX_VALUE else 1,
-                    overflow = FlowRowOverflow.Clip
-                ) {
-                    hashtags.forEach { tag ->
-                        TagChip(tag.name)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // 접기/펼치기 버튼
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
                 ) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.weight(1f),
+                        maxLines = if (isExpanded) Int.MAX_VALUE else 1,
+                        overflow = FlowRowOverflow.Clip
+                    ) {
+                        hashtags.forEach { tag ->
+                            TagChip(tag.name)
+                        }
+                    }
+
+                    // 접기/펼치기 버튼
                     Row(
                         modifier = Modifier
                             .clickable(
@@ -675,9 +678,7 @@ private fun ContentsScreenContent(
                     lineHeight = 20.sp,
                     color = MaterialTheme.colorScheme.tertiary
                 )
-
             }
-
         }
         // 전체 화면 이미지 뷰어
         if (showFullImage) {
@@ -709,7 +710,7 @@ private fun ContentsScreenContent(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     // 이미지 파일이면 이미지 표시
-                    if (fileDetail.type?.startsWith("image") == true && !fileDetail.src.isNullOrEmpty()) {
+                    if (fileDetail.type?.startsWith("image") == true && (!fileDetail.src.isNullOrEmpty() || !previewImageUrl.isNullOrEmpty())) {
                         AsyncImage(
                             model = fileDetail.src,
                             contentDescription = "전체 화면 이미지",
@@ -742,7 +743,8 @@ private fun ContentsScreenContent(
                                 color = Color.White,
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .padding(16.dp)
+                                    .verticalScroll(rememberScrollState())
+                                    .padding(horizontal = 32.dp)
                             )
                         }
                     }

@@ -46,7 +46,8 @@ fun MyScreen(
     onNavigateToMyType: () -> Unit = {},
     onNavigateToEditCategory: () -> Unit = {},
     onNavigateToTermsOfService: () -> Unit = {},
-    viewModel: MyViewModel = hiltViewModel()
+    viewModel: MyViewModel = hiltViewModel(),
+    myTypeViewModel: MyTypeViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val activity = context as? ComponentActivity
@@ -54,6 +55,7 @@ fun MyScreen(
     val uiState by viewModel.uiState.collectAsState()
     val userInfoState by viewModel.userInfoState.collectAsState()
     var showLogoutDialog by remember { mutableStateOf(false) }
+    val latestReportType by myTypeViewModel.latestReportType.collectAsState()
 
 
     Scaffold(
@@ -144,14 +146,14 @@ fun MyScreen(
                     MenuItemRow(
                         icon = Icons.Default.Bookmark,
                         title = "내 타입",
-                        subtitle = "태그 한 우물",
+                        subtitle = latestReportType ?: "",
                         onClick = onNavigateToMyType
                     )
 
                     // 즐거찾기
                     MenuItemRow(
                         icon = Icons.Default.Star,
-                        title = "즐거찾기",
+                        title = "즐겨찾기",
                         onClick = onNavigateToFavorite
                     )
                 }
@@ -210,6 +212,7 @@ fun MyScreen(
             title = {
                 Text(
                     text = "로그아웃",
+                    color = MaterialTheme.colorScheme.tertiary,
                     fontWeight = FontWeight.Bold,
                     fontSize = 20.sp
                 )
@@ -217,6 +220,7 @@ fun MyScreen(
             text = {
                 Text(
                     text = "정말 로그아웃 하시겠습니까?",
+                    color = MaterialTheme.colorScheme.tertiary,
                     fontSize = 16.sp
                 )
             },
