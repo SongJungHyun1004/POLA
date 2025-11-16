@@ -289,7 +289,7 @@ document.addEventListener('dragstart', (e) => {
   if (e.target.tagName === 'IMG') {
     draggedImageSrc = e.target.src;
     console.log('이미지 드래그 시작:', draggedImageSrc);
-    
+
     // 드롭존 다이얼로그 표시
     showDropZoneDialog();
   }
@@ -314,7 +314,7 @@ function showDropZoneDialog() {
   if (dropZoneDialog) {
     hideDropZoneDialog();
   }
-  
+
   // 다이얼로그 컨테이너
   dropZoneDialog = document.createElement('div');
   dropZoneDialog.id = 'pola-dropzone-dialog';
@@ -331,7 +331,7 @@ function showDropZoneDialog() {
     justify-content: center;
     pointer-events: none;
   `;
-  
+
   // 드롭존 박스
   const dropZone = document.createElement('div');
   dropZone.id = 'pola-dropzone';
@@ -349,7 +349,7 @@ function showDropZoneDialog() {
     pointer-events: auto;
     transition: all 0.2s ease;
   `;
-  
+
   // 아이콘
   const icon = document.createElement('div');
   icon.innerHTML = `
@@ -359,7 +359,7 @@ function showDropZoneDialog() {
       <line x1="12" y1="3" x2="12" y2="15"></line>
     </svg>
   `;
-  
+
   // 텍스트
   const text = document.createElement('div');
   text.style.cssText = `
@@ -369,7 +369,7 @@ function showDropZoneDialog() {
     color: #333;
   `;
   text.textContent = 'POLA에 이미지 저장하기';
-  
+
   const subText = document.createElement('div');
   subText.style.cssText = `
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -377,13 +377,13 @@ function showDropZoneDialog() {
     color: #666;
   `;
   subText.textContent = '여기에 이미지를 드롭하세요';
-  
+
   dropZone.appendChild(icon);
   dropZone.appendChild(text);
   dropZone.appendChild(subText);
   dropZoneDialog.appendChild(dropZone);
   document.body.appendChild(dropZoneDialog);
-  
+
   // 드롭존 이벤트
   dropZone.addEventListener('dragover', (e) => {
     e.preventDefault();
@@ -392,7 +392,7 @@ function showDropZoneDialog() {
     dropZone.style.borderColor = '#8B6340';
     dropZone.style.transform = 'scale(1.05)';
   });
-  
+
   dropZone.addEventListener('dragleave', (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -400,13 +400,13 @@ function showDropZoneDialog() {
     dropZone.style.borderColor = '#B0804C';
     dropZone.style.transform = 'scale(1)';
   });
-  
+
   dropZone.addEventListener('drop', async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     console.log('이미지 드롭됨:', draggedImageSrc);
-    
+
     // 로딩 상태로 변경
     text.textContent = '업로드 중...';
     subText.textContent = '잠시만 기다려주세요';
@@ -419,15 +419,46 @@ function showDropZoneDialog() {
         }
       </style>
     `;
-    
+
     // 백그라운드로 업로드 요청
     try {
+      console.log('🔍 Step 1: Extension context 체크');
+      console.log('chrome.runtime.id:', chrome.runtime?.id);
+      if (!chrome.runtime?.id) {
+        throw new Error('확장 프로그램이 다시 로드되었습니다. 페이지를 새로고침해주세요.');
+      }
+      console.log('🔍 Step 2: 메시지 전송 준비');
+      console.log('드래그된 이미지 URL:', draggedImageSrc);
+      console.log('페이지 URL:', window.location.href);
+      console.log('페이지 제목:', document.title);
+
+      console.log('📤 Step 3: Background로 메시지 전송 중...');
       chrome.runtime.sendMessage({
         action: 'uploadImageFromDrag',
         imageUrl: draggedImageSrc,
         pageUrl: window.location.href,
         pageTitle: document.title
       }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.log('📨 Step 4: Background 응답 수신');
+          console.log('Response:', response);
+          console.log('Runtime Error:', chrome.runtime.lastError);
+          console.error('Runtime 에러:', chrome.runtime.lastError);
+          text.textContent = '❌ 업로드 실패';
+          subText.textContent = '확장 프로그램을 확인해주세요';
+          icon.innerHTML = `
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#f44336" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+        `;
+
+          setTimeout(() => {
+            hideDropZoneDialog();
+          }, 3000);
+          return;
+        }
         if (response && response.success) {
           // 성공
           text.textContent = '✅ 업로드 완료!';
@@ -438,7 +469,7 @@ function showDropZoneDialog() {
               <polyline points="22 4 12 14.01 9 11.01"></polyline>
             </svg>
           `;
-          
+
           setTimeout(() => {
             hideDropZoneDialog();
           }, 2000);
@@ -446,7 +477,14 @@ function showDropZoneDialog() {
           // 실패
           text.textContent = '❌ 업로드 실패';
           subText.textContent = response?.error || '다시 시도해주세요';
-          
+          icon.innerHTML = `
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#f44336" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+        `;
+
           setTimeout(() => {
             hideDropZoneDialog();
           }, 2000);
@@ -456,7 +494,14 @@ function showDropZoneDialog() {
       console.error('업로드 오류:', error);
       text.textContent = '❌ 업로드 실패';
       subText.textContent = error.message;
-      
+      icon.innerHTML = `
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#f44336" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+    `;
+
       setTimeout(() => {
         hideDropZoneDialog();
       }, 2000);

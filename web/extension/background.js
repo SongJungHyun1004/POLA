@@ -7,13 +7,13 @@ const API_BASE_URL = CONFIG.API_BASE_URL;
 // 확장 프로그램 설치 시 실행
 chrome.runtime.onInstalled.addListener(async () => {
   console.log('확장 프로그램이 설치되었습니다.');
-  
+
   // 컨텍스트 메뉴 생성
   createContextMenus();
-  
+
   // 자동 로그인 시도
   const loginResult = await autoLogin();
-  
+
   if (loginResult.isAuthenticated) {
     console.log('자동 로그인 성공:', loginResult.user);
   } else if (loginResult.needLogin) {
@@ -24,10 +24,10 @@ chrome.runtime.onInstalled.addListener(async () => {
 // 확장 프로그램 시작 시 (브라우저 재시작 등)
 chrome.runtime.onStartup.addListener(async () => {
   console.log('확장 프로그램 시작됨');
-  
+
   // 자동 로그인 시도
   const loginResult = await autoLogin();
-  
+
   if (loginResult.isAuthenticated) {
     console.log('자동 로그인 성공:', loginResult.user);
   } else if (loginResult.needLogin) {
@@ -75,7 +75,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
   if (info.menuItemId === "captureScreen") {
     await startAreaCaptureWithInjection(tab);
-  } else if (info.menuItemId === "uploadImage") { 
+  } else if (info.menuItemId === "uploadImage") {
     await handleImageUpload(info, tab);
   } else if (info.menuItemId === "copyText") {
     await handleTextCapture(info, tab);
@@ -86,7 +86,12 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 // 메시지 리스너
 // ============================================
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log('메시지 수신:', request);
+  console.log('=====================================');
+  console.log('📩 Background 메시지 리스너 실행됨');
+  console.log('Action:', request.action);
+  console.log('Request 전체:', request);
+  console.log('Sender:', sender);
+  console.log('=====================================');
 
   // 로그인 요청
   if (request.action === 'login') {
@@ -800,7 +805,7 @@ async function triggerPostProcess(fileId, accessToken) {
 async function handleImageUpload(info, tab) {
   try {
     const imageUrl = info.srcUrl;
-    
+
     if (!imageUrl) {
       throw new Error('이미지 URL을 찾을 수 없습니다.');
     }
@@ -811,17 +816,17 @@ async function handleImageUpload(info, tab) {
     // 1. 이미지 다운로드
     console.log('1단계: 이미지 다운로드 중...');
     const imageResponse = await fetch(imageUrl);
-    
+
     if (!imageResponse.ok) {
       throw new Error('이미지를 가져올 수 없습니다.');
     }
 
     const blob = await imageResponse.blob();
     const fileSize = blob.size;
-    
+
     // 이미지 타입 확인
     const contentType = blob.type || 'image/png';
-    
+
     console.log('✅ 이미지 다운로드 완료, 크기:', fileSize, 'bytes, 타입:', contentType);
 
     // 토큰 가져오기
@@ -934,25 +939,37 @@ async function handleImageUpload(info, tab) {
 async function handleDragDropImageUpload(request, sendResponse) {
   try {
     console.log('드래그앤드롭 이미지 업로드 시작:', request.imageUrl);
-    
+
     // 1. 이미지 URL을 Base64로 변환
     const response = await fetch(request.imageUrl);
     const blob = await response.blob();
-    
+
+    // 🔍 파일 타입 확인
+    console.log('=== 이미지 정보 ===');
+    console.log('파일 타입:', blob.type);
+    console.log('파일 크기:', blob.size, 'bytes');
+    console.log('원본 URL:', request.imageUrl);
+    console.log('==================');
+
     const base64 = await new Promise((resolve) => {
       const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result);
+      reader.onloadend = () => {
+        // Base64 데이터의 MIME 타입도 확인
+        const mimeType = reader.result.split(';')[0].split(':')[1];
+        console.log('Base64 MIME Type:', mimeType);
+        resolve(reader.result);
+      };
       reader.readAsDataURL(blob);
     });
-    
+
     console.log('이미지 Base64 변환 완료');
-    
+
     // 2. 이미지 업로드
     const uploadResult = await uploadImage(base64, {
       title: request.pageTitle || '드래그 업로드',
       url: request.pageUrl
     });
-    
+
     console.log('✅ 드래그앤드롭 업로드 성공:', uploadResult);
 
     chrome.notifications.create({
@@ -962,12 +979,12 @@ async function handleDragDropImageUpload(request, sendResponse) {
       message: '드래그한 이미지가 성공적으로 저장되었습니다.',
       priority: 2
     });
-    
-    sendResponse({ 
-      success: true, 
-      data: uploadResult 
+
+    sendResponse({
+      success: true,
+      data: uploadResult
     });
-    
+
   } catch (error) {
     console.error('❌ 드래그앤드롭 업로드 실패:', error);
 
@@ -978,10 +995,10 @@ async function handleDragDropImageUpload(request, sendResponse) {
       message: error.message || '이미지 저장 중 오류가 발생했습니다.',
       priority: 2
     });
-    
-    sendResponse({ 
-      success: false, 
-      error: error.message 
+
+    sendResponse({
+      success: false,
+      error: error.message
     });
   }
 }
