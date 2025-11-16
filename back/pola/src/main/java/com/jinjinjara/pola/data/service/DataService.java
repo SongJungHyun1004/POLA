@@ -76,8 +76,55 @@ public class DataService {
             return cached;
         }
 
-        log.debug("[Remind] Redis miss for userId={}, returning empty list", userId);
-        return List.of();
+        log.debug("[Remind] Redis miss for userId={}, rebuilding...", userId);
+
+        List<DataResponse> fresh = buildRemindFiles(userId);
+
+        remindCacheRepository.saveRemindFiles(userId, fresh);
+
+        return fresh;
+    }
+
+    @Transactional(readOnly = true)
+    public List<DataResponse> buildRemindFiles(Long userId) {
+
+        List<File> files = fileRepository.findLeastViewedFiles(
+                userId,
+                PageRequest.of(0, 30)
+        );
+
+        if (files.isEmpty()) return List.of();
+
+        Map<Long, S3Service.FileMeta> metaMap = files.stream()
+                .collect(Collectors.toMap(
+                        File::getId,
+                        f -> new S3Service.FileMeta(f.getSrc(), f.getType())
+                ));
+
+        Map<Long, String> previewUrls = s3Service.generatePreviewUrls(metaMap);
+
+        List<Long> fileIds = files.stream().map(File::getId).toList();
+
+        List<FileTag> fileTags = fileTagRepository.findAllByFileIds(fileIds);
+
+        Map<Long, List<String>> tagMap = fileTags.stream()
+                .collect(Collectors.groupingBy(
+                        ft -> ft.getFile().getId(),
+                        Collectors.mapping(ft -> ft.getTag().getTagName(), Collectors.toList())
+                ));
+
+        return files.stream()
+                .map(file -> DataResponse.builder()
+                        .id(file.getId())
+                        .src(previewUrls.get(file.getId()))
+                        .type(file.getType())
+                        .context(file.getContext())
+                        .ocrText(file.getOcrText())
+                        .createdAt(file.getCreatedAt())
+                        .favorite(file.getFavorite())
+                        .tags(tagMap.getOrDefault(file.getId(), List.of()))
+                        .build())
+                .toList();
     }
 
     @Transactional

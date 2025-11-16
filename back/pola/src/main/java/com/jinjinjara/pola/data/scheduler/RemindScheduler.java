@@ -36,7 +36,7 @@ public class RemindScheduler {
     // ----------------------------
     // 매 시간 08분마다 실행
     // ----------------------------
-    @Scheduled(cron = "0 50 * * * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "* * 03 * * *", zone = "Asia/Seoul")
     @Transactional
     public void updateAllUsersRemindFiles() {
         log.info("[Scheduler] Remind files update started");
@@ -61,7 +61,6 @@ public class RemindScheduler {
     @Transactional(readOnly = true)
     public List<DataResponse> buildRemindFiles(Long userId) {
 
-        // ★ 7일 조건 제거 → 조회수 낮은 파일 30개 선정
         List<File> files = fileRepository.findLeastViewedFiles(
                 userId,
                 PageRequest.of(0, 30)
