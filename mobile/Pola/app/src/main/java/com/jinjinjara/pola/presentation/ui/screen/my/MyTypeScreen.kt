@@ -178,12 +178,12 @@ private fun SuccessContent(
             ) {
                 item { Spacer(Modifier.width(8.dp)) }
 
-                repeat(10) {
+//                repeat(10) {
 
-                    items(reports) { report ->
-                        ReportCard(report = report)
-                    }
+                items(reports) { report ->
+                    ReportCard(report = report)
                 }
+//                }
                 item { Spacer(Modifier.width(8.dp)) }
             }
         }

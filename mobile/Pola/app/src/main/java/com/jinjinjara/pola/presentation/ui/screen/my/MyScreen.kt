@@ -212,6 +212,7 @@ fun MyScreen(
             title = {
                 Text(
                     text = "로그아웃",
+                    color = MaterialTheme.colorScheme.tertiary,
                     fontWeight = FontWeight.Bold,
                     fontSize = 20.sp
                 )
@@ -219,6 +220,7 @@ fun MyScreen(
             text = {
                 Text(
                     text = "정말 로그아웃 하시겠습니까?",
+                    color = MaterialTheme.colorScheme.tertiary,
                     fontSize = 16.sp
                 )
             },
