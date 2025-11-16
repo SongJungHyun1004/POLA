@@ -33,9 +33,7 @@ public class RemindScheduler {
     private final RemindCacheRepository remindCacheRepository;
     private final UserRepository userRepository;
 
-    // ----------------------------
-    // 매 시간 08분마다 실행
-    // ----------------------------
+
     @Scheduled(cron = "* * 03 * * *", zone = "Asia/Seoul")
     @Transactional
     public void updateAllUsersRemindFiles() {
@@ -75,7 +73,7 @@ public class RemindScheduler {
                         f -> new S3Service.FileMeta(f.getSrc(), f.getType())
                 ));
 
-        Map<Long, String> previewUrls = s3Service.generatePreviewUrls(metaMap);
+        Map<Long, String> previewUrls = s3Service.generatePreviewUrlsLongTTL(metaMap);
 
         // 파일별 태그 조회
         List<Long> fileIds = files.stream().map(File::getId).toList();
