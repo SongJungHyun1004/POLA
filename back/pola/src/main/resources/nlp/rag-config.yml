@@ -2,16 +2,16 @@ rag:
   similarity:
     min: 0.2
     keepRatio: 0.8
-    backoff: [0.95, 0.9, 0.85, 0.8, 0.75]
+    backoff: [0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6]
 
     perType:
       QA:
-        min: 0.3
-        keepRatio: 0.85
-        backoff: [0.95, 0.9, 0.85, 0.8, 0.75]
+        min: 0.2
+        keepRatio: 0.80
+        backoff: [0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6]
 
       COMPARISON:
-        min: 0.25
+        min: 0.15
         keepRatio: 0.8
         backoff: [0.9, 0.8, 0.7]
 
