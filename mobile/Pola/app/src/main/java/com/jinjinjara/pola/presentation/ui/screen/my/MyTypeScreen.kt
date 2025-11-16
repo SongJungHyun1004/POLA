@@ -315,7 +315,12 @@ fun ReportCard(
                             Offset(1f, 1f),
                             Offset(-1f, -1f),
                             Offset(2f, 2f),
-                            Offset(-2f, -2f)
+                            Offset(-2f, -2f),
+                            Offset(0f, 0f),
+                            Offset(1f, 1f),
+                            Offset(-1f, -1f),
+                            Offset(2f, 2f),
+                            Offset(-2f, -2f),
                         )
 
                         glowOffsets.forEach { off ->
@@ -328,7 +333,7 @@ fun ReportCard(
                                     shadow = Shadow(
                                         color = Color.White,
                                         offset = off,
-                                        blurRadius = 30f   // blurRadius 자체는 작게
+                                        blurRadius = 50f   // blurRadius 자체는 작게
                                     )
                                 )
                             )
