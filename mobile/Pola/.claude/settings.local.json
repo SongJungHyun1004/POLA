@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(gradlew.bat :app:compileDebugKotlin:*)"
+      "Bash(gradlew.bat :app:compileDebugKotlin:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []

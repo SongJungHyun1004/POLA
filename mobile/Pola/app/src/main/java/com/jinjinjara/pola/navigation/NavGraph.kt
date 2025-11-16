@@ -4,6 +4,9 @@ import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
@@ -34,6 +37,7 @@ import com.jinjinjara.pola.presentation.ui.screen.home.HomeScreen
 import com.jinjinjara.pola.presentation.ui.screen.my.EditCategoryScreen
 import com.jinjinjara.pola.presentation.ui.screen.my.EditCategoryViewModel
 import com.jinjinjara.pola.presentation.ui.screen.my.EditTagScreen
+import com.jinjinjara.pola.presentation.ui.screen.my.EditTagUiState
 import com.jinjinjara.pola.presentation.ui.screen.my.EditTagViewModel
 import com.jinjinjara.pola.presentation.ui.screen.my.MyScreen
 import com.jinjinjara.pola.presentation.ui.screen.my.MyTypeScreen
@@ -433,13 +437,31 @@ fun NavGraphBuilder.myTabGraph(navController: NavHostController) {
             }
             val sharedCategoryViewModel: EditCategoryViewModel = hiltViewModel(myTabBackStackEntry)
 
+            // EditTagScreen에서 뒤로가기한 경우가 아니면 항상 서버에서 최신 데이터 로드
+            val previousRoute = navController.previousBackStackEntry?.destination?.route
+            LaunchedEffect(Unit) {
+                if (previousRoute != Screen.EditTag.route) {
+                    sharedCategoryViewModel.loadUserCategoriesWithTags()
+                }
+            }
+
             EditCategoryScreen(
                 viewModel = sharedCategoryViewModel,
                 onEditComplete = { categoriesWithTags ->
-                    // 선택된 카테고리 정보를 저장
+                    // DB 전체 상태 (초기 상태 비교용)
                     navController.currentBackStackEntry?.savedStateHandle?.set(
-                        "categoriesWithTags",
+                        "initialCategoriesWithTags",
+                        sharedCategoryViewModel.getAllCategoriesWithTags()
+                    )
+                    // 선택된 카테고리 정보 (UI 표시용)
+                    navController.currentBackStackEntry?.savedStateHandle?.set(
+                        "selectedCategoriesWithTags",
                         categoriesWithTags
+                    )
+                    // 카테고리 ID 맵
+                    navController.currentBackStackEntry?.savedStateHandle?.set(
+                        "categoryIdMap",
+                        sharedCategoryViewModel.getCategoryIdMap()
                     )
                     // 태그 편집 화면으로 이동
                     navController.navigate(Screen.EditTag.route)
@@ -456,18 +478,54 @@ fun NavGraphBuilder.myTabGraph(navController: NavHostController) {
                 navController.getBackStackEntry(NavGraphs.MY_TAB)
             }
             val sharedTagViewModel: EditTagViewModel = hiltViewModel(myTabBackStackEntry)
+            val sharedCategoryViewModel: EditCategoryViewModel = hiltViewModel(myTabBackStackEntry)
 
-            // 이전 화면에서 전달받은 선택된 카테고리 정보
-            val categoriesWithTags = navController.previousBackStackEntry
+            // DB에서 로드된 전체 카테고리 정보 (초기 상태 비교용)
+            val initialCategoriesWithTags = navController.previousBackStackEntry
                 ?.savedStateHandle
-                ?.get<Map<String, List<Tag>>>("categoriesWithTags")
+                ?.get<Map<String, List<Tag>>>("initialCategoriesWithTags")
                 ?: emptyMap()
 
+            // 선택된 카테고리 정보 (UI 표시용)
+            val selectedCategoriesWithTags = navController.previousBackStackEntry
+                ?.savedStateHandle
+                ?.get<Map<String, List<Tag>>>("selectedCategoriesWithTags")
+                ?: emptyMap()
+
+            // 카테고리 ID 맵
+            val categoryIdMap = navController.previousBackStackEntry
+                ?.savedStateHandle
+                ?.get<Map<String, Long>>("categoryIdMap")
+                ?: emptyMap()
+
+            // 초기 상태 설정
+            LaunchedEffect(initialCategoriesWithTags, selectedCategoriesWithTags, categoryIdMap) {
+                if (initialCategoriesWithTags.isNotEmpty()) {
+                    sharedTagViewModel.initializeState(initialCategoriesWithTags, categoryIdMap)
+                }
+            }
+
+            // Success 상태 감지 및 상태 초기화 후 MyScreen으로 이동
+            val uiState by sharedTagViewModel.uiState.collectAsState()
+            LaunchedEffect(uiState) {
+                if (uiState is EditTagUiState.Success) {
+                    // 두 ViewModel의 SavedStateHandle 모두 초기화
+                    sharedTagViewModel.clearSavedState()
+                    sharedCategoryViewModel.clearSavedState()
+
+                    // MyScreen으로 직접 이동 (EditCategoryScreen으로 돌아가지 않음)
+                    navController.navigate(Screen.My.route) {
+                        popUpTo(Screen.My.route) { inclusive = false }
+                    }
+                }
+            }
+
             EditTagScreen(
-                categoriesWithTags = categoriesWithTags,
+                categoriesWithTags = selectedCategoriesWithTags,
                 viewModel = sharedTagViewModel,
-                onEditComplete = { categories, selectedTags ->
-                    // 완료 버튼 기능은 비워둠 (사용자 요청)
+                onEditComplete = { categoriesWithAllTags ->
+                    // 변경사항 제출
+                    sharedTagViewModel.submitChanges(categoriesWithAllTags)
                 },
                 onBackClick = {
                     navController.popBackStack()

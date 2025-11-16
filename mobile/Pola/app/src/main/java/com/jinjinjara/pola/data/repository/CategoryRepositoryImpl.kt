@@ -307,19 +307,19 @@ class CategoryRepositoryImpl @Inject constructor(
     override suspend fun updateCategory(categoryId: Long, name: String): Result<Unit> {
         return withContext(ioDispatcher) {
             try {
-                Log.d("Category:Repo", "Updating category: $categoryId with name: $name")
+                Log.d("[Edit]", "Updating category: $categoryId with name: $name")
                 val response = categoryApi.updateCategory(categoryId, name)
 
-                Log.d("Category:Repo", "Response code: ${response.code()}")
-                Log.d("Category:Repo", "Is successful: ${response.isSuccessful}")
+                Log.d("[Edit]", "Response code: ${response.code()}")
+                Log.d("[Edit]", "Is successful: ${response.isSuccessful}")
 
                 if (response.isSuccessful) {
-                    Log.d("Category:Repo", "Successfully updated category")
+                    Log.d("[Edit]", "Successfully updated category")
                     Result.Success(Unit)
                 } else {
                     val errorBody = response.errorBody()?.string()
-                    Log.e("Category:Repo", "Failed to update category")
-                    Log.e("Category:Repo", "Error body: $errorBody")
+                    Log.e("[Edit]", "Failed to update category")
+                    Log.e("[Edit]", "Error body: $errorBody")
 
                     Result.Error(
                         message = "카테고리 수정에 실패했습니다",
@@ -327,7 +327,167 @@ class CategoryRepositoryImpl @Inject constructor(
                     )
                 }
             } catch (e: Exception) {
-                Log.e("Category:Repo", "Exception while updating category", e)
+                Log.e("[Edit]", "Exception while updating category", e)
+                Result.Error(
+                    exception = e,
+                    message = e.message ?: "알 수 없는 오류가 발생했습니다",
+                    errorType = ErrorType.NETWORK
+                )
+            }
+        }
+    }
+
+    override suspend fun createCategory(name: String): Result<Long> {
+        return withContext(ioDispatcher) {
+            try {
+                Log.d("[Edit]", "Creating category with name: $name")
+                val response = categoryApi.createCategory(name)
+
+                Log.d("[Edit]", "Response code: ${response.code()}")
+                Log.d("[Edit]", "Is successful: ${response.isSuccessful}")
+
+                if (response.isSuccessful && response.body() != null) {
+                    val body = response.body()!!
+                    if (body.data != null) {
+                        val categoryId = body.data.id
+                        Log.d("[Edit]", "Successfully created category with ID: $categoryId")
+                        Result.Success(categoryId)
+                    } else {
+                        Log.e("[Edit]", "Response data is null")
+                        Result.Error(
+                            message = "카테고리 생성 응답 데이터가 없습니다",
+                            errorType = ErrorType.SERVER
+                        )
+                    }
+                } else {
+                    val errorBody = response.errorBody()?.string()
+                    Log.e("[Edit]", "Failed to create category")
+                    Log.e("[Edit]", "Error body: $errorBody")
+
+                    Result.Error(
+                        message = "카테고리 생성에 실패했습니다",
+                        errorType = ErrorType.SERVER
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("[Edit]", "Exception while creating category", e)
+                Result.Error(
+                    exception = e,
+                    message = e.message ?: "알 수 없는 오류가 발생했습니다",
+                    errorType = ErrorType.NETWORK
+                )
+            }
+        }
+    }
+
+    override suspend fun deleteCategory(categoryId: Long): Result<Unit> {
+        return withContext(ioDispatcher) {
+            try {
+                Log.d("[Edit]", "Deleting category: $categoryId")
+                val response = categoryApi.deleteCategory(categoryId)
+
+                Log.d("[Edit]", "Response code: ${response.code()}")
+                Log.d("[Edit]", "Is successful: ${response.isSuccessful}")
+
+                if (response.isSuccessful) {
+                    Log.d("[Edit]", "Successfully deleted category")
+                    Result.Success(Unit)
+                } else {
+                    val errorBody = response.errorBody()?.string()
+                    Log.e("[Edit]", "Failed to delete category")
+                    Log.e("[Edit]", "Error body: $errorBody")
+
+                    Result.Error(
+                        message = "카테고리 삭제에 실패했습니다",
+                        errorType = ErrorType.SERVER
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("[Edit]", "Exception while deleting category", e)
+                Result.Error(
+                    exception = e,
+                    message = e.message ?: "알 수 없는 오류가 발생했습니다",
+                    errorType = ErrorType.NETWORK
+                )
+            }
+        }
+    }
+
+    override suspend fun removeTagFromCategory(categoryId: Long, tagId: Long): Result<Unit> {
+        return withContext(ioDispatcher) {
+            try {
+                Log.d("[Edit]", "Removing tag $tagId from category $categoryId")
+                val response = categoryApi.removeTagFromCategory(categoryId, tagId)
+
+                Log.d("[Edit]", "Response code: ${response.code()}")
+                Log.d("[Edit]", "Is successful: ${response.isSuccessful}")
+
+                if (response.isSuccessful) {
+                    Log.d("[Edit]", "Successfully removed tag from category")
+                    Result.Success(Unit)
+                } else {
+                    val errorBody = response.errorBody()?.string()
+                    Log.e("[Edit]", "Failed to remove tag from category")
+                    Log.e("[Edit]", "Error body: $errorBody")
+
+                    Result.Error(
+                        message = "태그 제거에 실패했습니다",
+                        errorType = ErrorType.SERVER
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("[Edit]", "Exception while removing tag from category", e)
+                Result.Error(
+                    exception = e,
+                    message = e.message ?: "알 수 없는 오류가 발생했습니다",
+                    errorType = ErrorType.NETWORK
+                )
+            }
+        }
+    }
+
+    override suspend fun addTagsToCategory(categoryId: Long, tagNames: List<String>): Result<List<Long>> {
+        return withContext(ioDispatcher) {
+            try {
+                Log.d("[Edit]", "Adding tags to category $categoryId: $tagNames")
+                val response = categoryApi.addTagsToCategory(categoryId, tagNames)
+
+                Log.d("[Edit]", "Response code: ${response.code()}")
+                Log.d("[Edit]", "Is successful: ${response.isSuccessful}")
+
+                if (response.isSuccessful && response.body() != null) {
+                    val body = response.body()!!
+                    Log.d("[Edit]", "Raw response body: $body")
+
+                    if (body.data != null) {
+                        // 각 항목의 상세 정보 로깅
+                        body.data.forEachIndexed { index, item ->
+                            Log.d("[Edit]", "  [$index] tagId=${item.tagId}, tagName=${item.tagName}, categoryId=${item.categoryId}, categoryName=${item.categoryName}")
+                        }
+
+                        // tagId가 null이 아닌 것만 수집
+                        val tagIds = body.data.mapNotNull { it.tagId }
+                        Log.d("[Edit]", "Successfully added ${tagIds.size} tags to category (total items: ${body.data.size})")
+                        Result.Success(tagIds)
+                    } else {
+                        Log.e("[Edit]", "Response data is null")
+                        Result.Error(
+                            message = "태그 추가 응답 데이터가 없습니다",
+                            errorType = ErrorType.SERVER
+                        )
+                    }
+                } else {
+                    val errorBody = response.errorBody()?.string()
+                    Log.e("[Edit]", "Failed to add tags to category")
+                    Log.e("[Edit]", "Error body: $errorBody")
+
+                    Result.Error(
+                        message = "태그 추가에 실패했습니다",
+                        errorType = ErrorType.SERVER
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("[Edit]", "Exception while adding tags to category", e)
                 Result.Error(
                     exception = e,
                     message = e.message ?: "알 수 없는 오류가 발생했습니다",
