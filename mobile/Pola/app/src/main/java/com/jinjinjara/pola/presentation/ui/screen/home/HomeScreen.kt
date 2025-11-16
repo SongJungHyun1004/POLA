@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
@@ -181,15 +182,27 @@ private fun HomeContent(
                         .padding(horizontal = 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // 챗봇 버튼
+                    Image(
+                        painter = painterResource(R.drawable.pola_chatbot),
+                        contentDescription = "챗봇",
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
+                                onNavigateToChatbot()
+                            },
+                        contentScale = ContentScale.Crop
+                    )
+
+                    Spacer(Modifier.width(12.dp))
+
                     SearchBar(
                         searchText = "",
-                        onSearchClick = { isAiMode ->
-                            if (isAiMode) {
-                                onNavigateToChatbot()
-                            } else {
-                                onNavigateToSearch()
-                            }
-                        },
+                        onSearchClick = { onNavigateToSearch() },
                         modifier = Modifier.weight(1f)
                     )
 
@@ -258,15 +271,27 @@ private fun HomeContent(
                     .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // 챗봇 버튼
+                Image(
+                    painter = painterResource(R.drawable.pola_chatbot),
+                    contentDescription = "챗봇",
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            onNavigateToChatbot()
+                        },
+                    contentScale = ContentScale.Crop
+                )
+
+                Spacer(Modifier.width(12.dp))
+
                 SearchBar(
                     searchText = "",
-                    onSearchClick = { isAiMode ->
-                        if (isAiMode) {
-                            onNavigateToChatbot()
-                        } else {
-                            onNavigateToSearch()
-                        }
-                    },
+                    onSearchClick = { onNavigateToSearch() },
                     modifier = Modifier.weight(1f)
                 )
 
