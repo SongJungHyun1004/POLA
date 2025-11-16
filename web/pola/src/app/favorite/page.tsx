@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, memo } from "react";
+import { Star } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -85,9 +86,12 @@ const SortableItem = memo(
             ocr_text={file.ocr_text}
           />
           {file.favorite && (
-            <span className="absolute top-2 right-2 text-yellow-500 text-lg z-10">
-              ★
-            </span>
+            <Star
+              fill={file.favorite ? "#FFD700" : "transparent"}
+              stroke="#FFD700"
+              strokeWidth={2.5}
+              className="absolute top-2 right-2 drop-shadow-sm w-6 h-6 z-10"               
+            />
           )}
         </button>
       </div>
@@ -212,7 +216,10 @@ export default function FavoritePage() {
         {/* 좌측 리스트 */}
         <div className="flex flex-col flex-1 overflow-hidden">
           <div className="flex items-center justify-between mb-2 pl-4">
-            <h1 className="text-4xl font-bold mb-2">Favorite</h1>
+            <h1 className="text-5xl font-bold mb-6 mt-8">Favorite</h1>
+          </div>
+          <div className="flex items-center justify-between mb-2 pl-4">
+            즐겨찾기 해둔 파일들을 둘러보세요.
           </div>
 
           <div
@@ -227,7 +234,7 @@ export default function FavoritePage() {
               <SortableContext items={files} strategy={rectSortingStrategy}>
                 <div
                   className="
-                    grid gap-6 p-10
+                    grid gap-6 pt-12 px-10 pb-10
                     grid-cols-1
                     sm:grid-cols-2
                     md:grid-cols-3

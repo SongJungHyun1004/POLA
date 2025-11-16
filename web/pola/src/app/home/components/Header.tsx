@@ -285,7 +285,7 @@ export default function Header() {
   /* -------------------- 로그인 전 헤더 -------------------- */
   if (!user) {
     return (
-      <header className="flex justify-between items-center w-full pb-10 px-8 pt-6">
+      <header className="flex justify-between items-center w-full pb-10 px-12 pt-6">
         <Link href="/home">
           <Image
             src="/images/POLA_logo_2.png"
@@ -312,7 +312,7 @@ export default function Header() {
   /* -------------------- 로그인 후 헤더 -------------------- */
   return (
     <>
-      <header className="relative flex justify-between items-center w-full pb-10 px-8 pt-6 bg-[#FFFEF8]">
+      <header className="relative flex justify-between items-center w-full pb-10 px-12 pt-6 bg-[#FFFEF8]">
         {/* 로고 */}
         <Link href="/home">
           <Image

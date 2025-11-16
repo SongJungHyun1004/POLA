@@ -1,16 +1,27 @@
 "use client";
 
-import CategoryBox from "./components/CategoryBox";
-import Timeline from "./components/Timeline";
-import CategoryRow from "./components/CategoryRow";
-import TextLink from "./components/TextLink";
-import useAuthStore from "@/store/useAuthStore";
-import { useRouter } from "next/navigation";
+
+
+import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getUserMe, getUserHome } from "@/services/userService";
+import useAuthStore from "@/store/useAuthStore";
+import { Home, Star, Bell, Clock } from "lucide-react";
+import Link from "next/link";
+import Timeline from "./components/Timeline";
+import PolaroidCard from "./components/PolaroidCard";
+import CategoryDropdown from "../components/CategoryDropdown";
+
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Pagination, Navigation, Autoplay } from "swiper/modules";
+
+import "swiper/css";
+import "swiper/css/pagination";
+import "swiper/css/navigation";
 
 export default function HomePage() {
   const router = useRouter();
+  const pathname = usePathname();
   const { setUser } = useAuthStore();
 
   const [favorites, setFavorites] = useState<any[]>([]);
@@ -26,7 +37,6 @@ export default function HomePage() {
     }
 
     const fetchData = async () => {
-      // 1) 사용자 정보
       const userRes = await getUserMe();
       if (!userRes) {
         router.push("/");
@@ -41,7 +51,6 @@ export default function HomePage() {
         profile_image_url: u.profile_image_url,
       });
 
-      // 2) 홈 데이터
       const homeRes = await getUserHome();
       if (!homeRes) {
         console.error("홈 데이터 조회 실패");
@@ -58,63 +67,171 @@ export default function HomePage() {
     fetchData();
   }, [router, setUser]);
 
+  const getLinkClassName = (path: string) => {
+    const baseClasses = "flex items-center gap-4 px-4 py-3 rounded-xl transition-colors cursor-pointer";
+    if (pathname === path) {
+      return `${baseClasses} bg-[#FFF4E0]`;
+    }
+    return `${baseClasses} hover:bg-gray-50`;
+  };
+
   return (
-    <main className="h-full text-[#4C3D25] px-8 pb-12 bg-[#FFFEF8]">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">
-        {/* 좌측 영역 */}
-        <div className="flex flex-col items-center justify-start gap-12 w-full mt-16">
-          <div className="flex justify-center gap-10 w-full">
-            {/* Favorite Box */}
-            <div
-              className="cursor-pointer"
-              onClick={() => {
-                if (favorites.length === 0) {
-                  alert("좋아요 표시한 컨텐츠가 없습니다");
-                  return;
-                }
-                router.push("/favorite");
-              }}
-            >
-              <CategoryBox text="Favorite" files={favorites} />
+    <div className="flex min-h-full bg-[#FFFEF8] ">
+      {/* 왼쪽 사이드바 */}
+      <aside className="w-70 ml-10 ">
+        {/* 네비게이션 박스 */}
+        <div className="bg-[#ffffff]  border-[#E5DCC5] rounded-3xl p-6 shadow-lg ">
+          {/* 홈 */}
+          <Link href="/home">
+            <div className={`${getLinkClassName("/home")} mb-1`}>
+              <Home className="w-5 h-5 text-[#8B7355]" />
+              <span className="text-lg font-semibold text-[#4C3D25]">Home</span>
             </div>
+          </Link>
 
-            <div className="flex w-8" />
+          <CategoryDropdown />
 
-            {/* Remind Box */}
-            <div
-              className="cursor-pointer"
-              onClick={() => {
-                if (reminds.length === 0) {
-                  alert("리마인드 할 컨텐츠가 없습니다");
-                  return;
-                }
-                router.push("/remind");
-              }}
-            >
-              <CategoryBox text="Remind" files={reminds} />
-            </div>
+          {/* Favorite */}
+          <div
+            onClick={() => {
+              if (favorites.length === 0) {
+                alert("즐겨찾기 표시한 컨텐츠가 없습니다");
+                return;
+              }
+              router.push("/favorite");
+            }}
+            className={`${getLinkClassName("/favorite")} mb-1`}
+          >
+            <Star className="w-5 h-5 text-[#8B7355]" />
+            <span className="text-lg font-semibold text-[#4C3D25]">Favorite</span>
           </div>
 
-          <div className="flex flex-col items-center justify-center w-full mt-8">
-            <Timeline timeline={timeline} />
-            <TextLink text="Timeline" link="/timeline" />
+          {/* Remind */}
+          <div
+            onClick={() => {
+              if (reminds.length === 0) {
+                alert("리마인드 할 컨텐츠가 없습니다");
+                return;
+              }
+              router.push("/remind");
+            }}
+            className={`${getLinkClassName("/remind")} mb-1`}
+          >
+            <Bell className="w-5 h-5 text-[#8B7355]" />
+            <span className="text-lg font-semibold text-[#4C3D25]">Remind</span>
+          </div>
+
+          {/* Timeline */}
+          <Link href="/timeline">
+            <div className={getLinkClassName("/timeline")}>
+              <Clock className="w-5 h-5 text-[#8B7355]" />
+              <span className="text-lg font-semibold text-[#4C3D25]">Timeline</span>
+            </div>
+          </Link>
+        </div>
+
+      </aside>
+
+      {/* 메인 콘텐츠 영역 */}
+      <main className="flex-1 overflow-y-auto py-8">
+        <div className="max-w-container">
+        {/* 필름 스트립 타임라인 */}
+        {/* <Link href="/timeline" className="mb-12 flex justify-center">
+          <Timeline timeline={timeline} />
+        </Link> */}
+
+        {/* Categories 제목 */}
+        <h2 className="text-5xl font-bold text-[#8B7355] mb-8">
+          Recent
+        </h2>
+
+        {/* 카테고리 카드 슬라이더 */}
+        <div className="w-full group py-6">
+          <div className="relative">
+            <Swiper
+              // Swiper에 사용할 모듈 등록
+              modules={[Pagination, Navigation, Autoplay]}
+              
+              // 자동 재생
+              autoplay={{
+                delay: 3000,
+                disableOnInteraction: false,
+              }}
+              
+              // 페이지네이션 (하단 점)
+              pagination={{ clickable: true }}
+              
+              // 네비게이션 (좌우 화살표)
+              // navigation={true}
+              
+              // 반응형 설정
+              slidesPerView={1} // 모바일(기본)에서는 1개
+              spaceBetween={7}
+              breakpoints={{
+                // 화면 너비 768px 이상일 때
+                768: {
+                  slidesPerView: 2,
+                  spaceBetween: 10,
+                },
+                // 화면 너비 1024px 이상일 때 (요청하신 3개)
+                1024: {
+                  slidesPerView: 3,
+                  spaceBetween: 10,
+                },
+              }}
+              
+              //  Swiper에 고유 클래스 부여 (CSS 커스텀용)
+              className="pola-swiper"
+            >
+                          
+            {categories.map((cat, index) => (
+                <SwiperSlide
+                  key={`${cat.categoryId}-${index}`}
+                  onClick={() => router.push(`/categories/${cat.categoryId}`)}
+                  className="cursor-pointer flex-shrink-0" // mx-6 제거 (spaceBetween이 대신함)
+                >
+                  <div className="relative w-72 h-96">
+                    {/* 배경 카드 2 */}
+                    <div className="absolute w-72 h-96 bg-white border-2 border-[#E5DCC5] rounded-lg shadow-sm transform rotate-[-4deg] translate-y-2 translate-x-1.5" />
+                    
+                    {/* 배경 카드 1 */}
+                    <div className="absolute w-72 h-96 bg-white border-2 border-[#E5DCC5] rounded-lg shadow-sm transform rotate-[-2deg] translate-y-1 translate-x-0.5" />
+                    
+                    {/* 메인 카드 */}
+                    <div className="absolute w-72 h-96 bg-white border-2 border-[#E5DCC5] rounded-lg shadow-md overflow-hidden transform transition-transform hover:scale-105">
+                      {cat.files && cat.files.length > 0 ? (
+                        <PolaroidCard
+                          src={cat.files[0].src || "/images/dummy_image_1.png"}
+                          type={cat.files[0].type}
+                          ocr_text={cat.files[0].ocr_text}
+                          large={true} // Use large size for the card
+                          categoryName={cat.categoryName}
+                        />
+                      ) : (
+                        <PolaroidCard
+                          src={"/images/POLA_null.png"}
+                          type={"image/png"}
+                          large={true}
+                          categoryName={cat.categoryName}
+                        />
+                      )}
+                    </div>
+                  </div>
+                </SwiperSlide>
+              ))}
+            </Swiper>
           </div>
         </div>
 
-        {/* 우측 카테고리 영역 */}
-        <div className="flex flex-col gap-8 overflow-y-auto pr-2 w-full h-full">
-          {categories.map((cat) => (
-            <div key={cat.categoryId} className="w-full flex-shrink-0">
-              <TextLink
-                text={cat.categoryName}
-                link={`/categories/${cat.categoryId}`}
-              />
-
-              <CategoryRow files={cat.files ?? []} />
-            </div>
-          ))}
-        </div>
+        {/* 카테고리가 없을 때 */}
+        {categories.length === 0 && (
+          <div className="text-center py-20">
+            <p className="text-xl text-gray-400">카테고리가 없습니다</p>
+            <p className="text-sm text-gray-300 mt-2">온보딩에서 카테고리를 추가해보세요</p>
+          </div>
+        )}
       </div>
-    </main>
+      </main>
+  </div>
   );
 }
