@@ -1,12 +1,38 @@
 importScripts('config.js');
+importScripts('auth.js');
 importScripts('apiClient.js');
 
 const API_BASE_URL = CONFIG.API_BASE_URL;
 
 // 확장 프로그램 설치 시 실행
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener(async () => {
   console.log('확장 프로그램이 설치되었습니다.');
+  
+  // 컨텍스트 메뉴 생성
   createContextMenus();
+  
+  // 자동 로그인 시도
+  const loginResult = await autoLogin();
+  
+  if (loginResult.isAuthenticated) {
+    console.log('자동 로그인 성공:', loginResult.user);
+  } else if (loginResult.needLogin) {
+    console.log('로그인이 필요합니다');
+  }
+});
+
+// 확장 프로그램 시작 시 (브라우저 재시작 등)
+chrome.runtime.onStartup.addListener(async () => {
+  console.log('확장 프로그램 시작됨');
+  
+  // 자동 로그인 시도
+  const loginResult = await autoLogin();
+  
+  if (loginResult.isAuthenticated) {
+    console.log('자동 로그인 성공:', loginResult.user);
+  } else if (loginResult.needLogin) {
+    console.log('로그인이 필요합니다');
+  }
 });
 
 // 컨텍스트 메뉴 생성
