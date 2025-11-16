@@ -113,6 +113,54 @@ public class S3Service {
 
         return presignedRequest.url();
     }
+    /* 리마인드 전용: Preview URL 24시간 30분 TTL */
+    public Map<Long, String> generatePreviewUrlsLongTTL(Map<Long, FileMeta> fileMetaMap) {
+
+        Map<Long, String> result = new HashMap<>(fileMetaMap.size());
+
+        for (Map.Entry<Long, FileMeta> entry : fileMetaMap.entrySet()) {
+            Long id = entry.getKey();
+            FileMeta meta = entry.getValue();
+
+            // 텍스트 파일은 preview가 없으므로 원본 URL로 대체
+            if (isTextType(meta.contentType())) {
+                result.put(id, presignedInlineUrlLongTTL(meta.key(), meta.contentType()).toString());
+                continue;
+            }
+
+            String previewKey = meta.key().replace("home/original/", "home/preview/");
+
+            try {
+                result.put(id, presignedInlineUrlLongTTL(previewKey, meta.contentType()).toString());
+            } catch (Exception e) {
+                result.put(id, presignedInlineUrlLongTTL(meta.key(), meta.contentType()).toString());
+            }
+        }
+        return result;
+    }
+
+    /* 긴 TTL (24시간 30분) presigned URL - 리마인드 전용 */
+    private URL presignedInlineUrlLongTTL(String key, String contentType) {
+
+        Duration longDuration =
+                Duration.ofDays(1).plusMinutes(30); // 24시간 + 30분
+
+        GetObjectRequest getRequest = GetObjectRequest.builder()
+                .bucket(bucket)
+                .key(key)
+                .responseContentType(resolveContentType(contentType))
+                .responseContentDisposition("inline")
+                .build();
+
+        PresignedGetObjectRequest presignedRequest =
+                s3Presigner.presignGetObject(builder ->
+                        builder.signatureDuration(longDuration)
+                                .getObjectRequest(getRequest)
+                );
+
+        return presignedRequest.url();
+    }
+
 
     /* 여러 파일의 Preview URL 일괄 생성 */
     public Map<Long, String> generatePreviewUrls(Map<Long, FileMeta> fileMetaMap) {
