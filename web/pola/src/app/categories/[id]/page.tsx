@@ -279,6 +279,7 @@ export default function CategoryPage() {
                     ))}
                   </div>
               </div>
+              
 
               {/* 모달 버튼 */}
               <button

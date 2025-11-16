@@ -1,5 +1,7 @@
 "use client";
 
+
+
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getUserMe, getUserHome } from "@/services/userService";
@@ -9,6 +11,13 @@ import Link from "next/link";
 import Timeline from "./components/Timeline";
 import PolaroidCard from "./components/PolaroidCard";
 import CategoryDropdown from "../components/CategoryDropdown";
+
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Pagination, Navigation, Autoplay } from "swiper/modules";
+
+import "swiper/css";
+import "swiper/css/pagination";
+import "swiper/css/navigation";
 
 export default function HomePage() {
   const router = useRouter();
@@ -67,11 +76,11 @@ export default function HomePage() {
   };
 
   return (
-    <div className="flex min-h-full bg-[#FFFEF8]">
+    <div className="flex min-h-full bg-[#FFFEF8] ">
       {/* 왼쪽 사이드바 */}
-      <aside className="w-80 p-8">
+      <aside className="w-70 ml-10 ">
         {/* 네비게이션 박스 */}
-        <div className="bg-white border-2 border-[#E5DCC5] rounded-3xl p-6 shadow-sm">
+        <div className="bg-[#ffffff]  border-[#E5DCC5] rounded-3xl p-6 shadow-lg ">
           {/* 홈 */}
           <Link href="/home">
             <div className={`${getLinkClassName("/home")} mb-1`}>
@@ -124,7 +133,8 @@ export default function HomePage() {
       </aside>
 
       {/* 메인 콘텐츠 영역 */}
-      <main className="flex-1 overflow-y-auto px-12 py-8">
+      <main className="flex-1 overflow-y-auto py-8">
+        <div className="max-w-container">
         {/* 필름 스트립 타임라인 */}
         {/* <Link href="/timeline" className="mb-12 flex justify-center">
           <Timeline timeline={timeline} />
@@ -136,26 +146,59 @@ export default function HomePage() {
         </h2>
 
         {/* 카테고리 카드 슬라이더 */}
-        <div className="w-full overflow-x-hidden group py-6">
-          <div className="flex whitespace-nowrap animate-scroll-x group-hover:animation-pause">
-            {[...categories, ...categories].map((cat, index) => (
-              <div
-                key={`${cat.categoryId}-${index}`}
-                onClick={() => router.push(`/categories/${cat.categoryId}`)}
-                className="cursor-pointer w-72 flex-shrink-0 mx-6"
-              >
-                {/* 폴라로이드 카드 스택 (3장 겹침) */}
-                <div className="relative w-full aspect-[3/4]">
-                  {/* 배경 카드 2 */}
-                  <div className="absolute inset-0 bg-white border-2 border-[#E5DCC5] rounded-lg shadow-sm transform rotate-[-4deg] translate-y-2 translate-x-1.5" />
-                  
-                  {/* 배경 카드 1 */}
-                  <div className="absolute inset-0 bg-white border-2 border-[#E5DCC5] rounded-lg shadow-sm transform rotate-[-2deg] translate-y-1 translate-x-0.5" />
-                  
-                  {/* 메인 카드 */}
-                  <div className="absolute inset-0 bg-white border-2 border-[#E5DCC5] rounded-lg shadow-md overflow-hidden transform transition-transform hover:scale-105">
-                    {/* 이미지 영역 (상단 75%) */}
-                    <div className="h-full bg-gray-50 overflow-hidden flex items-center justify-center">
+        <div className="w-full group py-6">
+          <div className="relative">
+            <Swiper
+              // Swiper에 사용할 모듈 등록
+              modules={[Pagination, Navigation, Autoplay]}
+              
+              // 자동 재생
+              autoplay={{
+                delay: 3000,
+                disableOnInteraction: false,
+              }}
+              
+              // 페이지네이션 (하단 점)
+              pagination={{ clickable: true }}
+              
+              // 네비게이션 (좌우 화살표)
+              // navigation={true}
+              
+              // 반응형 설정
+              slidesPerView={1} // 모바일(기본)에서는 1개
+              spaceBetween={7}
+              breakpoints={{
+                // 화면 너비 768px 이상일 때
+                768: {
+                  slidesPerView: 2,
+                  spaceBetween: 10,
+                },
+                // 화면 너비 1024px 이상일 때 (요청하신 3개)
+                1024: {
+                  slidesPerView: 3,
+                  spaceBetween: 10,
+                },
+              }}
+              
+              //  Swiper에 고유 클래스 부여 (CSS 커스텀용)
+              className="pola-swiper"
+            >
+                          
+            {categories.map((cat, index) => (
+                <SwiperSlide
+                  key={`${cat.categoryId}-${index}`}
+                  onClick={() => router.push(`/categories/${cat.categoryId}`)}
+                  className="cursor-pointer flex-shrink-0" // mx-6 제거 (spaceBetween이 대신함)
+                >
+                  <div className="relative w-72 h-96">
+                    {/* 배경 카드 2 */}
+                    <div className="absolute w-72 h-96 bg-white border-2 border-[#E5DCC5] rounded-lg shadow-sm transform rotate-[-4deg] translate-y-2 translate-x-1.5" />
+                    
+                    {/* 배경 카드 1 */}
+                    <div className="absolute w-72 h-96 bg-white border-2 border-[#E5DCC5] rounded-lg shadow-sm transform rotate-[-2deg] translate-y-1 translate-x-0.5" />
+                    
+                    {/* 메인 카드 */}
+                    <div className="absolute w-72 h-96 bg-white border-2 border-[#E5DCC5] rounded-lg shadow-md overflow-hidden transform transition-transform hover:scale-105">
                       {cat.files && cat.files.length > 0 ? (
                         <PolaroidCard
                           src={cat.files[0].src || "/images/dummy_image_1.png"}
@@ -174,9 +217,9 @@ export default function HomePage() {
                       )}
                     </div>
                   </div>
-                </div>
-              </div>
-            ))}
+                </SwiperSlide>
+              ))}
+            </Swiper>
           </div>
         </div>
 
@@ -187,7 +230,8 @@ export default function HomePage() {
             <p className="text-sm text-gray-300 mt-2">온보딩에서 카테고리를 추가해보세요</p>
           </div>
         )}
+      </div>
       </main>
-    </div>
+  </div>
   );
 }

@@ -1695,9 +1695,9 @@ __metadata:
   linkType: hard
 
 "csstype@npm:^3.0.2":
-  version: 3.2.0
-  resolution: "csstype@npm:3.2.0"
-  checksum: 10c0/119715d732d05db0da3b71f602448135b007127073cdda47b69e9d5599475e4aa0f6a15c5f0cdd3f3b1f17251c54adc3c8a516e7358f7fb4cfc51cc6eaf89ded
+  version: 3.2.1
+  resolution: "csstype@npm:3.2.1"
+  checksum: 10c0/923e00230966b5c741fc9bfc1d3695266bad0206b1fc9e9bba5dba1480d7b3ee01973bbdb7e48368d274ed0ce24d177235ababaa44cbc4581f6b36cdc6526530
   languageName: node
   linkType: hard
 
@@ -1819,9 +1819,9 @@ __metadata:
   linkType: hard
 
 "electron-to-chromium@npm:^1.5.249":
-  version: 1.5.252
-  resolution: "electron-to-chromium@npm:1.5.252"
-  checksum: 10c0/a42b164689d4230f1ab8a5e87183b58f5a96e123d2b7b680ca3a94734a04cf6cc4198e813473674ed626623a0cb7cb3ece42373c712a1afc340117ff85845b0f
+  version: 1.5.253
+  resolution: "electron-to-chromium@npm:1.5.253"
+  checksum: 10c0/d6cebe289030992bd7a9d31bfab571f1cfe30405e988ce451de78fc788aa171e8fa2c4122ef30d9c35edc06781a28d6c1c0faa738a1a918d305773305f3020eb
   languageName: node
   linkType: hard
 
@@ -2988,6 +2988,7 @@ __metadata:
     next: "npm:^16.0.1"
     react: "npm:^19.2.0"
     react-dom: "npm:^19.2.0"
+    swiper: "npm:^12.0.3"
     tailwindcss: "npm:^4"
     tsc: "npm:^2.0.4"
     typescript: "npm:^5.9.3"
@@ -4221,6 +4222,13 @@ __metadata:
   version: 1.0.0
   resolution: "supports-preserve-symlinks-flag@npm:1.0.0"
   checksum: 10c0/6c4032340701a9950865f7ae8ef38578d8d7053f5e10518076e6554a9381fa91bd9c6850193695c141f32b21f979c985db07265a758867bac95de05f7d8aeb39
+  languageName: node
+  linkType: hard
+
+"swiper@npm:^12.0.3":
+  version: 12.0.3
+  resolution: "swiper@npm:12.0.3"
+  checksum: 10c0/a854531791ba45cb0f6086904a99878fd207b42024820df68fbf64e01c20d542438c023ec4765b223f4dbffabf6858d311ec749bdca4ea4b4a7b74150a010162
   languageName: node
   linkType: hard
 
