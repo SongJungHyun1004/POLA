@@ -15,6 +15,7 @@ import {
   Trash2,
   Globe,
   Smartphone,
+  Search, // 🔍 추가
 } from "lucide-react";
 import {
   getMyCategories,
@@ -199,7 +200,6 @@ export default function PolaroidDetail({
     }
   }
 
-  /** 🔹 파일 삭제 처리 */
   async function handleDelete() {
     if (!id || deleting) return;
     if (!confirm("정말 이 파일을 삭제하시겠습니까?")) return;
@@ -219,35 +219,32 @@ export default function PolaroidDetail({
 
   return (
     <div className="flex flex-col items-center w-full">
-      {/* 카드 */}
+      {/* ---------- 카드 ---------- */}
       <div
         className={`relative bg-white rounded-md shadow-custom w-[340px] h-[460px] flex items-center justify-center transition-transform duration-500 [transform-style:preserve-3d] ${
           flipped ? "rotate-y-180" : ""
         }`}
+        onClick={() => setFlipped((prev) => !prev)}
       >
-        {/* ---------- FRONT (이미지 전면) ---------- */}
-        <div
-          className="absolute w-full h-full backface-hidden flex flex-col items-center justify-center cursor-pointer"
-          onClick={() => setOpen(true)}
-        >
+        {/* ---------- FRONT ---------- */}
+        <div className="absolute w-full h-full backface-hidden flex flex-col items-center justify-center cursor-pointer">
           <div className="relative w-[85%] h-[78%] overflow-hidden rounded-sm bg-[#FFFEF8]">
-            {/* 이미지 or OCR 텍스트 */}
             {isTextFile ? (
               <div
-              className="w-full h-full overflow-y-auto text-base leading-tight text-[#4C3D25] whitespace-pre-line break-words scrollbar-none p-2 shadow-inner-custom"
-              onWheel={(e) => e.stopPropagation()}              
-                >
+                className="w-full h-full overflow-y-auto text-base leading-tight text-[#4C3D25] whitespace-pre-line break-words scrollbar-none p-2 shadow-inner-custom"
+                onWheel={(e) => e.stopPropagation()}
+              >
                 {ocr_text || "(텍스트 없음)"}
               </div>
             ) : (
               <>
-              <Image
-                src={displaySrc}
-                alt="selected polaroid"
-                fill
-                className="object-cover object-center z-0"
-              />
-              <div className="absolute inset-0 shadow-inner-custom z-10 pointer-events-none"></div>
+                <Image
+                  src={displaySrc}
+                  alt="selected polaroid"
+                  fill
+                  className="object-cover object-center z-0"
+                />
+                <div className="absolute inset-0 shadow-inner-custom z-10 pointer-events-none"></div>
               </>
             )}
           </div>
@@ -285,7 +282,7 @@ export default function PolaroidDetail({
           )}
         </div>
 
-        {/* Back */}
+        {/* ---------- BACK ---------- */}
         <div className="absolute w-full h-full rotate-y-180 backface-hidden p-4 flex flex-col">
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-lg font-semibold text-[#4C3D25]">Context</h2>
@@ -309,6 +306,7 @@ export default function PolaroidDetail({
                   }`}
                 />
               </button>
+
               {!sharedView && (
                 <>
                   <button onClick={() => id && setShareOpen(true)}>
@@ -328,7 +326,7 @@ export default function PolaroidDetail({
             </div>
           </div>
 
-          <textarea 
+          <textarea
             className="flex-1 resize-none p-3 rounded-md text-base text-[#4C3D25] focus:outline-none cursor-default"
             value={context}
             readOnly
@@ -336,21 +334,21 @@ export default function PolaroidDetail({
         </div>
       </div>
 
-      {/* Tag + Date */}
+      {/* ---------- TAG + 확대 버튼 ---------- */}
       <div className="mt-4 text-center text-[#4C3D25] flex flex-col items-center w-80 max-w-full">
         <div className="flex flex-wrap justify-start gap-2 mb-2 w-full">
           {tagState.map((t, idx) => (
             <span
               key={idx}
               className="
-                          bg-[#D0A773]/95
-                          px-3 py-1
-                          rounded-full
-                          font-bold
-                          text-sm
-                          whitespace-nowrap
-                          inline-block
-                        "
+                bg-[#D0A773]/95
+                px-3 py-1
+                rounded-full
+                font-bold
+                text-sm
+                whitespace-nowrap
+                inline-block
+              "
             >
               {t}
             </span>
@@ -358,14 +356,16 @@ export default function PolaroidDetail({
         </div>
 
         <button
-          className="mt-3 bg-white border border-[#8B857C] rounded-full p-2 shadow hover:bg-[#F6F1E7] transition-transform hover:rotate-180"
-          onClick={() => setFlipped((prev) => !prev)}
+          className="mt-3 bg-white border border-[#8B857C] rounded-full p-2 shadow hover:bg-[#F6F1E7] transition-transform hover:scale-110"
+          onClick={() => setOpen(true)}
         >
-          <RotateCcw className="w-5 h-5 text-[#4C3D25]" />
+          <Search className="w-5 h-5 text-[#4C3D25]" />
         </button>
-        <p className="text-md mt-2">버튼을 눌러서 사진을 뒤집어 보세요</p>
+
+        <p className="text-md mt-2">버튼을 눌러서 사진을 크게 보세요</p>
       </div>
 
+      {/* 모달 */}
       {open &&
         (isTextFile ? (
           <OCRModal text={ocr_text ?? ""} onClose={() => setOpen(false)} />
