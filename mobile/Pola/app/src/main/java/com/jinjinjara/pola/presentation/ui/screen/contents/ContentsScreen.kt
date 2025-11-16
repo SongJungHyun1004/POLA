@@ -59,6 +59,7 @@ import kotlin.time.Duration
 @Composable
 fun ContentsScreen(
     fileId: Long,
+    previewImageUrl: String? = null,
     onBackClick: () -> Unit = {},
     onShareClick: () -> Unit = {},
     onEditClick: () -> Unit = {},
@@ -143,6 +144,7 @@ fun ContentsScreen(
             is ContentsUiState.Success -> {
                 ContentsScreenContent(
                     fileDetail = state.fileDetail,
+                    previewImageUrl = previewImageUrl,
                     isBookmarked = isBookmarked,
                     showMenu = showMenu,
                     isExpanded = isExpanded,
@@ -370,6 +372,7 @@ fun ContentsScreen(
 @Composable
 private fun ContentsScreenContent(
     fileDetail: FileDetail,
+    previewImageUrl: String? = null,
     isBookmarked: Boolean,
     showMenu: Boolean,
     isExpanded: Boolean,
@@ -615,6 +618,7 @@ private fun ContentsScreenContent(
                     onFavoriteClick = { onBookmarkToggle() },
                     // item 받아서 넣기
                     imageUrl = fileDetail.src,
+                    placeholderImageUrl = previewImageUrl,
                     type = fileDetail.type
                 )
 
@@ -706,7 +710,7 @@ private fun ContentsScreenContent(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     // 이미지 파일이면 이미지 표시
-                    if (fileDetail.type?.startsWith("image") == true && !fileDetail.src.isNullOrEmpty()) {
+                    if (fileDetail.type?.startsWith("image") == true && (!fileDetail.src.isNullOrEmpty() || !previewImageUrl.isNullOrEmpty())) {
                         AsyncImage(
                             model = fileDetail.src,
                             contentDescription = "전체 화면 이미지",

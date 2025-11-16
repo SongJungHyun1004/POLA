@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import coil.compose.rememberAsyncImagePainter
 import com.jinjinjara.pola.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -108,6 +109,7 @@ fun PolaCard(
     backgroundColor: Color = Color.White,
     imageResId: Int? = null,
     imageUrl: String? = null,
+    placeholderImageUrl: String? = null,
     type: String? = "image",
     ratio: Float = 3f / 4f,
     imageRatio: Float = 1f,
@@ -225,7 +227,12 @@ fun PolaCard(
                             model = imageUrl,
                             contentDescription = "Image Content",
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
+                            contentScale = ContentScale.Crop,
+                            placeholder = if (!placeholderImageUrl.isNullOrEmpty()) {
+                                rememberAsyncImagePainter(placeholderImageUrl)
+                            } else {
+                                null
+                            },
                         )
                     }
 

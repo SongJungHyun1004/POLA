@@ -27,8 +27,15 @@ sealed class Screen(val route: String) {
     data object Tag : Screen("tag/{tagName}?type={searchType}") {
         fun createRoute(tagName: String, searchType: String = "tag") = "tag/$tagName?type=$searchType"
     }
-    data object Contents : Screen("contents/{contentId}") {
-        fun createRoute(contentId: Long) = "contents/$contentId"
+    data object Contents : Screen("contents/{contentId}?imageUrl={imageUrl}") {
+        fun createRoute(contentId: Long, imageUrl: String? = null): String {
+            return if (imageUrl != null) {
+                val encodedUrl = java.net.URLEncoder.encode(imageUrl, "UTF-8")
+                "contents/$contentId?imageUrl=$encodedUrl"
+            } else {
+                "contents/$contentId"
+            }
+        }
     }
     data object ContentsEdit : Screen("contents/edit/{contentId}") {
         fun createRoute(contentId: Long) = "contents/edit/$contentId"
