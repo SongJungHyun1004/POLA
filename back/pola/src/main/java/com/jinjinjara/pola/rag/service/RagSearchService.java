@@ -43,6 +43,17 @@ public class RagSearchService {
 
         // 2) 검색
         List<SearchRow> rows = embeddingSearchService.searchSimilarFiles(userId, cleaned, limit, start, end);
+
+        log.info("[RagSearch] RAW SEARCH RESULTS (count={})", rows.size());
+        for (int i = 0; i < rows.size(); i++) {
+            SearchRow r = rows.get(i);
+            log.info("  [{}] id={} score={} context={}",
+                    i,
+                    r.getId(),
+                    r.getRelevanceScore(),
+                    r.getContext());
+        }
+
         if (rows.isEmpty()) {
             return new RagSearchResponse("검색 결과가 없습니다.", List.of());
         }
@@ -126,7 +137,7 @@ public class RagSearchService {
         double ratioCut = top1 * keepRatio;
         double finalCut = Math.max(effectiveMin, ratioCut);
 
-        log.debug("[RagSearch] type={}, top1={}, min={}, keep={}, appliedFactor={}, " +
+        log.info("[RagSearch] type={}, top1={}, min={}, keep={}, appliedFactor={}, " +
                         "effectiveMin={}, ratioCut={}, finalCut={}",
                 type, top1, minSim, keepRatio, appliedFactor, effectiveMin, ratioCut, finalCut);
 
@@ -135,6 +146,16 @@ public class RagSearchService {
                 .filter(s -> s.getRelevanceScore() != null
                         && s.getRelevanceScore() >= finalCut)
                 .toList();
+
+        log.info("[RagSearch] FILTERED RESULTS (count={})", filtered.size());
+        for (int i = 0; i < filtered.size(); i++) {
+            var f = filtered.get(i);
+            log.info("  [{}] id={} score={} context={}",
+                    i,
+                    f.getId(),
+                    f.getRelevanceScore(),
+                    f.getContext());
+        }
 
         if (filtered.isEmpty()) {
             log.debug("[RagSearch] filtered is empty after finalCut={}, type={}", finalCut, type);
