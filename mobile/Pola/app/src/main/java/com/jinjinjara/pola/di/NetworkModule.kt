@@ -10,6 +10,7 @@ import com.jinjinjara.pola.data.remote.api.FileUploadApi
 import com.jinjinjara.pola.data.remote.api.HomeApi
 import com.jinjinjara.pola.data.remote.api.RagSearchApi
 import com.jinjinjara.pola.data.remote.api.RemindApi
+import com.jinjinjara.pola.data.remote.api.ReportApi
 import com.jinjinjara.pola.data.remote.api.SearchApi
 import com.jinjinjara.pola.data.remote.api.TimelineApi
 import com.jinjinjara.pola.data.remote.interceptor.AuthInterceptor
@@ -177,5 +178,12 @@ object NetworkModule {
     @Singleton
     fun provideSearchApi(retrofit: Retrofit): SearchApi {
         return retrofit.create(SearchApi::class.java)
+    }
+
+    // ReportApi
+    @Provides
+    @Singleton
+    fun provideReportApi(retrofit: Retrofit): ReportApi {
+        return retrofit.create(ReportApi::class.java)
     }
 }

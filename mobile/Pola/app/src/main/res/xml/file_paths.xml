@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
     <cache-path
-        name="camera_images"
+        name="widget_images"
+        path="widget_images/" />
+
+    <cache-path
+        name="cache"
         path="." />
 </paths>

@@ -211,7 +211,24 @@ class FileUploadRepositoryImpl @Inject constructor(
                 )
             }
 
+            val fileId = completeResponse.body()!!.data.id
             Log.d("FileUpload", "=== Upload Complete SUCCESS ===")
+            Log.d("FileUpload", "File ID: $fileId")
+
+            // 파일 후처리 (자동 분류)를 별도 코루틴으로 실행 - UI는 기다리지 않음
+            CoroutineScope(Dispatchers.IO).launch {
+                Log.d("FileUpload", "Starting automatic classification in background...")
+                val postProcessResult = postProcessFile(fileId)
+                when (postProcessResult) {
+                    is Result.Success -> {
+                        Log.d("FileUpload", "Auto classification SUCCESS")
+                    }
+                    is Result.Error -> {
+                        Log.w("FileUpload", "Auto classification failed: ${postProcessResult.message}")
+                    }
+                    is Result.Loading -> {}
+                }
+            }
 
             Result.Success(completeResponse.body()!!.message)
 

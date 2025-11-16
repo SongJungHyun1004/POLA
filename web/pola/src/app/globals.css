@@ -1,5 +1,50 @@
 @import "tailwindcss";
 
+
+@font-face {
+    font-family: 'NanumSquareRound';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_two@1.0/NanumSquareRound.woff') format('woff');
+    font-weight: normal;
+    font-display: swap;
+}
+
+/* @font-face {
+    font-family: 'memomentKkukkkuk';
+    src: url('/fonts/memomentKkukkkuk.ttf') format('truetype');
+    font-weight: 400;
+} */
+
+
+/* @font-face {
+    font-family: 'SchoolSafeOuting';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-5@1.0/HakgyoansimNadeuriTTF-L.woff2') format('woff2');
+    font-weight: 400;
+    font-display: swap;
+} */
+
+
+/* @font-face {
+    font-family: 'IncheonEducationHimchan';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2307-2@1.0/iceHimchan-Rg.woff2') format('woff2');
+    font-weight: normal;
+    font-display: swap;
+} */
+
+/* 
+@font-face {
+    font-family: 'DoolgiMayoGothic';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2302@1.1/Dovemayo_gothic.woff2') format('woff2');
+    font-weight: normal;
+    font-display: swap;
+} */
+
+/* @font-face {
+    font-family: 'OngleipParkDahyeon';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2411-3@1.0/Ownglyph_ParkDaHyun.woff2') format('woff2');
+    font-weight: normal;
+    font-display: swap;
+} */
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -13,9 +58,24 @@
 }
 
 body {
-  background: var(--background);
+  background: var(--background); 
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family:'NanumSquareRound','memomentKkukkkuk','SchoolSafeOuting','IncheonEducationHimchan', 'DoolgiMayoGothic','OngleipParkDahyeon', Arial, Helvetica, sans-serif;
+}
+
+/* 반응형 컨테이너 */
+.max-w-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 768px) {
+  .max-w-container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
 }
 
 ::-webkit-scrollbar {
@@ -84,6 +144,23 @@ body {
   .animate-fade-slide-in {
     animation: fadeSlideIn 0.25s ease-out;
   }
+
+  @keyframes scroll-x {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  .animate-scroll-x {
+    animation: scroll-x 60s linear infinite;
+  }
+
+  .animation-pause {
+    animation-play-state: paused;
+  }
 }
 
 .no-scrollbar::-webkit-scrollbar {
@@ -116,4 +193,50 @@ body {
   max-height: calc(129px * 5 + 12px * 4);
   overflow: visible;
   border-radius: 12px;
+}
+
+.shadow-custom {
+  box-shadow: 0 2px 4px 0 rgba(95, 91, 85, 0.5); /* Softer, more diffused shadow */
+}
+
+/* Custom inset shadow for inner image border */
+.shadow-inner-custom {
+  box-shadow: inset 0 1px 3px 0 rgba(105, 101, 92, 0.639); /* Softer, more diffused inset shadow */
+}
+
+/* Custom Swiper styles */
+.pola-swiper .swiper-button-next,
+.pola-swiper .swiper-button-prev {
+  color: #8B7355;
+}
+
+.pola-swiper .swiper-pagination-bullet-active {
+  background: #8B7355;
+}
+
+/* Custom Swiper styles for positioning */
+.pola-swiper {
+  padding-bottom: 80px !important; 
+}
+
+.pola-swiper .swiper-button-next,
+.pola-swiper .swiper-button-prev {
+  top: 50%; /* Center vertically */
+  transform: translateY(-50%); /* Adjust for exact centering */
+  margin-top: 0; /* Remove default margin */
+}
+
+.pola-swiper .swiper-button-next {
+  right: -50px; /* Move further outside */
+}
+
+.pola-swiper .swiper-button-prev {
+  left: -50px; /* Move further outside */
+}
+
+.pola-swiper .swiper-pagination-bullets {
+  bottom: 30px !important; 
+  position: absolute; /* Ensure absolute positioning relative to .pola-swiper */
+  width: 100%; /* Ensure it spans the full width */
+  text-align: center; /* Center the dots */
 }

@@ -15,6 +15,8 @@ import {
   LogOut,
   X,
   ChevronDown,
+  FolderHeart,
+  Puzzle,
 } from "lucide-react";
 import useAuthStore from "@/store/useAuthStore";
 import { authService } from "@/services/authService";
@@ -163,7 +165,10 @@ export default function Header() {
   /* -------------------- AI 검색 -------------------- */
   const doAISearch = () => {
     if (!aiQuery.trim()) return;
-    router.push(`/files?nlp=${encodeURIComponent(aiQuery)}`);
+
+    const q = encodeURIComponent(aiQuery.trim());
+    router.push(`/ragsearch?query=${q}`);
+
     setAiMode(false);
   };
 
@@ -280,7 +285,7 @@ export default function Header() {
   /* -------------------- 로그인 전 헤더 -------------------- */
   if (!user) {
     return (
-      <header className="flex justify-between items-center w-full pb-10 px-8 pt-6">
+      <header className="flex justify-between items-center w-full pb-10 px-12 pt-6">
         <Link href="/home">
           <Image
             src="/images/POLA_logo_2.png"
@@ -307,7 +312,7 @@ export default function Header() {
   /* -------------------- 로그인 후 헤더 -------------------- */
   return (
     <>
-      <header className="relative flex justify-between items-center w-full pb-10 px-8 pt-6 bg-[#FFFEF8]">
+      <header className="relative flex justify-between items-center w-full pb-10 px-12 pt-6 bg-[#FFFEF8]">
         {/* 로고 */}
         <Link href="/home">
           <Image
@@ -507,16 +512,19 @@ export default function Header() {
               </div>
 
               <div className="p-4 space-y-3 text-[#4C3D25]">
+                {/* 내 정보 */}
                 <div>
-                  <p className="text-sm font-semibold mb-2">나의 활동</p>
-                  <MenuItem icon={<BarChart3 />} text="내 통계" />
-                  <MenuItem icon={<PersonStanding />} text="내 타입" />
-                </div>
+                  <p className="text-sm font-semibold mb-2">내 정보</p>
 
-                <hr />
+                  <MenuItem
+                    icon={<FolderHeart />}
+                    text="내 카테고리"
+                    onClick={() => {
+                      router.push("/my/categories");
+                      setShowProfileModal(false);
+                    }}
+                  />
 
-                <div>
-                  <p className="text-sm font-semibold mb-2">기타</p>
                   <MenuItem
                     icon={<Upload />}
                     text="업로드"
@@ -525,6 +533,35 @@ export default function Header() {
                       setShowProfileModal(false);
                     }}
                   />
+
+                  <MenuItem
+                    icon={<PersonStanding />}
+                    text="내 타입"
+                    onClick={() => {
+                      router.push("/my/type");
+                      setShowProfileModal(false);
+                    }}
+                  />
+                </div>
+
+                <hr />
+
+                {/* 기타 */}
+                <div>
+                  <p className="text-sm font-semibold mb-2">기타</p>
+
+                  <MenuItem
+                    icon={<Puzzle />}
+                    text="POLA 익스텐션"
+                    onClick={() => {
+                      window.open(
+                        "https://chrome.google.com/webstore",
+                        "_blank"
+                      );
+                      setShowProfileModal(false);
+                    }}
+                  />
+
                   <MenuItem
                     icon={<FileText />}
                     text="개인정보 처리방침"
@@ -534,6 +571,7 @@ export default function Header() {
 
                 <hr />
 
+                {/* 로그아웃 */}
                 <button
                   onClick={async () => {
                     try {

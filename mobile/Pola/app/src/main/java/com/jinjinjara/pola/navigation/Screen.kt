@@ -27,8 +27,15 @@ sealed class Screen(val route: String) {
     data object Tag : Screen("tag/{tagName}?type={searchType}") {
         fun createRoute(tagName: String, searchType: String = "tag") = "tag/$tagName?type=$searchType"
     }
-    data object Contents : Screen("contents/{contentId}") {
-        fun createRoute(contentId: Long) = "contents/$contentId"
+    data object Contents : Screen("contents/{contentId}?imageUrl={imageUrl}") {
+        fun createRoute(contentId: Long, imageUrl: String? = null): String {
+            return if (imageUrl != null) {
+                val encodedUrl = java.net.URLEncoder.encode(imageUrl, "UTF-8")
+                "contents/$contentId?imageUrl=$encodedUrl"
+            } else {
+                "contents/$contentId"
+            }
+        }
     }
     data object ContentsEdit : Screen("contents/edit/{contentId}") {
         fun createRoute(contentId: Long) = "contents/edit/$contentId"
@@ -53,6 +60,10 @@ sealed class Screen(val route: String) {
     data object Profile : Screen("my/profile")
     data object Settings : Screen("my/settings")
     data object EditProfile : Screen("my/profile/edit")
+    data object MyType : Screen("my/type")
+    data object EditCategory : Screen("my/edit/category")
+    data object EditTag : Screen("my/edit/tag")
+    data object TermsOfService : Screen("my/termsOfService")
 
     // 인자를 받는 화면 예시
     data object Detail : Screen("detail/{itemId}") {

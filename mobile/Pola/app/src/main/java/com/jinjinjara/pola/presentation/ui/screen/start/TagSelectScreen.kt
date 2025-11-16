@@ -23,11 +23,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextAlign
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.jinjinjara.pola.domain.model.Tag
 import com.jinjinjara.pola.util.ErrorType
 
 @Composable
 fun TagSelectScreen(
-    categoriesWithTags: Map<String, List<String>> = emptyMap(),
+    categoriesWithTags: Map<String, List<Tag>> = emptyMap(),
     onNextClick: () -> Unit = {},
     onBackClick: () -> Unit = {},
     viewModel: TagSelectViewModel = hiltViewModel()
@@ -129,8 +130,8 @@ fun TagSelectScreen(
 
 @Composable
 private fun TagSelectContent(
-    categoriesWithTags: Map<String, List<String>>,
-    onSubmit: (Map<String, List<String>>, Set<String>) -> Unit,
+    categoriesWithTags: Map<String, List<Tag>>,
+    onSubmit: (Map<String, List<Tag>>, Set<Long>) -> Unit,
     onBackClick: () -> Unit = {},
     viewModel: TagSelectViewModel = hiltViewModel()
 ) {
@@ -138,19 +139,24 @@ private fun TagSelectContent(
     var currentCategory by remember { mutableStateOf<TagCategory?>(null) }
 
     // ViewModel에서 상태 가져오기
-    val selectedTagsList by viewModel.selectedTags.collectAsState()
+    val selectedTagIdsList by viewModel.selectedTagIds.collectAsState()
     val customTagsMap by viewModel.customTagsMap.collectAsState()
 
     // List를 Set으로 변환
-    val selectedTags = remember(selectedTagsList) { selectedTagsList.toSet() }
+    val selectedTagIds = remember(selectedTagIdsList) { selectedTagIdsList.toSet() }
 
     // 선택된 카테고리를 TagCategory로 변환
     val categories = remember(categoriesWithTags, customTagsMap) {
         categoriesWithTags.map { (categoryName, tags) ->
+            // 커스텀 태그 추가 (임시 ID 사용)
+            var nextTempId = -1L
+            val customTags = (customTagsMap[categoryName] ?: emptyList()).map { tagName ->
+                Tag(id = nextTempId--, name = tagName)
+            }
+
             TagCategory(
                 title = categoryName,
-                // API에서 가져온 태그 + 사용자가 추가한 태그
-                tags = (tags + (customTagsMap[categoryName] ?: emptyList())).distinct()
+                tags = tags + customTags
             )
         }
     }
@@ -165,16 +171,16 @@ private fun TagSelectContent(
             categories.forEach { category ->
                 TagCategorySection(
                     category = category,
-                    selectedTags = selectedTags,
+                    selectedTagIds = selectedTagIds,
                     onTagClick = { tag ->
-                        viewModel.toggleTag(tag)
+                        viewModel.toggleTag(tag.id)
                     },
                     onClearAll = {
-                        val count = category.tags.count { selectedTags.contains(it) }
+                        val count = category.tags.count { selectedTagIds.contains(it.id) }
                         if (count == 0) {
-                            viewModel.selectAllTagsInCategory(category.tags)  // 모두 선택
+                            viewModel.selectAllTagsInCategory(category.tags.map { it.id })  // 모두 선택
                         } else {
-                            viewModel.deselectAllTagsInCategory(category.tags)  // 모두 해제
+                            viewModel.deselectAllTagsInCategory(category.tags.map { it.id })  // 모두 해제
                         }
                     },
                     onAddClick = {
@@ -189,9 +195,9 @@ private fun TagSelectContent(
         Spacer(modifier = Modifier.height(8.dp))
 
         // 모든 카테고리가 최소 4개 이상 선택되었는지 검증
-        val allCategoriesMeetRequirement = remember(selectedTags, categories) {
+        val allCategoriesMeetRequirement = remember(selectedTagIds, categories) {
             categories.all { category ->
-                category.tags.count { selectedTags.contains(it) } >= 4
+                category.tags.count { selectedTagIds.contains(it.id) } >= 4
             }
         }
 
@@ -226,10 +232,7 @@ private fun TagSelectContent(
             Button(
                 onClick = {
                     // ViewModel을 통해 선택된 태그 전송
-                    val finalCategoriesWithTags = (categoriesWithTags.keys + customTagsMap.keys).associateWith { key ->
-                        ((categoriesWithTags[key] ?: emptyList()) + (customTagsMap[key] ?: emptyList())).distinct()
-                    }
-                    onSubmit(finalCategoriesWithTags, selectedTags)
+                    onSubmit(categoriesWithTags, selectedTagIds)
                 },
                 enabled = allCategoriesMeetRequirement,
                 modifier = Modifier
@@ -268,14 +271,14 @@ private fun TagSelectContent(
 @Composable
 private fun TagCategorySection(
     category: TagCategory,
-    selectedTags: Set<String>,
-    onTagClick: (String) -> Unit,
+    selectedTagIds: Set<Long>,
+    onTagClick: (Tag) -> Unit,
     onClearAll: () -> Unit,
     onAddClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     // 해당 카테고리에서 선택된 태그 개수 계산
-    val selectedCount = category.tags.count { selectedTags.contains(it) }
+    val selectedCount = category.tags.count { selectedTagIds.contains(it.id) }
     val noneSelected = selectedCount == 0
     val buttonText = if (noneSelected) "모두 선택" else "모두 해제"
 
@@ -312,8 +315,8 @@ private fun TagCategorySection(
         ) {
             category.tags.forEach { tag ->
                 TagChip(
-                    text = tag,
-                    isSelected = selectedTags.contains(tag),
+                    text = tag.name,
+                    isSelected = selectedTagIds.contains(tag.id),
                     onClick = { onTagClick(tag) }
                 )
             }
@@ -399,13 +402,15 @@ private fun AddButton(onClick: () -> Unit = {}) {
 @Composable
 fun AddTagDialog(
     categoryTitle: String,
-    existingTags: List<String> = emptyList(),
+    existingTags: List<Tag> = emptyList(),
     onDismiss: () -> Unit,
     onConfirm: (List<String>) -> Unit
 ) {
     var text by remember { mutableStateOf("") }
     var addedTags by remember { mutableStateOf(listOf<String>()) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    val existingTagNames = remember(existingTags) { existingTags.map { it.name } }
 
     AlertDialog(
         modifier = Modifier.width(250.dp),
@@ -437,7 +442,7 @@ fun AddTagDialog(
                                 newTag.isEmpty() -> {
                                     text = ""
                                 }
-                                existingTags.contains(newTag) -> {
+                                existingTagNames.contains(newTag) -> {
                                     errorMessage = "이미 존재하는 태그입니다"
                                     text = ""
                                 }
@@ -555,7 +560,7 @@ fun AddTagDialog(
 
 data class TagCategory(
     val title: String,
-    val tags: List<String>,
+    val tags: List<Tag>,
 )
 
 @Preview(showBackground = true)

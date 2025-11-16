@@ -256,7 +256,6 @@ fun <T : DisplayItem> ItemGrid3View(
                 }
             ) {
                 PolaCard(
-                    modifier = Modifier.shadow(elevation = 8.dp),
                     ratio = 0.7661f,
                     imageRatio = 0.9062f,
                     paddingValues = PaddingValues(
@@ -329,7 +328,6 @@ fun <T : DisplayItem> ItemGrid2View(
                 }
             ) {
                 PolaCard(
-                    modifier = Modifier.shadow(elevation = 8.dp),
                     ratio = 0.7661f,
                     imageRatio = 0.9062f,
                     paddingValues = PaddingValues(

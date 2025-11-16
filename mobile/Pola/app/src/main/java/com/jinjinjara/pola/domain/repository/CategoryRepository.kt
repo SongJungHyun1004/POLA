@@ -5,6 +5,7 @@ import com.jinjinjara.pola.domain.model.CategoryRecommendation
 import com.jinjinjara.pola.domain.model.FileDetail
 import com.jinjinjara.pola.domain.model.FilesPage
 import com.jinjinjara.pola.domain.model.UserCategory
+import com.jinjinjara.pola.domain.model.UserCategoryWithTags
 import com.jinjinjara.pola.util.Result
 
 /**
@@ -42,5 +43,15 @@ interface CategoryRepository {
      * Get user's categories
      */
     suspend fun getCategories(): Result<List<Category>>
+
+    /**
+     * Get user's categories with tags
+     */
+    suspend fun getUserCategoriesWithTags(): Result<List<UserCategoryWithTags>>
+
+    /**
+     * Update category name
+     */
+    suspend fun updateCategory(categoryId: Long, name: String): Result<Unit>
 
 }
