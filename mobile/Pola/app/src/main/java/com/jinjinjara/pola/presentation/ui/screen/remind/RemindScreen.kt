@@ -14,6 +14,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.*
@@ -115,6 +117,15 @@ fun RemindScreen(
                                         color = MaterialTheme.colorScheme.tertiary,
                                         fontWeight = FontWeight.Bold,
                                         style = MaterialTheme.typography.titleLarge
+                                    )
+                                }
+                            },
+                            actions = {
+                                IconButton(onClick = { viewModel.loadReminders() }) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Refresh,
+                                        contentDescription = "새로고침",
+                                        tint = MaterialTheme.colorScheme.tertiary
                                     )
                                 }
                             },
@@ -352,6 +363,15 @@ private fun RemindScreenContent(
                             style = MaterialTheme.typography.titleLarge
                         )
 
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { viewModel.loadReminders() }) {
+                        Icon(
+                            imageVector = Icons.Filled.Refresh,
+                            contentDescription = "새로고침",
+                            tint = MaterialTheme.colorScheme.tertiary
+                        )
                     }
                 },
                 windowInsets = WindowInsets(0.dp)

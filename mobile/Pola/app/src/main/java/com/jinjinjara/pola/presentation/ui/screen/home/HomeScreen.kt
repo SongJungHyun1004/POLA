@@ -28,6 +28,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,6 +67,7 @@ data class Category(
     val imageRes: Int
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
@@ -75,9 +79,17 @@ fun HomeScreen(
 ) {
 
     val uiState by viewModel.uiState.collectAsState()
+    var isRefreshing by remember { mutableStateOf(false) }
+    val pullRefreshState = rememberPullToRefreshState()
 
     LaunchedEffect(Unit) {
         viewModel.loadHomeData()
+    }
+
+    LaunchedEffect(uiState) {
+        if (uiState is HomeUiState.Success) {
+            isRefreshing = false
+        }
     }
 
     when (val state = uiState) {
@@ -106,14 +118,32 @@ fun HomeScreen(
         }
 
         is HomeUiState.Success -> {
-            HomeContent(
-                homeData = state.data,
-                onNavigateToContents = onNavigateToContents,
-                onNavigateToCategory = onNavigateToCategory,
-                onNavigateToFavorite = onNavigateToFavorite,
-                onNavigateToSearch = onNavigateToSearch,
-                onNavigateToChatbot = onNavigateToChatbot
-            )
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = {
+                    isRefreshing = true
+                    viewModel.refresh()
+                },
+                state = pullRefreshState,
+                indicator = {
+                    PullToRefreshDefaults.Indicator(
+                        state = pullRefreshState,
+                        isRefreshing = isRefreshing,
+                        modifier = Modifier.align(Alignment.TopCenter),
+                        color = MaterialTheme.colorScheme.background,
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                }
+            ) {
+                HomeContent(
+                    homeData = state.data,
+                    onNavigateToContents = onNavigateToContents,
+                    onNavigateToCategory = onNavigateToCategory,
+                    onNavigateToFavorite = onNavigateToFavorite,
+                    onNavigateToSearch = onNavigateToSearch,
+                    onNavigateToChatbot = onNavigateToChatbot
+                )
+            }
         }
     }
 
