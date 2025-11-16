@@ -3,4 +3,8 @@
     <cache-path
         name="widget_images"
         path="widget_images/" />
+
+    <cache-path
+        name="cache"
+        path="." />
 </paths>
