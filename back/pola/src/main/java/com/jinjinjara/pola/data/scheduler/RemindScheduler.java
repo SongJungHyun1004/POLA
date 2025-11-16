@@ -36,7 +36,7 @@ public class RemindScheduler {
     // ----------------------------
     // 매 시간 08분마다 실행
     // ----------------------------
-    @Scheduled(cron = "0 21 * * * *")
+    @Scheduled(cron = "0 35 * * * *")
     @Transactional
     public void updateAllUsersRemindFiles() {
         log.info("[Scheduler] Remind files update started");
