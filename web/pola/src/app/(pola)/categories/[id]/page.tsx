@@ -213,6 +213,12 @@ export default function CategoryPage() {
     } catch {}
   };
 
+  useEffect(() => {
+    if (files.length > 0 && !selectedFile) {
+      handleSelectFile(files[0]);
+    }
+  }, [files]);
+
   const handleFavoriteChange = (state: boolean) => {
     if (!selectedFile) return;
 
@@ -353,34 +359,36 @@ export default function CategoryPage() {
           </div>
 
           {/* ---------------- RIGHT DETAIL PANEL ---------------- */}
-          <div
-            className="
-            w-[400px] 
-            flex-shrink-0 
-            border-l border-[#E3DCC8] 
-            pl-6 
-            flex 
-            items-start
-            justify-center
-            pt-4
-            overflow-y-auto
-            scrollbar-thin scrollbar-thumb-[#CBBF9E]/50
-          "
-          >
-            <PolaroidDetail
-              id={selectedFile?.id}
-              src={selectedFile?.src}
-              tags={selectedFile?.tags ?? []}
-              contexts={selectedFile?.context ?? ""}
-              date={selectedFile?.created_at}
-              categoryId={selectedFile?.category_id}
-              favorite={selectedFile?.favorite}
-              type={selectedFile?.type}
-              platform={selectedFile?.platform}
-              ocr_text={selectedFile?.ocr_text}
-              onFavoriteChange={handleFavoriteChange}
-            />
-          </div>
+          {selectedFile && (
+            <div
+              className="
+                w-[400px] 
+                flex-shrink-0 
+                border-l border-[#E3DCC8] 
+                pl-6 
+                flex 
+                items-start
+                justify-center
+                pt-4
+                overflow-y-auto
+                scrollbar-thin scrollbar-thumb-[#CBBF9E]/50
+              "
+            >
+              <PolaroidDetail
+                id={selectedFile?.id}
+                src={selectedFile?.src}
+                tags={selectedFile?.tags ?? []}
+                contexts={selectedFile?.context ?? ""}
+                date={selectedFile?.created_at}
+                categoryId={selectedFile?.category_id}
+                favorite={selectedFile?.favorite}
+                type={selectedFile?.type}
+                platform={selectedFile?.platform}
+                ocr_text={selectedFile?.ocr_text}
+                onFavoriteChange={handleFavoriteChange}
+              />
+            </div>
+          )}
         </div>
       </div>
 

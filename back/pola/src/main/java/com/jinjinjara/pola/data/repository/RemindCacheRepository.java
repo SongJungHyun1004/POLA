@@ -48,6 +48,17 @@ public class RemindCacheRepository {
         }
     }
 
+    public void removeItem(Long userId, Long fileId) {
+        List<DataResponse> cached = getRemindFiles(userId);
+        if (cached == null) return;
+
+        List<DataResponse> updated = cached.stream()
+                .filter(r -> !r.getId().equals(fileId))  // 해당 파일만 제거
+                .toList();
+
+        saveRemindFiles(userId, updated);
+    }
+
     public void saveRemindFiles(Long userId, List<DataResponse> files) {
         try {
             String json = objectMapper.writeValueAsString(files);

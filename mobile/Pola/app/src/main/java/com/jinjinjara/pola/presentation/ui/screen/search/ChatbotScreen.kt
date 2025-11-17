@@ -83,7 +83,7 @@ fun ChatbotScreen(
             )
 
             Text(
-                text = "AI 챗봇",
+                text = "AI 도우미",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.tertiary,
