@@ -12,27 +12,33 @@ import java.util.Optional;
 
 public interface CategoryTagRepository extends JpaRepository<CategoryTag, Long> {
     List<CategoryTag> findByCategory(Category category);
+
     Optional<CategoryTag> findByCategoryAndTag(Category category, Tag tag);
+
     void deleteByCategoryAndTag(Category category, Tag tag);
+
     boolean existsByCategoryAndTag(Category category, Tag tag);
+
     void deleteByCategoryId(Long categoryId);
 
     @Query("""
-SELECT t
-FROM CategoryTag ct
-JOIN ct.tag t
-WHERE ct.category.id = :categoryId
-""")
+            SELECT t
+            FROM CategoryTag ct
+            JOIN ct.tag t
+            WHERE ct.category.id = :categoryId
+            """)
     List<Tag> findTagsByCategoryId(@Param("categoryId") Long categoryId);
+
+    boolean existsByTag(Tag tag);
 
 
     @Query("""
-    SELECT DISTINCT ct 
-    FROM CategoryTag ct
-    JOIN FETCH ct.category c
-    JOIN FETCH ct.tag t
-    WHERE c.user.id = :userId
-""")
+                SELECT DISTINCT ct 
+                FROM CategoryTag ct
+                JOIN FETCH ct.category c
+                JOIN FETCH ct.tag t
+                WHERE c.user.id = :userId
+            """)
     List<CategoryTag> findAllByUserId(@Param("userId") Long userId);
 
 

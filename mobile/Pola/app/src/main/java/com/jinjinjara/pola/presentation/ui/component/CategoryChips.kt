@@ -15,9 +15,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -33,22 +38,36 @@ fun CategoryChips(
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
 
-    // 선택된 카테고리로 자동 스크롤
-    LaunchedEffect(selectedCategory) {
+    // 각 칩의 실제 너비를 저장
+    val chipWidths = remember { mutableStateMapOf<String, Float>() }
+    var viewportWidth by remember { mutableStateOf(0f) }
+
+    // 선택된 카테고리로 자동 스크롤 (중앙 정렬)
+    LaunchedEffect(selectedCategory, chipWidths.size, viewportWidth) {
         val selectedIndex = categories.indexOf(selectedCategory)
-        // 화면에 이미 보이는 처음 2-3개 항목은 스크롤하지 않음
-        if (selectedIndex > 2) {
+        // 모든 칩의 너비와 뷰포트 너비가 측정된 후 실행
+        if (chipWidths.size == categories.size && viewportWidth > 0f) {
             coroutineScope.launch {
-                // 각 칩의 평균 너비 추정 (텍스트 + padding + spacing)
-                // 2글자 카테고리 기준: 한글 2글자(~40dp) + padding(36dp) ≈ 70dp
-                val estimatedChipWidth = with(density) { 70.dp.toPx() }
                 val spacing = with(density) { 8.dp.toPx() }
                 val startPadding = with(density) { 8.dp.toPx() }
 
-                // 선택된 칩의 대략적인 위치 계산
-                val scrollPosition = (selectedIndex * (estimatedChipWidth + spacing)) - startPadding
+                // 선택된 칩까지의 누적 너비 계산 (실제 측정값 사용)
+                var accumulatedWidth = startPadding
+                for (i in 0 until selectedIndex) {
+                    val chipWidth = chipWidths[categories[i]] ?: 0f
+                    accumulatedWidth += chipWidth + spacing
+                }
 
-                scrollState.animateScrollTo(scrollPosition.toInt())
+                // 선택된 칩의 너비
+                val selectedChipWidth = chipWidths[selectedCategory] ?: 0f
+
+                // 칩을 화면 중앙에 배치하기 위한 스크롤 위치 계산
+                val chipCenter = accumulatedWidth + (selectedChipWidth / 2)
+                val viewportCenter = viewportWidth / 2
+                val targetScroll = chipCenter - viewportCenter
+
+                // animateScrollTo가 자동으로 0 ~ maxScroll 범위로 제한
+                scrollState.animateScrollTo(targetScroll.toInt())
             }
         }
     }
@@ -56,6 +75,9 @@ fun CategoryChips(
     Row(
         modifier = Modifier
             .padding(top = 8.dp, bottom = 12.dp)
+            .onGloballyPositioned { coordinates ->
+                viewportWidth = coordinates.size.width.toFloat()
+            }
             .horizontalScroll(scrollState),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -67,6 +89,10 @@ fun CategoryChips(
                 color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.background,
                 shadowElevation = if (isSelected) 4.dp else 2.dp,
                 modifier = Modifier
+                    .onGloballyPositioned { coordinates ->
+                        // 각 칩의 실제 너비 측정 및 저장
+                        chipWidths[category] = coordinates.size.width.toFloat()
+                    }
                     .clickable(
                         indication = null,
                         interactionSource = remember { MutableInteractionSource() }

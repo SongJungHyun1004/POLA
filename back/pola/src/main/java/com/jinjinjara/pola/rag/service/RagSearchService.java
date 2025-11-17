@@ -9,6 +9,7 @@ import com.jinjinjara.pola.rag.util.QueryPreprocessor;
 import com.jinjinjara.pola.rag.util.RagPostProcessor;
 import com.jinjinjara.pola.rag.util.RagProperties;
 import com.jinjinjara.pola.s3.service.S3Service;
+import com.jinjinjara.pola.user.entity.Users;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,7 +32,8 @@ public class RagSearchService {
     private final FileTagService fileTagService;
     private final RagProperties ragProperties;
 
-    public RagSearchResponse search(Long userId, String query, int limit) {
+    public RagSearchResponse search(Users user, String query, int limit) {
+        Long userId = user.getId();
         log.info("[RagSearch] userId={}, query='{}', limit={}", userId, query, limit);
 
         // 1) 전처리 + 타입 라우팅
@@ -62,7 +64,7 @@ public class RagSearchService {
         List<RagSearchSource> sources = rows.stream()
                 .map(r -> {
                     // 태그 조회
-                    List<String> tagNames = fileTagService.getTagsByFile(r.getId()).stream()
+                    List<String> tagNames = fileTagService.getTagsByFile(r.getId(),user).stream()
                             .map(com.jinjinjara.pola.data.dto.response.TagResponse::getTagName)
                             .filter(Objects::nonNull)
                             .map(String::trim)
