@@ -115,11 +115,18 @@ export default function FavoritePage() {
     })
   );
 
+  // ⭐ 초기 자동 선택 처리 함수
+  const selectInitialFile = async (file: any) => {
+    await handleSelectFile(file);
+  };
+
   async function loadMore() {
     if (isFetching || !hasMore) return;
+
     try {
       setIsFetching(true);
       const newFiles = await getFavoriteFiles(page);
+
       if (newFiles.length === 0) {
         setHasMore(false);
         return;
@@ -136,6 +143,12 @@ export default function FavoritePage() {
           (v, i, a) => a.findIndex((t) => t.id === v.id) === i
         );
       });
+
+      // ⭐ 첫 로딩 때만 자동 선택
+      const isFirstLoad = page === 0;
+      if (isFirstLoad && newFilesWithRotation.length > 0) {
+        selectInitialFile(newFilesWithRotation[0]);
+      }
 
       setPage((prev) => prev + 1);
     } catch (e) {
@@ -215,10 +228,9 @@ export default function FavoritePage() {
       <div className="w-full max-w-[1200px] h-full flex gap-8 p-6">
         {/* 좌측 리스트 */}
         <div className="flex flex-col flex-1 overflow-hidden">
-          <div className="flex items-center justify-between mb-2 pl-4">
-            <h1 className="text-5xl font-bold mb-6">Favorite</h1>
-          </div>
-          <div className="flex items-center justify-between mb-2 pl-4">
+          <h1 className="text-5xl font-bold mb-6 pl-4">Favorite</h1>
+
+          <div className="text-xl text-[#7A6A48] mb-4 pl-4">
             즐겨찾기 해둔 파일들을 둘러보세요.
           </div>
 
@@ -278,41 +290,34 @@ export default function FavoritePage() {
           </div>
         </div>
 
-        {/* 우측 상세 */}
-        <div className="w-[400px] flex-shrink-0 border-l border-[#E3DCC8] pl-6 flex flex-col items-center justify-center">
-          <PolaroidDetail
-            id={selectedFile?.id}
-            src={selectedFile?.src}
-            tags={selectedFile?.tags ?? []}
-            contexts={selectedFile?.context ?? ""}
-            date={selectedFile?.created_at}
-            categoryId={selectedFile?.category_id}
-            favorite={selectedFile?.favorite}
-            type={selectedFile?.type}
-            platform={selectedFile?.platform}
-            ocr_text={selectedFile?.ocr_text}
-            onCategoryUpdated={async () => {
-              const refreshed = await getFavoriteFiles(0);
-              setFiles(
-                refreshed.map((f: any) => ({
-                  ...f,
-                  rotation: `rotate(${Math.random() * 8 - 4}deg)`,
-                }))
-              );
-            }}
-            onFavoriteChange={(newState) => {
-              if (!selectedFile) return;
-              setSelectedFile(
-                (prev) => prev && { ...prev, favorite: newState }
-              );
-              setFiles((prev) =>
-                prev.map((f) =>
-                  f.id === selectedFile.id ? { ...f, favorite: newState } : f
-                )
-              );
-            }}
-          />
-        </div>
+        {/* 우측 상세 영역 — ⭐ selectedFile 있을 때만 표시 ⭐ */}
+        {selectedFile && (
+          <div
+            className="
+              w-[400px] 
+              flex-shrink-0 
+              border-l border-[#E3DCC8]
+              pl-6 
+              flex 
+              flex-col
+              items-center
+              justify-center
+            "
+          >
+            <PolaroidDetail
+              id={selectedFile?.id}
+              src={selectedFile?.src}
+              tags={selectedFile?.tags ?? []}
+              contexts={selectedFile?.context ?? ""}
+              date={selectedFile?.created_at}
+              categoryId={selectedFile?.category_id}
+              favorite={selectedFile?.favorite}
+              type={selectedFile?.type}
+              platform={selectedFile?.platform}
+              ocr_text={selectedFile?.ocr_text}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
