@@ -29,6 +29,11 @@ class FavoriteViewModel @Inject constructor(
     private val _errorEvent = MutableSharedFlow<String>()
     val errorEvent: SharedFlow<String> = _errorEvent.asSharedFlow()
 
+    private val _sortOrder = MutableStateFlow("최신순")
+    val sortOrder: StateFlow<String> = _sortOrder.asStateFlow()
+
+    private var originalData: List<FavoriteData> = emptyList()
+
     init {
         loadFavorites()
     }
@@ -44,7 +49,9 @@ class FavoriteViewModel @Inject constructor(
                     result.data.forEachIndexed { index, favoriteData ->
                         Log.d(TAG, "  [$index] id: ${favoriteData.id}, imageUrl: ${favoriteData.imageUrl}")
                     }
-                    _uiState.value = FavoriteUiState.Success(result.data)
+                    originalData = result.data
+                    val sortedData = sortFavorites(originalData, _sortOrder.value)
+                    _uiState.value = FavoriteUiState.Success(sortedData)
                 }
                 is Result.Error -> {
                     Log.e(TAG, "UseCase Error - message: ${result.message}")
@@ -70,15 +77,19 @@ class FavoriteViewModel @Inject constructor(
 
             Log.d(TAG, "toggleFavorite - fileId: $fileId, newState: $newFavoriteState")
 
-            // Optimistic update: UI 즉시 업데이트
-            val updatedList = currentState.data.map { item ->
+            // 실패 시 복원을 위해 이전 상태 저장
+            val previousOriginalData = originalData
+
+            // Optimistic update: 원본 데이터와 UI 즉시 업데이트
+            originalData = originalData.map { item ->
                 if (item.fileId == fileId) {
                     item.copy(isFavorite = newFavoriteState)
                 } else {
                     item
                 }
             }
-            _uiState.value = FavoriteUiState.Success(updatedList)
+            val sortedData = sortFavorites(originalData, _sortOrder.value)
+            _uiState.value = FavoriteUiState.Success(sortedData)
 
             // API 호출
             when (val result = toggleFavoriteUseCase(fileId, newFavoriteState)) {
@@ -89,7 +100,9 @@ class FavoriteViewModel @Inject constructor(
                 is Result.Error -> {
                     Log.e(TAG, "즐겨찾기 토글 실패 - message: ${result.message}")
                     // 실패 시 원래 상태로 복원
-                    _uiState.value = currentState
+                    originalData = previousOriginalData
+                    val restoredData = sortFavorites(originalData, _sortOrder.value)
+                    _uiState.value = FavoriteUiState.Success(restoredData)
                     // 에러 토스트 이벤트 발생
                     _errorEvent.emit(result.message ?: "즐겨찾기 상태를 변경할 수 없습니다")
                 }
@@ -97,6 +110,22 @@ class FavoriteViewModel @Inject constructor(
                     Log.d(TAG, "즐겨찾기 토글 로딩")
                 }
             }
+        }
+    }
+
+    fun setSortOrder(order: String) {
+        _sortOrder.value = order
+        if (originalData.isNotEmpty()) {
+            val sortedData = sortFavorites(originalData, order)
+            _uiState.value = FavoriteUiState.Success(sortedData)
+        }
+    }
+
+    private fun sortFavorites(data: List<FavoriteData>, order: String): List<FavoriteData> {
+        return when (order) {
+            "최신순" -> data
+            "오래된순" -> data.reversed()
+            else -> data
         }
     }
 

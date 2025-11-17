@@ -128,7 +128,7 @@ fun CategoryScreen(
         }
     }
     var isMenuExpanded by remember { mutableStateOf(false) }
-    var selectedSort by remember { mutableStateOf("최신순") }
+    val selectedSort by viewModel.sortOrder.collectAsState()
     var viewMode by remember { mutableStateOf(ViewMode.GRID_2) }
 
     val categories = uiState.files
@@ -511,7 +511,6 @@ fun CategoryScreen(
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .clickable {
-                                                    selectedSort = sort
                                                     isMenuExpanded = false
                                                     val (sortBy, direction) = when (sort) {
                                                         "최신순" -> "createdAt" to "DESC"
