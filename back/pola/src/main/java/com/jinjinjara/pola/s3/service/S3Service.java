@@ -113,7 +113,7 @@ public class S3Service {
 
         return presignedRequest.url();
     }
-    /* 리마인드 전용: Preview URL 24시간 30분 TTL */
+    /* 리마인드 전용: Preview URL 24시간 TTL */
     public Map<Long, String> generatePreviewUrlsLongTTL(Map<Long, FileMeta> fileMetaMap) {
 
         Map<Long, String> result = new HashMap<>(fileMetaMap.size());
@@ -122,7 +122,7 @@ public class S3Service {
             Long id = entry.getKey();
             FileMeta meta = entry.getValue();
 
-            // 텍스트 파일은 preview가 없으므로 원본 URL로 대체
+
             if (isTextType(meta.contentType())) {
                 result.put(id, presignedInlineUrlLongTTL(meta.key(), meta.contentType()).toString());
                 continue;
@@ -133,17 +133,20 @@ public class S3Service {
             try {
                 result.put(id, presignedInlineUrlLongTTL(previewKey, meta.contentType()).toString());
             } catch (Exception e) {
+                // preview 없으면 original 키로 재시도
                 result.put(id, presignedInlineUrlLongTTL(meta.key(), meta.contentType()).toString());
             }
         }
+
         return result;
     }
 
-    /* 긴 TTL (24시간 30분) presigned URL - 리마인드 전용 */
+
+
+    /* 긴 TTL (24시간) presigned URL - 리마인드 전용 */
     private URL presignedInlineUrlLongTTL(String key, String contentType) {
 
-        Duration longDuration =
-                Duration.ofDays(1).plusMinutes(30); // 24시간 + 30분
+        Duration longDuration = Duration.ofHours(25); // 24시간 고정
 
         GetObjectRequest getRequest = GetObjectRequest.builder()
                 .bucket(bucket)
