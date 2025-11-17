@@ -25,36 +25,41 @@ import java.util.List;
 public class CategoryTagController {
 
     private final CategoryTagService categoryTagService;
+
     @Operation(summary = "카테고리에 태그 추가", description = "특정 카테고리에 선택한 태그를 연결합니다.")
     @PostMapping("/categories/{categoryId}/tags/{tagId}")
     public ResponseEntity<ApiResponse<CategoryTagResponse>> addTagToCategory(
+            @AuthenticationPrincipal Users user,
             @Parameter(description = "카테고리 ID", example = "1") @PathVariable Long categoryId,
             @Parameter(description = "태그 ID", example = "5") @PathVariable Long tagId
     ) {
-        CategoryTagResponse response = categoryTagService.addTagToCategory(categoryId, tagId);
+        CategoryTagResponse response = categoryTagService.addTagToCategory(user, categoryId, tagId);
         return ResponseEntity.ok(ApiResponse.ok(response, "κα테고리에 태그가 추가되었습니다."));
     }
 
     @Operation(summary = "카테고리에서 태그 제거", description = "특정 카테고리에서 지정된 태그를 제거합니다.")
     @DeleteMapping("/categories/{categoryId}/tags/{tagId}")
     public ResponseEntity<ApiResponse<Void>> removeTagFromCategory(
+            @AuthenticationPrincipal Users user,
             @Parameter(description = "카테고리 ID", example = "1") @PathVariable Long categoryId,
             @Parameter(description = "태그 ID", example = "5") @PathVariable Long tagId
     ) {
-        categoryTagService.removeTagFromCategory(categoryId, tagId);
+        categoryTagService.removeTagFromCategory(user, categoryId, tagId);
         return ResponseEntity.ok(ApiResponse.ok(null, "카테고리에서 태그가 제거되었습니다."));
     }
 
     @Operation(summary = "카테고리 내 태그 조회", description = "특정 카테고리에 연결된 모든 태그를 조회합니다.")
     @GetMapping("/categories/{categoryId}/tags")
-    public ApiResponse<List<TagResponse>> getTagsByCategory(@PathVariable Long categoryId) {
-        List<TagResponse> tags = categoryTagService.getTagsByCategory(categoryId);
+    public ApiResponse<List<TagResponse>> getTagsByCategory(
+            @AuthenticationPrincipal Users user,
+            @PathVariable Long categoryId
+    ) {
+        List<TagResponse> tags = categoryTagService.getTagsByCategory(user, categoryId);
         if (tags == null || tags.isEmpty()) {
             return ApiResponse.ok(null, "카테고리 태그가 없습니다.");
         }
         return ApiResponse.ok(tags, "카테고리 태그 목록 조회 완료");
     }
-
 
     @Operation(summary = "전체 태그 조회", description = "등록된 모든 태그를 조회합니다.")
     @GetMapping("/tags")
@@ -72,7 +77,7 @@ public class CategoryTagController {
         return ResponseEntity.ok(ApiResponse.ok(tag, "새 태그가 생성되었습니다."));
     }
 
-    @Operation(summary = "태그 삭제", description = "특정 태그를 삭제합니다.")
+    @Operation(summary = "태그 삭제", description = "특정 태그를 삭제합니다. (※ 다른 카테고리에서 사용 중이면 삭제할 수 없습니다.)")
     @DeleteMapping("/tags/{tagId}")
     public ResponseEntity<ApiResponse<Void>> deleteTag(
             @Parameter(description = "삭제할 태그 ID", example = "7") @PathVariable Long tagId
@@ -80,7 +85,6 @@ public class CategoryTagController {
         categoryTagService.deleteTag(tagId);
         return ResponseEntity.ok(ApiResponse.ok(null, "태그 삭제 완료"));
     }
-
 
     @Operation(summary = "추천 카테고리/태그 목록", description = "기본 카테고리와 추천 태그 리스트를 반환합니다.")
     @GetMapping("/categories/tags/recommendations")
@@ -91,11 +95,14 @@ public class CategoryTagController {
 
     @Operation(summary = "카테고리/태그 초기 등록", description = "사용자 선택 카테고리/태그를 등록하며 '미분류'를 자동 추가합니다.")
     @PostMapping("/categories/tags/init")
-    public ResponseEntity<ApiResponse<Void>> initCategoriesAndTags(@RequestBody InitCategoryTagRequest request
-    ,@AuthenticationPrincipal Users user) {
+    public ResponseEntity<ApiResponse<Void>> initCategoriesAndTags(
+            @AuthenticationPrincipal Users user,
+            @RequestBody InitCategoryTagRequest request
+    ) {
         categoryTagService.initCategoriesAndTags(user, request);
         return ResponseEntity.ok(ApiResponse.ok(null, "사용자 카테고리/태그 초기화 완료"));
     }
+
     @Operation(summary = "사용자 전체 카테고리별 태그 조회", description = "유저가 가진 모든 카테고리와 각 카테고리에 연결된 태그들을 반환합니다.")
     @GetMapping("/users/me/categories/tags")
     public ApiResponse<List<CategoryWithTagsResponse>> getUserCategoriesWithTags(
@@ -105,14 +112,14 @@ public class CategoryTagController {
         return ApiResponse.ok(response, "사용자 카테고리별 태그 목록 조회 성공");
     }
 
-
     @Operation(summary = "카테고리에 태그 여러개 추가", description = "같은 이름의 태그가 없으면 새로 생성 후 연결합니다.")
     @PostMapping("/categories/{categoryId}/tags")
     public ApiResponse<List<CategoryTagResponse>> addTagsToCategory(
+            @AuthenticationPrincipal Users user,
             @PathVariable Long categoryId,
             @RequestBody List<String> tagNames
     ) {
-        List<CategoryTagResponse> responses = categoryTagService.addTagsToCategory(categoryId, tagNames);
+        List<CategoryTagResponse> responses = categoryTagService.addTagsToCategory(user, categoryId, tagNames);
         return ApiResponse.ok(responses, "카테고리에 태그가 성공적으로 추가되었습니다.");
     }
 }

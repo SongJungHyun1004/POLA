@@ -146,71 +146,73 @@ export default function RemindPage() {
   };
 
   return (
-    <div className="relative w-full h-full text-[#4C3D25] overflow-hidden flex flex-col">
-      {/* Title */}
-      <h1 className="text-6xl font-bold ml-8 mt-6 mb-4 flex-none">Remind</h1>
+    <div className="w-full h-full flex justify-center">
+      <div className="relative w-full max-w-[1200px] h-full text-[#4C3D25] overflow-hidden flex flex-col p-6">
+        {/* Title */}
+        <h1 className="text-5xl font-bold mb-6 flex-none pl-2">Remind</h1>
 
-      {/* Slider */}
-      <div className="relative flex-none h-[460px] flex items-center justify-center">
-        {/* Left Preview */}
-        <div
-          onClick={() => paginate(-1)}
-          className="absolute left-[20%] top-1/2 -translate-y-1/2 scale-[0.88] opacity-60 cursor-pointer z-10 hover:opacity-80"
-        >
-          <PolaroidPreview data={reminds[leftIndex]} />
-        </div>
-
-        {/* Center - Detail */}
-        <AnimatePresence custom={direction} mode="popLayout">
-          <motion.div
-            key={currentDetail?.id}
-            custom={direction}
-            variants={variants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{ duration: 0.35, ease: "easeInOut" }}
-            className="relative z-20"
+        {/* Slider */}
+        <div className="relative flex-none h-[460px] flex items-center justify-center">
+          {/* Left Preview */}
+          <div
+            onClick={() => paginate(-1)}
+            className="absolute left-[20%] top-1/2 -translate-y-1/2 scale-[0.88] opacity-60 cursor-pointer z-10 hover:opacity-80"
           >
-            {currentDetail && <PolaroidDetail {...currentDetail} />}
-          </motion.div>
-        </AnimatePresence>
+            <PolaroidPreview data={reminds[leftIndex]} />
+          </div>
 
-        {/* Right Preview */}
-        <div
-          onClick={() => paginate(1)}
-          className="absolute right-[20%] top-1/2 -translate-y-1/2 scale-[0.88] opacity-60 cursor-pointer z-10 hover:opacity-80"
-        >
-          <PolaroidPreview data={reminds[rightIndex]} />
+          {/* Center - Detail */}
+          <AnimatePresence custom={direction} mode="popLayout">
+            <motion.div
+              key={currentDetail?.id}
+              custom={direction}
+              variants={variants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.35, ease: "easeInOut" }}
+              className="relative z-20"
+            >
+              {currentDetail && <PolaroidDetail {...currentDetail} />}
+            </motion.div>
+          </AnimatePresence>
+
+          {/* Right Preview */}
+          <div
+            onClick={() => paginate(1)}
+            className="absolute right-[20%] top-1/2 -translate-y-1/2 scale-[0.88] opacity-60 cursor-pointer z-10 hover:opacity-80"
+          >
+            <PolaroidPreview data={reminds[rightIndex]} />
+          </div>
+
+          {/* Arrow Buttons */}
+          <button
+            className="absolute left-[12%] top-1/2 -translate-y-1/2 hover:opacity-80 z-20"
+            onClick={() => paginate(-1)}
+          >
+            <ChevronLeft size={42} />
+          </button>
+
+          <button
+            className="absolute right-[12%] top-1/2 -translate-y-1/2 hover:opacity-80 z-20"
+            onClick={() => paginate(1)}
+          >
+            <ChevronRight size={42} />
+          </button>
         </div>
 
-        {/* Arrow Buttons */}
-        <button
-          className="absolute left-[12%] top-1/2 -translate-y-1/2 hover:opacity-80 z-20"
-          onClick={() => paginate(-1)}
-        >
-          <ChevronLeft size={42} />
-        </button>
-
-        <button
-          className="absolute right-[12%] top-1/2 -translate-y-1/2 hover:opacity-80 z-20"
-          onClick={() => paginate(1)}
-        >
-          <ChevronRight size={42} />
-        </button>
-      </div>
-
-      {/* Thumbnails */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[90%] pointer-events-auto">
-        <ThumbnailStrip
-          images={reminds}
-          currentIndex={currentIndex}
-          onSelect={(i) => {
-            setDirection(i > currentIndex ? 1 : -1);
-            setCurrentIndex(i);
-            updateDetail(i);
-          }}
-        />
+        {/* Thumbnails */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[90%] pointer-events-auto">
+          <ThumbnailStrip
+            images={reminds}
+            currentIndex={currentIndex}
+            onSelect={(i) => {
+              setDirection(i > currentIndex ? 1 : -1);
+              setCurrentIndex(i);
+              updateDetail(i);
+            }}
+          />
+        </div>
       </div>
     </div>
   );

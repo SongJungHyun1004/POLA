@@ -213,6 +213,12 @@ export default function CategoryPage() {
     } catch {}
   };
 
+  useEffect(() => {
+    if (files.length > 0 && !selectedFile) {
+      handleSelectFile(files[0]);
+    }
+  }, [files]);
+
   const handleFavoriteChange = (state: boolean) => {
     if (!selectedFile) return;
 
@@ -268,29 +274,31 @@ export default function CategoryPage() {
     <>
       {/* 전체 화면 중앙 정렬 + 최대 너비 1300px */}
       <div className="w-full h-full flex justify-center bg-[#FFFEF8] text-[#4C3D25]">
-        <div className="w-full max-w-[1200px] h-full flex gap-8 px-6 pb-6">
+        <div className="w-full max-w-[1200px] h-full flex gap-8 p-6">
           {/* ---------------- LEFT CONTENT AREA ---------------- */}
-          <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="w-full flex-1 flex flex-col overflow-hidden">
             {/* 상단 타이틀 */}
-            <div className="flex items-center justify-between mb-2 pl-4">
-              <div>
-                <h2 className="text-5xl font-bold mb-6">{categoryName}</h2>
-                <div className="text-2xl text-[#7A6A48] flex flex-wrap gap-x-2 ">
-                  {tags.map((t, index) => (
-                    <span key={index} className="whitespace-nowrap">
-                      #{t}
-                    </span>
-                  ))}
-                </div>
+            <div className="w-full mb-2 pl-4">
+              {/* 타이틀 + 버튼: 한 줄 전체 차지 */}
+              <div className="flex w-full items-center justify-between mb-6">
+                <h2 className="text-5xl font-bold">{categoryName}</h2>
+
+                <button
+                  className="p-2 rounded-full hover:bg-[#EDE6D8]"
+                  onClick={() => setIsModalOpen(true)}
+                >
+                  <Pencil className="w-5 h-5" />
+                </button>
               </div>
 
-              {/* 모달 버튼 */}
-              <button
-                className="p-2 rounded-full hover:bg-[#EDE6D8]"
-                onClick={() => setIsModalOpen(true)}
-              >
-                <Pencil className="w-5 h-5" />
-              </button>
+              {/* 태그 */}
+              <div className="text-2xl text-[#7A6A48] flex flex-wrap gap-x-2">
+                {tags.map((t, index) => (
+                  <span key={index} className="whitespace-nowrap">
+                    #{t}
+                  </span>
+                ))}
+              </div>
             </div>
 
             {/* 리스트 스크롤 영역 */}
@@ -351,34 +359,36 @@ export default function CategoryPage() {
           </div>
 
           {/* ---------------- RIGHT DETAIL PANEL ---------------- */}
-          <div
-            className="
-            w-[400px] 
-            flex-shrink-0 
-            border-l border-[#E3DCC8] 
-            pl-6 
-            flex 
-            items-start
-            justify-center
-            pt-4
-            overflow-y-auto
-            scrollbar-thin scrollbar-thumb-[#CBBF9E]/50
-          "
-          >
-            <PolaroidDetail
-              id={selectedFile?.id}
-              src={selectedFile?.src}
-              tags={selectedFile?.tags ?? []}
-              contexts={selectedFile?.context ?? ""}
-              date={selectedFile?.created_at}
-              categoryId={selectedFile?.category_id}
-              favorite={selectedFile?.favorite}
-              type={selectedFile?.type}
-              platform={selectedFile?.platform}
-              ocr_text={selectedFile?.ocr_text}
-              onFavoriteChange={handleFavoriteChange}
-            />
-          </div>
+          {selectedFile && (
+            <div
+              className="
+                w-[400px] 
+                flex-shrink-0 
+                border-l border-[#E3DCC8] 
+                pl-6 
+                flex 
+                items-start
+                justify-center
+                pt-4
+                overflow-y-auto
+                scrollbar-thin scrollbar-thumb-[#CBBF9E]/50
+              "
+            >
+              <PolaroidDetail
+                id={selectedFile?.id}
+                src={selectedFile?.src}
+                tags={selectedFile?.tags ?? []}
+                contexts={selectedFile?.context ?? ""}
+                date={selectedFile?.created_at}
+                categoryId={selectedFile?.category_id}
+                favorite={selectedFile?.favorite}
+                type={selectedFile?.type}
+                platform={selectedFile?.platform}
+                ocr_text={selectedFile?.ocr_text}
+                onFavoriteChange={handleFavoriteChange}
+              />
+            </div>
+          )}
         </div>
       </div>
 

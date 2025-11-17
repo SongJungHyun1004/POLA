@@ -156,7 +156,7 @@ export default function RAGSearchPageInner() {
     <div className="w-full h-full flex justify-center bg-[#FFFEF8] text-[#4C3D25] overflow-hidden">
       <div
         className="h-full flex flex-row gap-6 pb-6 pl-6 transition-all duration-500"
-        style={{ width: layoutExpanded ? "1200px" : "720px" }}
+        style={{ width: layoutExpanded ? "1200px" : "800px" }}
       >
         {/* LEFT AREA */}
         <div
@@ -168,87 +168,101 @@ export default function RAGSearchPageInner() {
               ref={scrollRef}
               className="flex-1 overflow-y-auto p-6 pr-2 scrollbar-thin scrollbar-thumb-[#CBBF9E]/50"
             >
-              {/* 메시지 + 카드 그룹 */}
-              {messages.map((msg, i) => (
-                <div key={i} className="mb-10">
-                  {/* 메시지 */}
-                  <div
-                    className={`flex mb-4 ${
-                      msg.role === "user" ? "justify-end" : "justify-start"
-                    }`}
-                  >
-                    {msg.role === "assistant" && (
-                      <div className="w-10 h-10 rounded-full overflow-hidden mr-3">
-                        <img
-                          src="/images/POLA_chatbot.png"
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    )}
+              {/* 🔥 메시지가 없을 때: 중앙 안내 UI */}
+              {messages.length === 0 && (
+                <div className="w-full h-full flex flex-col items-center justify-center opacity-80 select-none">
+                  <img
+                    src="/images/POLA_chatbot_empty.png"
+                    alt="empty"
+                    className="w-52 h-52 object-contain mb-4"
+                  />
+                  <p className="text-lg text-[#7A6A48]">
+                    궁금한 것을 입력창에 입력해주세요.
+                  </p>
+                </div>
+              )}
 
+              {/* 🔥 메시지가 있을 때만 기존 채팅+카드 렌더 */}
+              {messages.length > 0 &&
+                messages.map((msg, i) => (
+                  <div key={i} className="mb-10">
+                    {/* 메시지 */}
                     <div
-                      className={`max-w-[70%] p-4 rounded-2xl text-base shadow-sm leading-relaxed ${
-                        msg.role === "user"
-                          ? "bg-[#4C3D25] text-white"
-                          : "bg-white text-[#4C3D25] border border-[#E3DCC8]"
+                      className={`flex mb-4 ${
+                        msg.role === "user" ? "justify-end" : "justify-start"
                       }`}
                     >
-                      {msg.content}
-                    </div>
-                  </div>
+                      {msg.role === "assistant" && (
+                        <div className="w-10 h-10 rounded-full overflow-hidden mr-3">
+                          <img
+                            src="/images/POLA_chatbot.png"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
 
-                  {/* 카드 그룹 */}
-                  {cardGroups
-                    .filter((g) => g.answerIndex === i)
-                    .map((group, gi) => (
                       <div
-                        key={gi}
-                        className="grid grid-cols-2 gap-4 ml-14 mt-3 w-[330px]"
+                        className={`max-w-[70%] p-4 rounded-2xl text-base shadow-sm leading-relaxed ${
+                          msg.role === "user"
+                            ? "bg-[#4C3D25] text-white"
+                            : "bg-white text-[#4C3D25] border border-[#E3DCC8]"
+                        }`}
                       >
-                        {group.cards.map((c, idx) => (
-                          <div
-                            key={idx}
-                            onClick={() =>
-                              setDetail({
-                                id: c.id,
-                                src: c.src,
-                                tags: c.tags.map((t: string) => `#${t}`),
-                                contexts: c.context,
-                                favorite: c.favorite,
-                                type: c.type,
-                                platform: c.platform,
-                                ocr_text: c.ocr_text,
-                                date: c.createdAt,
-                              })
-                            }
-                            className="relative cursor-pointer transition-transform duration-200 hover:scale-105"
-                            style={{ transform: `rotate(${c.rotate}deg)` }}
-                          >
-                            {/* Favorite 별 표시 */}
-                            {c.favorite && (
-                              <Star
-                                fill={c.favorite ? "#FFD700" : "transparent"}
-                                stroke="#FFD700"
-                                strokeWidth={2.5}
-                                className="absolute top-2 right-4 drop-shadow-sm w-6 h-6 z-10"
-                              />
-                            )}
-
-                            <PolaroidCard
-                              src={c.src}
-                              type={c.type}
-                              ocr_text={c.ocr_text}
-                            />
-                          </div>
-                        ))}
+                        {msg.content}
                       </div>
-                    ))}
-                </div>
-              ))}
+                    </div>
 
-              {loading && (
+                    {/* 카드 그룹 */}
+                    {cardGroups
+                      .filter((g) => g.answerIndex === i)
+                      .map((group, gi) => (
+                        <div
+                          key={gi}
+                          className="grid grid-cols-2 gap-4 ml-14 mt-3 w-[330px]"
+                        >
+                          {group.cards.map((c, idx) => (
+                            <div
+                              key={idx}
+                              onClick={() =>
+                                setDetail({
+                                  id: c.id,
+                                  src: c.src,
+                                  tags: c.tags.map((t: string) => `#${t}`),
+                                  contexts: c.context,
+                                  favorite: c.favorite,
+                                  type: c.type,
+                                  platform: c.platform,
+                                  ocr_text: c.ocr_text,
+                                  date: c.createdAt,
+                                })
+                              }
+                              className="relative cursor-pointer transition-transform duration-200 hover:scale-105"
+                              style={{ transform: `rotate(${c.rotate}deg)` }}
+                            >
+                              {c.favorite && (
+                                <Star
+                                  fill={c.favorite ? "#FFD700" : "transparent"}
+                                  stroke="#FFD700"
+                                  strokeWidth={2.5}
+                                  className="absolute top-2 right-4 drop-shadow-sm w-6 h-6 z-10"
+                                />
+                              )}
+
+                              <PolaroidCard
+                                src={c.src}
+                                type={c.type}
+                                ocr_text={c.ocr_text}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                  </div>
+                ))}
+
+              {loading && messages.length > 0 && (
                 <div className="text-center text-sm text-[#7A6A48] mt-2">
-                  AI가 답변을 생성하는 중...
+                  상담포아가 답변을 생성하는 중...
                 </div>
               )}
             </div>
@@ -257,7 +271,7 @@ export default function RAGSearchPageInner() {
             <div className="p-4 flex items-center gap-2 border-t border-[#E5DECF] bg-[#F4EFE2]">
               <input
                 type="text"
-                placeholder="AI에게 질문해보세요..."
+                placeholder="상담포아에게 질문해보세요..."
                 className="flex-grow bg-white border border-[#D8D5CC] rounded-full px-4 py-3 outline-none"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}

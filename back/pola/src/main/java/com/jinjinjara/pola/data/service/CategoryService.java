@@ -94,25 +94,23 @@ public class CategoryService {
      * READ - 단일 조회
      */
     @Transactional(readOnly = true)
-    public CategoryResponse getCategoryById(Long id) {
-        try {
-            Category category = categoryRepository.findById(id)
-                    .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
-            return CategoryResponse.fromEntity(category);
-        } catch (CustomException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new CustomException(ErrorCode.DATA_NOT_FOUND, e.getMessage());
-        }
+    public CategoryResponse getCategoryById(Long id, Users user) {
+        Category category = categoryRepository.findById(id)
+                .filter(c -> c.getUser().getId().equals(user.getId()))
+                .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
+
+        return CategoryResponse.fromEntity(category);
     }
+
 
     /**
      * UPDATE - 이름 수정
      */
-    public CategoryResponse updateCategory(Long id, String newName) {
+    public CategoryResponse updateCategory(Long id, String newName, Users user) {
         try {
             Category category = categoryRepository.findById(id)
-                    .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
+                    .filter(c -> c.getUser().getId().equals(user.getId()))
+                    .orElseThrow(() -> new CustomException(ErrorCode.FILE_ACCESS_DENIED));
 
             // 이름 중복 확인
             boolean exists = categoryRepository.existsByUserAndCategoryName(category.getUser(), newName);
@@ -142,13 +140,13 @@ public class CategoryService {
      * 카테고리 삭제 시, 해당 카테고리를 참조하는 파일들은 모두 '미분류' 카테고리로 이동
      */
     @Transactional
-    public void deleteCategory(Long id) {
+    public void deleteCategory(Long id,Users user) {
         try {
             // 1. 삭제 대상 카테고리 확인
             Category category = categoryRepository.findById(id)
-                    .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
+                    .filter(c -> c.getUser().getId().equals(user.getId()))
+                    .orElseThrow(() -> new CustomException(ErrorCode.FILE_ACCESS_DENIED));
 
-            Users user = category.getUser();
             Long userId = user.getId();
 
             // 2. '미분류' 카테고리 조회 또는 생성
