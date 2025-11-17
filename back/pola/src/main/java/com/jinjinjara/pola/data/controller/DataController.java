@@ -27,6 +27,7 @@ import java.util.List;
 public class DataController {
 
     private final DataService dataService;
+
     // ==========================================
     // Presigned 업로드 완료
     // ==========================================
@@ -106,9 +107,9 @@ public class DataController {
     @Operation(
             summary = "리마인드 파일 목록 조회",
             description = """
-            최근 7일 이내에 보지 않은 파일 중 조회수가 낮고 오래된 순으로 30개를 반환합니다.
-            리마인드는 사용자가 잊고 있던 데이터를 다시 상기시켜주는 용도입니다.
-            """
+                    최근 7일 이내에 보지 않은 파일 중 조회수가 낮고 오래된 순으로 30개를 반환합니다.
+                    리마인드는 사용자가 잊고 있던 데이터를 다시 상기시켜주는 용도입니다.
+                    """
     )
     @GetMapping("/reminders")
     public ApiResponse<List<DataResponse>> getRemindFiles(
@@ -125,9 +126,9 @@ public class DataController {
     @Operation(
             summary = "파일 상세 정보 조회",
             description = """
-            파일 단건의 상세 정보를 반환합니다.
-            호출 시 해당 파일의 조회수가 1 증가하고, 마지막 열람 시각(lastViewedAt)이 갱신됩니다.
-            """
+                    파일 단건의 상세 정보를 반환합니다.
+                    호출 시 해당 파일의 조회수가 1 증가하고, 마지막 열람 시각(lastViewedAt)이 갱신됩니다.
+                    """
     )
     @GetMapping("/{fileId}")
     public ApiResponse<FileDetailResponse> getFileDetail(
@@ -149,13 +150,16 @@ public class DataController {
         File updated = dataService.updateFavoriteSort(fileId, newSort, user);
         return ApiResponse.ok(updated, "즐겨찾기 순서 변경 완료");
     }
+
     // ==========================================
 // 파일 삭제
 // ==========================================
     @Operation(summary = "데이터 삭제", description = "사용자가 지정한 파일을 제거합니다.")
     @DeleteMapping("/{id}")
-    public ApiResponse<Void> deleteData(@PathVariable("id") Long fileId) {
-        dataService.deleteFile(fileId);
+    public ApiResponse<Void> deleteData(
+            @AuthenticationPrincipal Users user,
+            @PathVariable("id") Long fileId) {
+        dataService.deleteFile(fileId, user);
         return ApiResponse.ok(null, "파일이 성공적으로 삭제되었습니다.");
     }
 
@@ -163,11 +167,11 @@ public class DataController {
     @Operation(
             summary = "파일 공유 링크 생성",
             description = """
-    지정된 파일에 대해 공유 링크를 생성합니다.  
-    - 기본 만료 시간은 24시간입니다.  
-    - 이미 공유 중인 파일은 기존 링크를 재사용합니다.  
-    - 로그인된 사용자만 호출할 수 있습니다.
-    """
+                    지정된 파일에 대해 공유 링크를 생성합니다.  
+                    - 기본 만료 시간은 24시간입니다.  
+                    - 이미 공유 중인 파일은 기존 링크를 재사용합니다.  
+                    - 로그인된 사용자만 호출할 수 있습니다.
+                    """
     )
     @PostMapping("/{fileId}/share")
     public ApiResponse<FileShareResponse> createShareLink(
@@ -186,26 +190,26 @@ public class DataController {
     @Operation(
             summary = "파일 목록(타임라인) 조회",
             description = """
-        로그인한 사용자의 파일 목록을 페이징, 정렬, 필터 조건으로 조회합니다.  
-        기본적으로 업로드 최신순(`createdAt DESC`)으로 정렬되어 **타임라인 형태**로 반환됩니다.  
-        
-        **옵션**
-        - `filterType`: category | favorite | tag | null(null을 보내면 전체파일을 조회)
-        - `filterId`: categoryId (filterType이 'category'거나'tag'일때 해당 카테고리나 태그의 id입력)
-        - `sortBy`: 정렬 기준 필드명 (예: createdAt, views ,file_size, last_viewed_at등)
-        - `direction`: 정렬 방향 (ASC / DESC)
-        - `page`, `size`: 페이징 설정 (기본 0페이지, size 최대 50)
-        
-        **예시**
-        ```json
-        {
-          "page": 0,
-          "size": 50,
-          "sortBy": "createdAt",
-          "direction": "DESC"
-        }
-        ```
-        """
+                    로그인한 사용자의 파일 목록을 페이징, 정렬, 필터 조건으로 조회합니다.  
+                    기본적으로 업로드 최신순(`createdAt DESC`)으로 정렬되어 **타임라인 형태**로 반환됩니다.  
+                    
+                    **옵션**
+                    - `filterType`: category | favorite | tag | null(null을 보내면 전체파일을 조회)
+                    - `filterId`: categoryId (filterType이 'category'거나'tag'일때 해당 카테고리나 태그의 id입력)
+                    - `sortBy`: 정렬 기준 필드명 (예: createdAt, views ,file_size, last_viewed_at등)
+                    - `direction`: 정렬 방향 (ASC / DESC)
+                    - `page`, `size`: 페이징 설정 (기본 0페이지, size 최대 50)
+                    
+                    **예시**
+                    ```json
+                    {
+                      "page": 0,
+                      "size": 50,
+                      "sortBy": "createdAt",
+                      "direction": "DESC"
+                    }
+                    ```
+                    """
     )
     @PostMapping("/list")
     public ApiResponse<PagedResponseDto<DataResponse>> getFileList(
@@ -233,9 +237,9 @@ public class DataController {
     @Operation(
             summary = "파일 내용(context) 수정",
             description = """
-        파일의 텍스트 설명(context)만 수정합니다.  
-        다른 필드는 변경되지 않습니다.
-        """
+                    파일의 텍스트 설명(context)만 수정합니다.  
+                    다른 필드는 변경되지 않습니다.
+                    """
     )
     @PutMapping("/{fileId}")
     public ApiResponse<FileDetailResponse> updateFileContext(

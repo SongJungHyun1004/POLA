@@ -38,22 +38,22 @@ public class CategoryController {
 
     @Operation(summary = "단일 카테고리 조회")
     @GetMapping("/{id}")
-    public ApiResponse<CategoryResponse> getById(@PathVariable Long id) {
-        CategoryResponse category = categoryService.getCategoryById(id);
+    public ApiResponse<CategoryResponse> getById(@AuthenticationPrincipal Users user,@PathVariable Long id) {
+        CategoryResponse category = categoryService.getCategoryById(id,user);
         return ApiResponse.ok(category, "카테고리 조회 완료");
     }
 
     @Operation(summary = "카테고리 수정")
     @PutMapping("/{id}")
-    public ApiResponse<CategoryResponse> update(@PathVariable Long id, @RequestParam String name) {
-        CategoryResponse updated = categoryService.updateCategory(id, name);
+    public ApiResponse<CategoryResponse> update(@AuthenticationPrincipal Users user,@PathVariable Long id, @RequestParam String name) {
+        CategoryResponse updated = categoryService.updateCategory(id, name,user);
         return ApiResponse.ok(updated, "카테고리 수정 완료");
     }
 
     @Operation(summary = "카테고리 삭제")
     @DeleteMapping("/{id}")
-    public ApiResponse<Void> delete(@PathVariable Long id) {
-        categoryService.deleteCategory(id);
+    public ApiResponse<Void> delete(@AuthenticationPrincipal Users user,@PathVariable Long id) {
+        categoryService.deleteCategory(id,user);
         return ApiResponse.ok(null, "카테고리 삭제 완료");
     }
 }
