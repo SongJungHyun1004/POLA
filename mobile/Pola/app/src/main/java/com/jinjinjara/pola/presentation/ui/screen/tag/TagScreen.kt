@@ -50,6 +50,7 @@ import androidx.compose.ui.zIndex
 import com.jinjinjara.pola.presentation.ui.component.DisplayItem
 import com.jinjinjara.pola.presentation.ui.component.ItemGrid2View
 import com.jinjinjara.pola.presentation.ui.component.ItemGrid3View
+import com.jinjinjara.pola.presentation.ui.component.ItemListView
 
 
 data class ContentsItem(
@@ -63,7 +64,7 @@ data class ContentsItem(
 ) : DisplayItem
 
 enum class ViewMode {
-    GRID_3, GRID_2
+    LIST, GRID_3, GRID_2
 }
 
 @Composable
@@ -178,6 +179,16 @@ fun TagScreen(
             .background(MaterialTheme.colorScheme.background)
     ) {
         when (viewMode) {
+            ViewMode.LIST -> {
+                ItemListView(
+                    items = categories,
+                    onItemClick = { item -> onNavigateToContents(item.id.toLong()) },
+                    onFavoriteToggle = null, // 즐겨찾기 아이콘 숨김
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = headerHeightDp + 8.dp)
+                )
+            }
             ViewMode.GRID_3 -> {
                 ItemGrid3View(
                     items = categories,
@@ -325,7 +336,11 @@ fun TagScreen(
                 ) {
                     Icon(
                         painter = painterResource(
-                            id = if (viewMode == ViewMode.GRID_3) R.drawable.grid_3 else R.drawable.gird_2
+                            id = when (viewMode) {
+                                ViewMode.LIST -> R.drawable.list
+                                ViewMode.GRID_3 -> R.drawable.grid_3
+                                ViewMode.GRID_2 -> R.drawable.gird_2
+                            }
                         ),
                         contentDescription = "뷰 모드 변경",
                         tint = MaterialTheme.colorScheme.primary,
@@ -335,9 +350,14 @@ fun TagScreen(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
                             ) {
-                                viewMode = if (viewMode == ViewMode.GRID_3) ViewMode.GRID_2 else ViewMode.GRID_3
+                                viewMode = when (viewMode) {
+                                    ViewMode.LIST -> ViewMode.GRID_3
+                                    ViewMode.GRID_3 -> ViewMode.GRID_2
+                                    ViewMode.GRID_2 -> ViewMode.LIST
+                                }
                             }
                     )
+                    Spacer(modifier = Modifier.width(8.dp))
                     Box {
                         Row(
                             modifier = Modifier.clickable(
@@ -349,7 +369,7 @@ fun TagScreen(
                             Text(
                                 text = selectedSort,
                                 color = MaterialTheme.colorScheme.tertiary,
-                                fontSize = 12.sp
+                                fontSize = 14.sp
                             )
                             Icon(
                                 imageVector =
@@ -386,8 +406,8 @@ fun TagScreen(
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .clickable {
-                                                    viewModel.setSortOrder(sort)
                                                     isMenuExpanded = false
+                                                    viewModel.setSortOrder(sort)
                                                 }
                                                 .padding(horizontal = 16.dp, vertical = 10.dp),
                                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -396,7 +416,7 @@ fun TagScreen(
                                             Text(
                                                 text = sort,
                                                 color = MaterialTheme.colorScheme.tertiary,
-                                                fontSize = 12.sp
+                                                fontSize = 14.sp
                                             )
                                             if (sort == selectedSort) {
                                                 Icon(
