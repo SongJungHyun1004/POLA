@@ -4,6 +4,31 @@ importScripts('apiClient.js');
 
 const API_BASE_URL = CONFIG.API_BASE_URL;
 
+/**
+ * Base64 문자열을 UTF-8로 디코딩
+ * atob()는 ASCII만 지원하므로 한글 처리를 위해 별도 함수 사용
+ */
+function base64DecodeUnicode(base64) {
+  try {
+    // Base64를 바이너리 문자열로 변환
+    const binaryString = atob(base64);
+
+    // 바이너리 문자열을 Uint8Array로 변환
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+
+    // UTF-8 디코딩
+    const decoder = new TextDecoder('utf-8');
+    return decoder.decode(bytes);
+  } catch (error) {
+    console.error('Base64 UTF-8 디코딩 실패:', error);
+    // 폴백: 기본 atob 사용
+    return atob(base64);
+  }
+}
+
 // 확장 프로그램 설치 시 실행
 chrome.runtime.onInstalled.addListener(async () => {
   console.log('확장 프로그램이 설치되었습니다.');
@@ -233,14 +258,18 @@ async function handleLogin() {
     console.log('ID Token 길이:', idToken.length);
     console.log('ID Token 시작:', idToken.substring(0, 50) + '...');
 
-    // 3. ID Token에서 사용자 정보 디코딩 (JWT 디코딩)
+    // 3. ID Token에서 사용자 정보 디코딩 (JWT 디코딩 with UTF-8 지원)
     console.log('3. 사용자 정보 디코딩 중...');
-    const payload = JSON.parse(atob(idToken.split('.')[1]));
+    const payloadBase64 = idToken.split('.')[1];
+    const payloadJson = base64DecodeUnicode(payloadBase64);
+    const payload = JSON.parse(payloadJson);
+
     console.log('✅ 사용자 정보:', {
       email: payload.email,
       name: payload.name,
       picture: payload.picture
     });
+    console.log('이름 길이:', payload.name?.length, '바이트 길이:', new Blob([payload.name || '']).size);
 
     // 4. 백엔드에 ID Token 전송
     console.log('4. 백엔드 인증 요청 중...');
@@ -1083,31 +1112,31 @@ async function handleDragDropImageUpload(request, sendResponse) {
 async function handleDragDropTextUpload(request, sendResponse) {
   console.log('🎯 handleDragDropTextUpload 함수 진입!');
   console.log('Request:', request);
-  
+
   try {
     console.log('✅ Try 블록 시작');
     console.log('드래그앤드롭 텍스트 업로드 시작');
     console.log('텍스트 길이:', request.text?.length);
     console.log('텍스트 미리보기:', request.text?.substring(0, 100) + '...');
-    
+
     // 토큰 가져오기
     const { accessToken } = await chrome.storage.local.get(['accessToken']);
-    
+
     if (!accessToken) {
       throw new Error('로그인이 필요합니다.');
     }
-    
+
     // 텍스트를 Blob으로 변환
     const textBlob = new Blob([request.text], { type: 'text/plain; charset=utf-8' });
     const fileSize = textBlob.size;
-    
+
     console.log('텍스트 Blob 생성 완료, 크기:', fileSize, 'bytes');
-    
+
     // 1단계: S3 Presigned URL 생성
     console.log('1단계: S3 업로드 URL 생성 중...');
     const timestamp = Date.now();
     const fileName = `text_${timestamp}.txt`;
-    
+
     const presignedResponse = await fetch(
       `${API_BASE_URL}s3/presigned/upload?fileName=${encodeURIComponent(fileName)}`,
       {
@@ -1117,20 +1146,20 @@ async function handleDragDropTextUpload(request, sendResponse) {
         }
       }
     );
-    
+
     if (!presignedResponse.ok) {
       throw new Error('업로드 URL 생성 실패');
     }
-    
+
     const presignedData = await presignedResponse.json();
     const uploadUrl = presignedData.data.url;
     const fileKey = presignedData.data.key;
-    
+
     console.log('✅ 1단계 완료 - Upload URL 획득');
-    
+
     // 2단계: S3에 직접 업로드
     console.log('2단계: S3에 텍스트 업로드 중...');
-    
+
     const s3UploadResponse = await fetch(uploadUrl, {
       method: 'PUT',
       headers: {
@@ -1138,18 +1167,18 @@ async function handleDragDropTextUpload(request, sendResponse) {
       },
       body: textBlob
     });
-    
+
     if (!s3UploadResponse.ok) {
       throw new Error('S3 업로드 실패');
     }
-    
+
     console.log('✅ 2단계 완료 - S3 업로드 성공');
-    
+
     // 3단계: DB에 파일 메타데이터 저장
     console.log('3단계: 파일 정보 저장 중...');
-    
+
     const originUrl = uploadUrl.split('?')[0];
-    
+
     const completeResponse = await fetch(`${API_BASE_URL}files/complete`, {
       method: 'POST',
       headers: {
@@ -1164,19 +1193,19 @@ async function handleDragDropTextUpload(request, sendResponse) {
         platform: 'WEB'
       })
     });
-    
+
     if (!completeResponse.ok) {
       throw new Error('파일 등록 실패');
     }
-    
+
     const completeData = await completeResponse.json();
     console.log('✅ 3단계 완료 - 파일 등록 성공');
-    
+
     // 4단계: 파일 분류 (백그라운드)
     triggerPostProcess(completeData.data.id, accessToken);
-    
+
     console.log('✅ 드래그앤드롭 텍스트 업로드 성공:', completeData);
-    
+
     chrome.notifications.create({
       type: 'basic',
       iconUrl: 'icons/icon128.png',
@@ -1184,15 +1213,15 @@ async function handleDragDropTextUpload(request, sendResponse) {
       message: '드래그한 텍스트가 성공적으로 저장되었습니다.',
       priority: 2
     });
-    
-    sendResponse({ 
-      success: true, 
-      data: completeData 
+
+    sendResponse({
+      success: true,
+      data: completeData
     });
-    
+
   } catch (error) {
     console.error('❌ 드래그앤드롭 텍스트 업로드 실패:', error);
-    
+
     chrome.notifications.create({
       type: 'basic',
       iconUrl: 'icons/icon128.png',
@@ -1200,10 +1229,10 @@ async function handleDragDropTextUpload(request, sendResponse) {
       message: error.message || '텍스트 저장 중 오류가 발생했습니다.',
       priority: 2
     });
-    
-    sendResponse({ 
-      success: false, 
-      error: error.message 
+
+    sendResponse({
+      success: false,
+      error: error.message
     });
   }
 }
