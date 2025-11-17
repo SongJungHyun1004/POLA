@@ -15,6 +15,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,6 +53,8 @@ fun TimelineScreen(
     val selectedCategoryId by viewModel.selectedCategoryId.collectAsState()
     val coroutineScope = rememberCoroutineScope()
     val listState = rememberLazyListState()
+    var isRefreshing by remember { mutableStateOf(false) }
+    val pullRefreshState = rememberPullToRefreshState()
 
     val showScrollToTopButton by remember {
         derivedStateOf { listState.firstVisibleItemIndex > 0 }
@@ -64,6 +69,13 @@ fun TimelineScreen(
     LaunchedEffect(Unit) {
         viewModel.errorEvent.collect { message ->
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Pull-to-Refresh 상태 관리
+    LaunchedEffect(uiState) {
+        if (uiState is TimelineUiState.Success) {
+            isRefreshing = false
         }
     }
 
@@ -96,15 +108,6 @@ fun TimelineScreen(
                                 color = MaterialTheme.colorScheme.tertiary,
                                 fontWeight = FontWeight.Bold,
                                 style = MaterialTheme.typography.titleLarge
-                            )
-                        }
-                    },
-                    actions = {
-                        IconButton(onClick = { /* TODO */ }) {
-                            Image(
-                                painter = painterResource(id = R.drawable.calendar),
-                                contentDescription = "달력 아이콘",
-                                modifier = Modifier.size(24.dp)
                             )
                         }
                     },
@@ -148,12 +151,30 @@ fun TimelineScreen(
                     val successState = uiState as TimelineUiState.Success
                     val groupedFiles = successState.groupedFiles
 
-                    LazyColumn(
-                        state = listState,
+                    PullToRefreshBox(
+                        isRefreshing = isRefreshing,
+                        onRefresh = {
+                            isRefreshing = true
+                            viewModel.refresh()
+                        },
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(innerPadding)
+                            .padding(innerPadding),
+                        state = pullRefreshState,
+                        indicator = {
+                            PullToRefreshDefaults.Indicator(
+                                state = pullRefreshState,
+                                isRefreshing = isRefreshing,
+                                modifier = Modifier.align(Alignment.TopCenter),
+                                color = MaterialTheme.colorScheme.background,
+                                containerColor = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     ) {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
                         item {
                             TimelineCategoryChips(
                                 categories = categories,
@@ -225,6 +246,7 @@ fun TimelineScreen(
                         }
 
                         item { Spacer(Modifier.height(24.dp)) }
+                        }
                     }
                 }
             }

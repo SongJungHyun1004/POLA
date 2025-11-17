@@ -64,16 +64,37 @@ public class DataService {
     private final CategoryTagRepository categoryTagRepository;
     private final FileTagRepository fileTagRepository;
     private final FileSearchService fileSearchService;
+    private final RemindCacheRepository remindCacheRepository;
 
     @Transactional(readOnly = true)
     public List<DataResponse> getRemindFiles(Long userId) {
-        LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
 
-        //  최근 7일 이내에 보지 않은 파일 30개 조회
-        List<File> files = fileRepository.findRemindFiles(userId, sevenDaysAgo, PageRequest.of(0, 30));
+        List<DataResponse> cached = remindCacheRepository.getRemindFiles(userId);
+
+        if (cached != null) {
+            log.debug("[Remind] Redis hit for userId={}", userId);
+            return cached;
+        }
+
+        log.debug("[Remind] Redis miss for userId={}, rebuilding...", userId);
+
+        List<DataResponse> fresh = buildRemindFiles(userId);
+
+        remindCacheRepository.saveRemindFiles(userId, fresh);
+
+        return fresh;
+    }
+
+    @Transactional(readOnly = true)
+    public List<DataResponse> buildRemindFiles(Long userId) {
+
+        List<File> files = fileRepository.findLeastViewedFiles(
+                userId,
+                PageRequest.of(0, 30)
+        );
+
         if (files.isEmpty()) return List.of();
 
-        // presigned URL 생성 (파일 ID → S3 key 매핑)
         Map<Long, S3Service.FileMeta> metaMap = files.stream()
                 .collect(Collectors.toMap(
                         File::getId,
@@ -82,27 +103,26 @@ public class DataService {
 
         Map<Long, String> previewUrls = s3Service.generatePreviewUrls(metaMap);
 
-        // 파일별 태그 조회 (file_tags 기준)
         List<Long> fileIds = files.stream().map(File::getId).toList();
 
         List<FileTag> fileTags = fileTagRepository.findAllByFileIds(fileIds);
+
         Map<Long, List<String>> tagMap = fileTags.stream()
                 .collect(Collectors.groupingBy(
                         ft -> ft.getFile().getId(),
                         Collectors.mapping(ft -> ft.getTag().getTagName(), Collectors.toList())
                 ));
 
-        // DataResponse 변환
         return files.stream()
                 .map(file -> DataResponse.builder()
                         .id(file.getId())
-                        .src(previewUrls.get(file.getId())) // presigned URL 반환
+                        .src(previewUrls.get(file.getId()))
                         .type(file.getType())
                         .context(file.getContext())
                         .ocrText(file.getOcrText())
                         .createdAt(file.getCreatedAt())
                         .favorite(file.getFavorite())
-                        .tags(tagMap.getOrDefault(file.getId(), List.of())) // 파일별 태그 리스트
+                        .tags(tagMap.getOrDefault(file.getId(), List.of()))
                         .build())
                 .toList();
     }

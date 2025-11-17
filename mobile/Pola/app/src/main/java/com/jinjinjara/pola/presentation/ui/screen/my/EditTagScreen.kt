@@ -29,7 +29,7 @@ import com.jinjinjara.pola.util.ErrorType
 @Composable
 fun EditTagScreen(
     categoriesWithTags: Map<String, List<Tag>> = emptyMap(),
-    onEditComplete: (Map<String, List<String>>, Set<String>) -> Unit = { _, _ -> },
+    onEditComplete: (Map<String, List<Tag>>) -> Unit = { },
     onBackClick: () -> Unit = {},
     viewModel: EditTagViewModel = hiltViewModel()
 ) {
@@ -122,8 +122,8 @@ fun EditTagScreen(
                 else -> {
                     TagSelectContent(
                         categoriesWithTags = categoriesWithTags,
-                        onSubmit = { categories, selectedTags ->
-                            onEditComplete(categories, selectedTags)
+                        onSubmit = { categoriesWithAllTags ->
+                            onEditComplete(categoriesWithAllTags)
                         },
                         onBackClick = onBackClick,
                         viewModel = viewModel
@@ -137,7 +137,7 @@ fun EditTagScreen(
 @Composable
 private fun TagSelectContent(
     categoriesWithTags: Map<String, List<Tag>>,
-    onSubmit: (Map<String, List<String>>, Set<String>) -> Unit,
+    onSubmit: (Map<String, List<Tag>>) -> Unit,
     onBackClick: () -> Unit = {},
     viewModel: EditTagViewModel = hiltViewModel()
 ) {
@@ -237,8 +237,14 @@ private fun TagSelectContent(
             // 완료 버튼
             Button(
                 onClick = {
-                    // 완료 버튼 기능은 비워둠
-                    //onEditComplete(categoriesWithTags, selectedTags)
+                    // 선택된 태그들로 카테고리 맵 재구성
+                    val updatedCategoriesWithTags = categories.associate { category ->
+                        val selectedTagsInCategory = category.tags.filter { tag ->
+                            selectedTagIds.contains(tag.id)
+                        }
+                        category.title to selectedTagsInCategory
+                    }
+                    onSubmit(updatedCategoriesWithTags)
                 },
                 enabled = allCategoriesMeetRequirement,
                 modifier = Modifier

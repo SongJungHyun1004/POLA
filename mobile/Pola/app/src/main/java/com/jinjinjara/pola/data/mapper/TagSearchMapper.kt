@@ -12,6 +12,7 @@ fun TagSearchResult.toDomain(): TagSearchFile {
         context = context,
         ocrText = ocrText,
         imageUrl = imageUrl,
+        type = fileType,
         createdAt = createdAt
     )
 }
