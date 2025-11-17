@@ -4,7 +4,7 @@ import { Home, Star, Bell, Clock } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 
-import CategoryDropdown from "../../components/CategoryDropdown";
+import CategoryDropdown from "../../../components/CategoryDropdown";
 import { useEffect, useState } from "react";
 import { getUserHome } from "@/services/userService";
 

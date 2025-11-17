@@ -2,7 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import PolaroidCard from "@/app/home/components/PolaroidCard";
+import PolaroidCard from "@/app/(pola)/home/components/PolaroidCard";
 import PolaroidDetail from "@/app/categories/[id]/components/PolaroidDetail";
 import { searchFiles, searchTags } from "@/services/fileService";
 import { Star } from "lucide-react";

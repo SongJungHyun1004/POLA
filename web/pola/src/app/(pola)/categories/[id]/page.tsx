@@ -2,9 +2,9 @@
 
 import { useParams } from "next/navigation";
 import { useState, useEffect, useRef, memo } from "react";
-import PolaroidCard from "@/app/home/components/PolaroidCard";
+import PolaroidCard from "@/app/(pola)/home/components/PolaroidCard";
 import PolaroidDetail from "./components/PolaroidDetail";
-import { Pencil,Star } from "lucide-react";
+import { Pencil, Star } from "lucide-react";
 
 import {
   getCategoryInfo,
@@ -71,7 +71,7 @@ const PolaroidItem = memo(
           />
 
           {file.favorite && (
-            <Star 
+            <Star
               fill={file.favorite ? "#FFD700" : "transparent"}
               stroke="#FFD700"
               strokeWidth={2.5}
@@ -270,16 +270,15 @@ export default function CategoryPage() {
             {/* 상단 타이틀 */}
             <div className="flex items-center justify-between mb-2 pl-4">
               <div>
-                <h2 className="text-5xl font-bold mb-6 mt-8">{categoryName}</h2>
+                <h2 className="text-5xl font-bold mb-6">{categoryName}</h2>
                 <div className="text-2xl text-[#7A6A48] flex flex-wrap gap-x-2 ">
-                     {tags.map((t, index) => (
-                     <span key={index} className="whitespace-nowrap">
+                  {tags.map((t, index) => (
+                    <span key={index} className="whitespace-nowrap">
                       #{t}
                     </span>
-                    ))}
-                  </div>
+                  ))}
+                </div>
               </div>
-              
 
               {/* 모달 버튼 */}
               <button

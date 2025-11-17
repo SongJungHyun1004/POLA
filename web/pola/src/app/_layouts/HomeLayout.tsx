@@ -1,7 +1,9 @@
+"use client";
+
 import { Metadata } from "next";
 import type { ReactNode } from "react";
-import Header from "../home/components/Header";
-import HomeSidebar from "../home/components/HomeSidebar";
+import Header from "../(pola)/home/components/Header";
+import HomeSidebar from "../(pola)/home/components/HomeSidebar";
 
 export const metadata: Metadata = {
   title: "POLA",

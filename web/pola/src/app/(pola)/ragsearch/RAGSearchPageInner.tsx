@@ -3,10 +3,10 @@
 import { useSearchParams } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import PolaroidDetail from "../categories/[id]/components/PolaroidDetail";
-import PolaroidCard from "../home/components/PolaroidCard";
 import { Send } from "lucide-react";
 import { ragSearch } from "@/services/ragService";
 import { Star } from "lucide-react";
+import PolaroidCard from "../home/components/PolaroidCard";
 
 interface ChatMessage {
   role: "user" | "assistant";
