@@ -17,7 +17,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-import PolaroidCard from "@/app/home/components/PolaroidCard";
+import PolaroidCard from "@/app/(pola)/home/components/PolaroidCard";
 import PolaroidDetail from "../categories/[id]/components/PolaroidDetail";
 import { getFavoriteFiles } from "@/services/favoriteService";
 import { getFileDetail } from "@/services/categoryService";
@@ -90,7 +90,7 @@ const SortableItem = memo(
               fill={file.favorite ? "#FFD700" : "transparent"}
               stroke="#FFD700"
               strokeWidth={2.5}
-              className="absolute top-2 right-2 drop-shadow-sm w-6 h-6 z-10"               
+              className="absolute top-2 right-2 drop-shadow-sm w-6 h-6 z-10"
             />
           )}
         </button>

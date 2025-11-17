@@ -2,10 +2,10 @@
 
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import PolaroidCard from "@/app/home/components/PolaroidCard";
-import PolaroidDetail from "@/app/categories/[id]/components/PolaroidDetail";
+import PolaroidCard from "@/app/(pola)/home/components/PolaroidCard";
 import { searchFiles, searchTags } from "@/services/fileService";
 import { Star } from "lucide-react";
+import PolaroidDetail from "../categories/[id]/components/PolaroidDetail";
 
 export default function FilesPage() {
   const params = useSearchParams();

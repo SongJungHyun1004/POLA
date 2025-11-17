@@ -1,4 +1,3 @@
-
 interface Props {
   data: {
     id: number;
@@ -14,7 +13,7 @@ export default function PolaroidPreview({ data }: Props) {
 
   return (
     <div className="relative w-[240px] h-[300px] bg-white border border-[#D8D5CC] rounded-md shadow-sm flex flex-col items-center justify-start p-3 transition-transform duration-200 hover:-translate-y-1 cursor-pointer">
-      <div className="w-full h-[75%] border border-[#D8D5CC] rounded-md overflow-hidden flex items-center justify-center bg-white">
+      <div className="w-[95%] h-[85%] border border-[#D8D5CC] rounded-md overflow-hidden flex items-center justify-center bg-white">
         {isText ? (
           <div
             className="w-full h-full text-[11px] leading-tight text-[#4C3D25] whitespace-pre-line break-words text-left px-2 py-2 overflow-hidden"

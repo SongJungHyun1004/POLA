@@ -4,11 +4,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getUserMe, getUserHome } from "@/services/userService";
 import useAuthStore from "@/store/useAuthStore";
-import { Home, Star, Bell, Clock } from "lucide-react";
-import Link from "next/link";
-import Timeline from "./components/Timeline";
 import PolaroidCard from "./components/PolaroidCard";
-import CategoryDropdown from "../components/CategoryDropdown";
 
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination, Navigation, Autoplay } from "swiper/modules";
