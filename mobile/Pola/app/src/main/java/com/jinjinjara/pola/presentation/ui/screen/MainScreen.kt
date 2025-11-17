@@ -142,7 +142,13 @@ fun MainScreen(
                                                 saveState = true
                                             }
                                             launchSingleTop = true
-                                            restoreState = item.route != Screen.Home.route
+                                            restoreState = when (targetRoute) {
+                                                NavGraphs.HOME_TAB,
+                                                NavGraphs.TIMELINE_TAB,
+                                                Screen.Remind.route,
+                                                NavGraphs.MY_TAB -> false
+                                                else -> true
+                                            }
                                         }
                                     },
                                 contentAlignment = Alignment.Center

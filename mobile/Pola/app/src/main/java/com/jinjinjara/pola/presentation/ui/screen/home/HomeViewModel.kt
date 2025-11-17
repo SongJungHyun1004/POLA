@@ -38,6 +38,10 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun refresh() {
+        loadHomeData()
+    }
+
 }
 
 sealed class HomeUiState {

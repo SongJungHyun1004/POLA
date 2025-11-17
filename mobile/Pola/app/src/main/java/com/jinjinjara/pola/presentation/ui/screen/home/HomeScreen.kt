@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
@@ -28,6 +29,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,6 +68,7 @@ data class Category(
     val imageRes: Int
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
@@ -75,9 +80,17 @@ fun HomeScreen(
 ) {
 
     val uiState by viewModel.uiState.collectAsState()
+    var isRefreshing by remember { mutableStateOf(false) }
+    val pullRefreshState = rememberPullToRefreshState()
 
     LaunchedEffect(Unit) {
         viewModel.loadHomeData()
+    }
+
+    LaunchedEffect(uiState) {
+        if (uiState is HomeUiState.Success) {
+            isRefreshing = false
+        }
     }
 
     when (val state = uiState) {
@@ -106,14 +119,32 @@ fun HomeScreen(
         }
 
         is HomeUiState.Success -> {
-            HomeContent(
-                homeData = state.data,
-                onNavigateToContents = onNavigateToContents,
-                onNavigateToCategory = onNavigateToCategory,
-                onNavigateToFavorite = onNavigateToFavorite,
-                onNavigateToSearch = onNavigateToSearch,
-                onNavigateToChatbot = onNavigateToChatbot
-            )
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = {
+                    isRefreshing = true
+                    viewModel.refresh()
+                },
+                state = pullRefreshState,
+                indicator = {
+                    PullToRefreshDefaults.Indicator(
+                        state = pullRefreshState,
+                        isRefreshing = isRefreshing,
+                        modifier = Modifier.align(Alignment.TopCenter),
+                        color = MaterialTheme.colorScheme.background,
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                }
+            ) {
+                HomeContent(
+                    homeData = state.data,
+                    onNavigateToContents = onNavigateToContents,
+                    onNavigateToCategory = onNavigateToCategory,
+                    onNavigateToFavorite = onNavigateToFavorite,
+                    onNavigateToSearch = onNavigateToSearch,
+                    onNavigateToChatbot = onNavigateToChatbot
+                )
+            }
         }
     }
 
@@ -151,15 +182,27 @@ private fun HomeContent(
                         .padding(horizontal = 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // 챗봇 버튼
+                    Image(
+                        painter = painterResource(R.drawable.pola_chatbot),
+                        contentDescription = "챗봇",
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
+                                onNavigateToChatbot()
+                            },
+                        contentScale = ContentScale.Crop
+                    )
+
+                    Spacer(Modifier.width(12.dp))
+
                     SearchBar(
                         searchText = "",
-                        onSearchClick = { isAiMode ->
-                            if (isAiMode) {
-                                onNavigateToChatbot()
-                            } else {
-                                onNavigateToSearch()
-                            }
-                        },
+                        onSearchClick = { onNavigateToSearch() },
                         modifier = Modifier.weight(1f)
                     )
 
@@ -228,15 +271,27 @@ private fun HomeContent(
                     .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // 챗봇 버튼
+                Image(
+                    painter = painterResource(R.drawable.pola_chatbot),
+                    contentDescription = "챗봇",
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            onNavigateToChatbot()
+                        },
+                    contentScale = ContentScale.Crop
+                )
+
+                Spacer(Modifier.width(12.dp))
+
                 SearchBar(
                     searchText = "",
-                    onSearchClick = { isAiMode ->
-                        if (isAiMode) {
-                            onNavigateToChatbot()
-                        } else {
-                            onNavigateToSearch()
-                        }
-                    },
+                    onSearchClick = { onNavigateToSearch() },
                     modifier = Modifier.weight(1f)
                 )
 

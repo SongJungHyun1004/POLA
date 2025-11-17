@@ -108,7 +108,7 @@ fun TagScreen(
         files.map { file ->
             ContentsItem(
                 id = file.fileId.toString(),
-                type = "image",
+                type = file.type,
                 imageRes = 0,
                 imageUrl = file.imageUrl,
                 tags = file.tags,
