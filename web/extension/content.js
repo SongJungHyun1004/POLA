@@ -282,21 +282,29 @@ async function cropImage(imageDataUrl, area) {
 
 let dropZoneDialog = null;
 let draggedImageSrc = null;
+let draggedText = null;
+let dragType = null;
 let dragStartedInCenter = false;
 
 
 // 드래그 종료 시
+// 이미지 및 텍스트 드래그 이벤트 리스너
 document.addEventListener('dragstart', (e) => {
-  // 이미지 태그인지 확인
+  console.log('🎯 dragstart 이벤트:', e.target.tagName);
+
+  // 1. 이미지 드래그 감지
   if (e.target.tagName === 'IMG') {
+    dragType = 'image';
     draggedImageSrc = e.target.src;
-    console.log('이미지 드래그 시작:', draggedImageSrc);
-    
-    // 🎯 이미지와 드롭존(중앙 위치)이 겹치는지 확인
+    draggedText = null;
+
+    console.log('📸 이미지 드래그 시작:', draggedImageSrc);
+
+    // 이미지와 드롭존(중앙 위치)이 겹치는지 확인
     const imgRect = e.target.getBoundingClientRect();
     const windowWidth = window.innerWidth;
     const windowHeight = window.innerHeight;
-    
+
     // 드롭존의 예상 크기와 위치 (중앙)
     const dropZoneWidth = 400;
     const dropZoneHeight = 300;
@@ -304,54 +312,90 @@ document.addEventListener('dragstart', (e) => {
     const dropZoneRight = (windowWidth + dropZoneWidth) / 2;
     const dropZoneTop = (windowHeight - dropZoneHeight) / 2;
     const dropZoneBottom = (windowHeight + dropZoneHeight) / 2;
-    
+
     // 이미지와 드롭존이 겹치는지 확인 (사각형 충돌 감지)
     const isOverlapping = !(
-      imgRect.right < dropZoneLeft ||    // 이미지가 드롭존 왼쪽에
-      imgRect.left > dropZoneRight ||    // 이미지가 드롭존 오른쪽에
-      imgRect.bottom < dropZoneTop ||    // 이미지가 드롭존 위에
-      imgRect.top > dropZoneBottom       // 이미지가 드롭존 아래에
+      imgRect.right < dropZoneLeft ||
+      imgRect.left > dropZoneRight ||
+      imgRect.bottom < dropZoneTop ||
+      imgRect.top > dropZoneBottom
     );
-    
+
     dragStartedInCenter = isOverlapping;
-    
+
     console.log('🔍 겹침 감지:', {
       이미지위치: {
         left: Math.round(imgRect.left),
         right: Math.round(imgRect.right),
         top: Math.round(imgRect.top),
-        bottom: Math.round(imgRect.bottom),
-        width: Math.round(imgRect.width),
-        height: Math.round(imgRect.height)
-      },
-      드롭존예상위치: {
-        left: Math.round(dropZoneLeft),
-        right: Math.round(dropZoneRight),
-        top: Math.round(dropZoneTop),
-        bottom: Math.round(dropZoneBottom)
+        bottom: Math.round(imgRect.bottom)
       },
       겹침여부: isOverlapping,
       드롭존위치: isOverlapping ? '오른쪽' : '중앙'
     });
-    
+
     // 드롭존 다이얼로그 표시
-    showDropZoneDialog();
+    showDropZoneDialog('image');
+  }
+
+  // 2. 텍스트 선택 드래그 감지
+  const selectedText = window.getSelection().toString().trim();
+  if (selectedText && !draggedImageSrc) {
+    dragType = 'text';
+    draggedText = selectedText;
+    draggedImageSrc = null;
+
+    console.log('📝 텍스트 드래그 시작:', draggedText.substring(0, 50) + '...');
+
+    // 텍스트 선택 영역 확인
+    const selection = window.getSelection();
+    if (selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+
+      const windowWidth = window.innerWidth;
+      const windowHeight = window.innerHeight;
+
+      const dropZoneWidth = 400;
+      const dropZoneHeight = 300;
+      const dropZoneLeft = (windowWidth - dropZoneWidth) / 2;
+      const dropZoneRight = (windowWidth + dropZoneWidth) / 2;
+      const dropZoneTop = (windowHeight - dropZoneHeight) / 2;
+      const dropZoneBottom = (windowHeight + dropZoneHeight) / 2;
+
+      const isOverlapping = !(
+        rect.right < dropZoneLeft ||
+        rect.left > dropZoneRight ||
+        rect.bottom < dropZoneTop ||
+        rect.top > dropZoneBottom
+      );
+
+      dragStartedInCenter = isOverlapping;
+
+      console.log('🔍 텍스트 선택 영역 겹침:', isOverlapping);
+    } else {
+      dragStartedInCenter = false;
+    }
+
+    // 드롭존 다이얼로그 표시
+    showDropZoneDialog('text');
   }
 }, true);
 
 // 드래그 종료 시
 document.addEventListener('dragend', (e) => {
   console.log('🔚 dragend 이벤트 발생', e.target.tagName);
-  
-  if (e.target.tagName === 'IMG') {
-    console.log('✅ 이미지 드래그 종료 - 드롭존 제거 중...');
-    
-    // 드롭 이벤트가 발생했는지 확인하기 위해 짧은 지연
+
+  if (e.target.tagName === 'IMG' || draggedText) {
+    console.log('✅ 드래그 종료 - 드롭존 제거 중...');
+
     setTimeout(() => {
       console.log('⏰ 타임아웃 실행 - 드롭존 숨기기');
       hideDropZoneDialog();
       draggedImageSrc = null;
-      dragStartedInCenter = false; // 상태 초기화
+      draggedText = null;
+      dragType = null;
+      dragStartedInCenter = false;
     }, 100);
   }
 }, true);
@@ -359,7 +403,7 @@ document.addEventListener('dragend', (e) => {
 /**
  * 드롭존 다이얼로그 표시
  */
-function showDropZoneDialog() {
+function showDropZoneDialog(type) {
   // 기존 다이얼로그가 있으면 제거
   if (dropZoneDialog) {
     hideDropZoneDialog();
@@ -403,13 +447,25 @@ function showDropZoneDialog() {
 
   // 아이콘
   const icon = document.createElement('div');
-  icon.innerHTML = `
-    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#B0804C" stroke-width="2">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-      <polyline points="17 8 12 3 7 8"></polyline>
-      <line x1="12" y1="3" x2="12" y2="15"></line>
-    </svg>
-  `;
+  if (type === 'text') {
+    icon.innerHTML = `
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#B0804C" stroke-width="2">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+        <polyline points="14 2 14 8 20 8"></polyline>
+        <line x1="16" y1="13" x2="8" y2="13"></line>
+        <line x1="16" y1="17" x2="8" y2="17"></line>
+        <polyline points="10 9 9 9 8 9"></polyline>
+      </svg>
+    `;
+  } else {
+    icon.innerHTML = `
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#B0804C" stroke-width="2">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+        <polyline points="17 8 12 3 7 8"></polyline>
+        <line x1="12" y1="3" x2="12" y2="15"></line>
+      </svg>
+    `;
+  }
 
   // 텍스트
   const text = document.createElement('div');
@@ -419,7 +475,7 @@ function showDropZoneDialog() {
     font-weight: 600;
     color: #333;
   `;
-  text.textContent = 'POLA에 이미지 저장하기';
+  text.textContent = type === 'text' ? 'POLA에 텍스트 저장하기' : 'POLA에 이미지 저장하기';
 
   const subText = document.createElement('div');
   subText.style.cssText = `
@@ -427,7 +483,7 @@ function showDropZoneDialog() {
     font-size: 14px;
     color: #666;
   `;
-  subText.textContent = '여기에 이미지를 드롭하세요';
+  subText.textContent = type === 'text' ? '여기에 텍스트를 드롭하세요' : '여기에 이미지를 드롭하세요';
 
   const formatInfo = document.createElement('div');
   formatInfo.style.cssText = `
@@ -436,7 +492,7 @@ function showDropZoneDialog() {
     color: #999;
     margin-top: 8px;
   `;
-  formatInfo.textContent = '지원 형식: PNG, JPEG';
+  formatInfo.textContent = type === 'text' ? '선택한 텍스트 저장' : '지원 형식: PNG, JPEG';
 
   dropZone.appendChild(icon);
   dropZone.appendChild(text);
@@ -481,7 +537,7 @@ function showDropZoneDialog() {
     e.preventDefault();
     e.stopPropagation();
 
-    console.log('이미지 드롭됨:', draggedImageSrc);
+    console.log('드롭됨! 타입:', dragType);
 
     // 로딩 상태로 변경
     text.textContent = '업로드 중...';
@@ -502,12 +558,26 @@ function showDropZoneDialog() {
         throw new Error('확장 프로그램이 다시 로드되었습니다. 페이지를 새로고침해주세요.');
       }
 
-      chrome.runtime.sendMessage({
-        action: 'uploadImageFromDrag',
-        imageUrl: draggedImageSrc,
-        pageUrl: window.location.href,
-        pageTitle: document.title
-      }, (response) => {
+      let message;
+      if (dragType === 'text') {
+        console.log('📝 텍스트 업로드 요청:', draggedText?.substring(0, 50) + '...');
+        message = {
+          action: 'uploadTextFromDrag',
+          text: draggedText,
+          pageUrl: window.location.href,
+          pageTitle: document.title
+        };
+      } else {
+        console.log('📸 이미지 업로드 요청:', draggedImageSrc);
+        message = {
+          action: 'uploadImageFromDrag',
+          imageUrl: draggedImageSrc,
+          pageUrl: window.location.href,
+          pageTitle: document.title
+        };
+      }
+
+      chrome.runtime.sendMessage(message, (response) => {
         if (chrome.runtime.lastError) {
           console.error('Runtime 에러:', chrome.runtime.lastError);
           text.textContent = '❌ 업로드 실패';

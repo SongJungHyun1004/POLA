@@ -152,6 +152,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true; // 비동기 응답
   }
 
+  // 드래그앤드롭 텍스트 업로드
+  if (request.action === 'uploadTextFromDrag') {
+    handleDragDropTextUpload(request, sendResponse);
+    return true; // 비동기 응답
+  }
+
   return true;
 });
 
@@ -1067,6 +1073,137 @@ async function handleDragDropImageUpload(request, sendResponse) {
     sendResponse({
       success: false,
       error: error.message
+    });
+  }
+}
+
+/**
+ * 드래그앤드롭 텍스트 업로드 처리
+ */
+async function handleDragDropTextUpload(request, sendResponse) {
+  console.log('🎯 handleDragDropTextUpload 함수 진입!');
+  console.log('Request:', request);
+  
+  try {
+    console.log('✅ Try 블록 시작');
+    console.log('드래그앤드롭 텍스트 업로드 시작');
+    console.log('텍스트 길이:', request.text?.length);
+    console.log('텍스트 미리보기:', request.text?.substring(0, 100) + '...');
+    
+    // 토큰 가져오기
+    const { accessToken } = await chrome.storage.local.get(['accessToken']);
+    
+    if (!accessToken) {
+      throw new Error('로그인이 필요합니다.');
+    }
+    
+    // 텍스트를 Blob으로 변환
+    const textBlob = new Blob([request.text], { type: 'text/plain; charset=utf-8' });
+    const fileSize = textBlob.size;
+    
+    console.log('텍스트 Blob 생성 완료, 크기:', fileSize, 'bytes');
+    
+    // 1단계: S3 Presigned URL 생성
+    console.log('1단계: S3 업로드 URL 생성 중...');
+    const timestamp = Date.now();
+    const fileName = `text_${timestamp}.txt`;
+    
+    const presignedResponse = await fetch(
+      `${API_BASE_URL}s3/presigned/upload?fileName=${encodeURIComponent(fileName)}`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      }
+    );
+    
+    if (!presignedResponse.ok) {
+      throw new Error('업로드 URL 생성 실패');
+    }
+    
+    const presignedData = await presignedResponse.json();
+    const uploadUrl = presignedData.data.url;
+    const fileKey = presignedData.data.key;
+    
+    console.log('✅ 1단계 완료 - Upload URL 획득');
+    
+    // 2단계: S3에 직접 업로드
+    console.log('2단계: S3에 텍스트 업로드 중...');
+    
+    const s3UploadResponse = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8'
+      },
+      body: textBlob
+    });
+    
+    if (!s3UploadResponse.ok) {
+      throw new Error('S3 업로드 실패');
+    }
+    
+    console.log('✅ 2단계 완료 - S3 업로드 성공');
+    
+    // 3단계: DB에 파일 메타데이터 저장
+    console.log('3단계: 파일 정보 저장 중...');
+    
+    const originUrl = uploadUrl.split('?')[0];
+    
+    const completeResponse = await fetch(`${API_BASE_URL}files/complete`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        key: fileKey,
+        type: 'text/plain',
+        fileSize: fileSize,
+        originUrl: originUrl,
+        platform: 'WEB'
+      })
+    });
+    
+    if (!completeResponse.ok) {
+      throw new Error('파일 등록 실패');
+    }
+    
+    const completeData = await completeResponse.json();
+    console.log('✅ 3단계 완료 - 파일 등록 성공');
+    
+    // 4단계: 파일 분류 (백그라운드)
+    triggerPostProcess(completeData.data.id, accessToken);
+    
+    console.log('✅ 드래그앤드롭 텍스트 업로드 성공:', completeData);
+    
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icons/icon128.png',
+      title: 'POLA - 텍스트 저장 완료',
+      message: '드래그한 텍스트가 성공적으로 저장되었습니다.',
+      priority: 2
+    });
+    
+    sendResponse({ 
+      success: true, 
+      data: completeData 
+    });
+    
+  } catch (error) {
+    console.error('❌ 드래그앤드롭 텍스트 업로드 실패:', error);
+    
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icons/icon128.png',
+      title: 'POLA - 텍스트 저장 실패',
+      message: error.message || '텍스트 저장 중 오류가 발생했습니다.',
+      priority: 2
+    });
+    
+    sendResponse({ 
+      success: false, 
+      error: error.message 
     });
   }
 }
