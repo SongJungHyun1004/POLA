@@ -95,10 +95,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   // 로그인 요청
   if (request.action === 'login') {
-    handleLogin().then(sendResponse).catch(error => {
-      sendResponse({ success: false, error: error.message });
-    });
-    return true;
+    console.log('📥 로그인 요청 수신 - handleLogin 호출');
+
+    handleLogin()
+      .then(result => {
+        console.log('✅ handleLogin 성공:', result);
+        console.log('📤 Popup으로 응답 전송:', { success: true, user: result.user });
+        sendResponse({ success: true, user: result.user });
+      })
+      .catch(error => {
+        console.error('❌ handleLogin 실패:', error);
+        console.log('📤 Popup으로 에러 응답 전송:', { success: false, error: error.message });
+        sendResponse({ success: false, error: error.message });
+      });
+
+    console.log('⏳ 비동기 응답 대기 중... (return true)');
+    return true; // 비동기 응답을 위해 필수!
   }
 
   // 로그아웃 요청
@@ -233,7 +245,7 @@ async function handleLogin() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Client-Type': 'WEB'
+        'X-Client-Type': 'APP'
       },
       body: JSON.stringify({ idToken: idToken })
     });
@@ -265,14 +277,23 @@ async function handleLogin() {
 
     // 토큰 추출
     const accessToken = authData.data?.accessToken || authData.accessToken;
-    // WEB 클라이언트는 refresh token을 쿠키로 받으므로 응답에 없음
+    const refreshToken = authData.data?.refreshToken || authData.refreshToken;
+
+    console.log('토큰 추출 결과:');
+    console.log('  - accessToken:', accessToken ? '있음' : '❌ 없음');
+    console.log('  - refreshToken:', refreshToken ? '있음' : '❌ 없음');
 
     if (!accessToken) {
       console.error('❌ Access Token 누락:', authData);
       throw new Error('서버 응답에 Access Token이 없습니다');
     }
 
-    console.log('✅ Access Token 추출 성공');
+    if (!refreshToken) {
+      console.error('❌ Refresh Token 누락:', authData);
+      throw new Error('서버 응답에 Refresh Token이 없습니다');
+    }
+
+    console.log('✅ 토큰 추출 성공');
 
     // 5. 백엔드 Access Token 검증 및 사용자 정보 가져오기
     console.log('5. Access Token 검증 중...');
@@ -291,8 +312,12 @@ async function handleLogin() {
 
     // 6. Access Token 및 사용자 정보 저장
     console.log('6. 토큰 저장 중...');
+    console.log('  - accessToken:', accessToken ? '있음' : '없음');
+    console.log('  - refreshToken:', refreshToken ? '있음' : '없음');
+
     await chrome.storage.local.set({
       accessToken: accessToken,
+      refreshToken: refreshToken,  // ⭐ refreshToken 추가!
       user: {
         id: verifyData.data.userId,
         email: verifyData.data.email || payload.email,
@@ -301,6 +326,8 @@ async function handleLogin() {
       },
       loginTime: Date.now()
     });
+
+    console.log('✅ 토큰 저장 완료');
 
     console.log('✅ 로그인 완료!');
     showNotification('로그인 성공', `${payload.name}님 환영합니다!`);
@@ -351,54 +378,47 @@ async function handleLogout() {
  * 인증 상태 확인 (토큰 검증 포함)
  */
 async function checkAuthStatus() {
+  console.log('===========================================');
+  console.log('🔍 Background: checkAuthStatus 호출됨');
+  console.log('===========================================');
+
   try {
-    const result = await chrome.storage.local.get(['accessToken', 'user']);
+    const result = await chrome.storage.local.get(['accessToken', 'refreshToken', 'user']);
 
-    if (!result.accessToken) {
+    console.log('📦 Background Storage 확인:');
+    console.log('  - accessToken:', result.accessToken ? '있음' : '❌ 없음');
+    console.log('  - refreshToken:', result.refreshToken ? '있음' : '❌ 없음');
+    console.log('  - user:', result.user ? '있음' : '❌ 없음');
+
+    // ⭐ accessToken이나 refreshToken이 없으면 즉시 로그아웃 상태 반환
+    if (!result.accessToken || !result.refreshToken) {
+      console.log('❌ 토큰 부족 - 로그아웃 상태 반환');
+      console.log('===========================================');
+
       return {
         isAuthenticated: false,
         user: null
       };
     }
 
-    // Access Token 검증
-    try {
-      const verifyResponse = await fetch(`${API_BASE_URL}oauth/verify`, {
-        headers: {
-          'Authorization': `Bearer ${result.accessToken}`
-        }
-      });
+    console.log('✅ 토큰 존재 - 인증된 상태 반환');
+    console.log('===========================================');
 
-      if (verifyResponse.ok) {
-        return {
-          isAuthenticated: true,
-          user: result.user
-        };
-      } else {
-        // 토큰이 만료되었으면 저장소에서 삭제
-        await chrome.storage.local.remove(['accessToken', 'user']);
-        return {
-          isAuthenticated: false,
-          user: null
-        };
-      }
-    } catch (error) {
-      console.error('토큰 검증 실패:', error);
-      return {
-        isAuthenticated: false,
-        user: null
-      };
-    }
+    return {
+      isAuthenticated: true,
+      user: result.user
+    };
 
   } catch (error) {
-    console.error('인증 상태 확인 실패:', error);
+    console.error('❌ 인증 상태 확인 실패:', error);
+    console.log('===========================================');
+
     return {
       isAuthenticated: false,
       user: null
     };
   }
 }
-
 // Content script 주입 후 영역 선택 시작
 async function startAreaCaptureWithInjection(tab) {
   try {
@@ -498,13 +518,10 @@ async function handleTextCapture(info, tab) {
       const timestamp = Date.now();
       const fileName = `text_${timestamp}.txt`;
 
-      const presignedResponse = await fetch(
-        `${API_BASE_URL}s3/presigned/upload?fileName=${encodeURIComponent(fileName)}`,
+      const presignedResponse = await apiRequest(
+        `s3/presigned/upload?fileName=${encodeURIComponent(fileName)}`,
         {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${accessToken}`
-          }
+          method: 'GET'
         }
       );
 

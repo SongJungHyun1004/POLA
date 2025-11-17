@@ -190,7 +190,7 @@ async function refreshAccessToken() {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${refreshToken}`,
-        'X-Client-Type': 'WEB',
+        'X-Client-Type': 'APP',
         'Content-Type': 'application/json'
       }
     });
@@ -265,25 +265,11 @@ async function autoLogin() {
   try {
     console.log('자동 로그인 시도 중...');
     
-    // 1. Access Token 검증
-    const verifyResult = await verifyToken();
-    
-    if (verifyResult.valid) {
-      console.log('Access Token 유효 - 로그인 상태 유지');
-      return { 
-        success: true, 
-        isAuthenticated: true,
-        user: verifyResult.user 
-      };
-    }
-    
-    // 2. Access Token이 만료된 경우 Refresh Token으로 재발급
-    console.log('Access Token 만료 - Refresh Token으로 재발급 시도');
-    
+    // 1. Refresh Token 확인
     const { refreshToken } = await getTokens();
     
     if (!refreshToken) {
-      console.log('Refresh Token 없음 - 로그인 필요');
+      console.log('❌ Refresh Token 없음 - 로그인 필요');
       return { 
         success: false, 
         isAuthenticated: false,
@@ -291,31 +277,63 @@ async function autoLogin() {
       };
     }
     
-    // 3. 토큰 재발급
-    await refreshAccessToken();
+    console.log('✅ Refresh Token 존재 - 토큰 재발급 시도');
     
-    // 4. 재발급 후 사용자 정보 가져오기
-    const newVerifyResult = await verifyToken();
-    
-    if (newVerifyResult.valid) {
-      console.log('토큰 재발급 성공 - 자동 로그인 완료');
+    // 2. Refresh Token으로 새 Access Token 발급
+    try {
+      const response = await fetch(`${AUTH_CONFIG.apiBaseUrl}/oauth/reissue`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${refreshToken}`,
+          'X-Client-Type': 'APP',
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        console.log('❌ Refresh Token 만료 - 로그아웃 처리');
+        await signOut();
+        return { 
+          success: false, 
+          isAuthenticated: false,
+          needLogin: true,
+          error: 'Refresh Token 만료'
+        };
+      }
+      
+      const data = await response.json();
+      const newAccessToken = data.data?.accessToken || data.accessToken;
+      const newRefreshToken = data.data?.refreshToken || data.refreshToken;
+      
+      // 3. 새 토큰 저장
+      const { user } = await getTokens();
+      await saveTokens({
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+        user
+      });
+      
+      console.log('✅ 자동 로그인 성공 - Access Token 재발급 완료');
+      
       return { 
         success: true, 
         isAuthenticated: true,
-        user: newVerifyResult.user 
+        user: user 
+      };
+      
+    } catch (error) {
+      console.error('❌ 토큰 재발급 실패:', error);
+      await signOut();
+      return { 
+        success: false, 
+        isAuthenticated: false,
+        needLogin: true,
+        error: error.message 
       };
     }
     
-    console.log('자동 로그인 실패');
-    return { 
-      success: false, 
-      isAuthenticated: false,
-      needLogin: true 
-    };
-    
   } catch (error) {
-    console.error('자동 로그인 오류:', error);
-    // 에러 발생 시 인증 정보 초기화
+    console.error('❌ 자동 로그인 오류:', error);
     await signOut();
     return { 
       success: false, 

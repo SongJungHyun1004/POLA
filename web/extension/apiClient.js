@@ -96,6 +96,7 @@ async function refreshToken(refreshToken) {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${refreshToken}`,
+      'X-Client-Type': 'APP',
       'Content-Type': 'application/json'
     }
   });
@@ -123,8 +124,36 @@ async function refreshToken(refreshToken) {
  * 인증 정보 초기화
  */
 function clearAuth() {
+  console.log('===========================================');
+  console.log('🔓 clearAuth 호출됨 - 인증 정보 삭제 시작');
+  console.log('===========================================');
+  
   return new Promise((resolve) => {
-    chrome.storage.local.remove(['accessToken', 'refreshToken', 'user'], resolve);
+    // 먼저 현재 storage 상태 확인
+    chrome.storage.local.get(['accessToken', 'refreshToken', 'user'], (before) => {
+      console.log('📦 삭제 전 Storage 상태:');
+      console.log('  - accessToken:', before.accessToken ? '있음' : '없음');
+      console.log('  - refreshToken:', before.refreshToken ? '있음' : '없음');
+      console.log('  - user:', before.user ? '있음' : '없음');
+      
+      // 삭제 실행
+      chrome.storage.local.remove(['accessToken', 'refreshToken', 'user'], () => {
+        console.log('✅ Storage.remove() 호출 완료');
+        
+        // 삭제 후 확인
+        chrome.storage.local.get(['accessToken', 'refreshToken', 'user'], (after) => {
+          console.log('📦 삭제 후 Storage 상태:');
+          console.log('  - accessToken:', after.accessToken ? '⚠️ 아직 있음!' : '✅ 삭제됨');
+          console.log('  - refreshToken:', after.refreshToken ? '⚠️ 아직 있음!' : '✅ 삭제됨');
+          console.log('  - user:', after.user ? '⚠️ 아직 있음!' : '✅ 삭제됨');
+          console.log('===========================================');
+          console.log('✅ clearAuth 완료');
+          console.log('===========================================');
+          
+          resolve();
+        });
+      });
+    });
   });
 }
 

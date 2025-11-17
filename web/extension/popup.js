@@ -1,7 +1,16 @@
 // popup.js - 팝업 UI 컨트롤러
+console.log('🟢 popup.js 파일 로드됨!');
 
+// 즉시 실행되는 테스트 코드
+(function() {
+  console.log('🟢 popup.js 즉시 실행 함수 실행됨!');
+  console.log('현재 URL:', window.location.href);
+  console.log('document.readyState:', document.readyState);
+})();
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('팝업 로드됨');
+  console.log('===========================================');
+  console.log('🚀 popup.js 로드 시작');
+  console.log('===========================================');
 
   // 요소 참조
   const loginSection = document.getElementById('login-section');
@@ -10,53 +19,149 @@ document.addEventListener('DOMContentLoaded', async () => {
   const loginBtn = document.getElementById('loginBtn');
   const logoutBtn = document.getElementById('logoutBtn');
 
+  console.log('📋 DOM 요소 확인:');
+  console.log('  - loginSection:', !!loginSection);
+  console.log('  - authenticatedSection:', !!authenticatedSection);
+  console.log('  - loading:', !!loading);
+  console.log('  - loginBtn:', !!loginBtn);
+  console.log('  - logoutBtn:', !!logoutBtn);
+
   // 초기화
+  console.log('🔄 초기 인증 상태 확인 시작...');
   await checkAuthAndUpdateUI();
 
-  // 이벤트 리스너 등록
-  loginBtn.addEventListener('click', handleLogin);
-  logoutBtn.addEventListener('click', handleLogout);
+  // 포커스 얻을 때마다 재확인
+  window.addEventListener('focus', async () => {
+    console.log('🔄 팝업 포커스 - 인증 상태 재확인');
+    await checkAuthAndUpdateUI();
+  });
 
+  // 이벤트 리스너 등록
+  console.log('🎯 이벤트 리스너 등록 중...');
+  
+  if (loginBtn) {
+    loginBtn.addEventListener('click', handleLogin);
+    console.log('  ✅ loginBtn 클릭 이벤트 등록');
+  } else {
+    console.error('  ❌ loginBtn을 찾을 수 없음!');
+  }
+  
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', handleLogout);
+    console.log('  ✅ logoutBtn 클릭 이벤트 등록');
+  } else {
+    console.error('  ❌ logoutBtn을 찾을 수 없음!');
+  }
+
+  // 나머지 이벤트 리스너...
   const dropZone = document.getElementById('dropZone');
   const fileInput = document.getElementById('fileInput');
 
-  dropZone.addEventListener('click', () => fileInput.click());
-  dropZone.addEventListener('dragover', handleDragOver);
-  dropZone.addEventListener('dragleave', handleDragLeave);
-  dropZone.addEventListener('drop', handleDrop);
-  fileInput.addEventListener('change', handleFileSelect);
-  // 통계 업데이트 (선택사항)
-  // updateStats();
+  if (dropZone && fileInput) {
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('dragover', handleDragOver);
+    dropZone.addEventListener('dragleave', handleDragLeave);
+    dropZone.addEventListener('drop', handleDrop);
+    fileInput.addEventListener('change', handleFileSelect);
+    console.log('  ✅ 드롭존 이벤트 등록');
+  }
+  
+  console.log('===========================================');
+  console.log('✅ popup.js 초기화 완료');
+  console.log('===========================================');
 });
 
 /**
  * 인증 상태 확인 및 UI 업데이트
  */
 async function checkAuthAndUpdateUI() {
+  console.log('===========================================');
+  console.log('🔍 checkAuthAndUpdateUI 시작');
+  console.log('===========================================');
+  
   try {
-    // Background script에 인증 상태 확인 요청
-    const response = await chrome.runtime.sendMessage({ action: 'checkAuth' });
-
-    console.log('인증 상태:', response);
-
     const loginSection = document.getElementById('login-section');
     const authenticatedSection = document.getElementById('authenticated-section');
 
-    if (response.isAuthenticated && response.user) {
-      // 로그인 상태 - 사용자 정보 표시
-      loginSection.style.display = 'none';
-      authenticatedSection.style.display = 'block';
+    // ⭐ 1. 먼저 로컬 storage 직접 확인
+    const storageData = await new Promise((resolve) => {
+      chrome.storage.local.get(['accessToken', 'refreshToken', 'user'], (result) => {
+        resolve(result);
+      });
+    });
 
-      // 사용자 정보 업데이트
-      updateUserInfo(response.user);
-    } else {
-      // 로그아웃 상태 - 로그인 화면 표시
+    console.log('📦 Storage 직접 확인 결과:');
+    console.log('  - accessToken:', storageData.accessToken ? 
+      `존재 (길이: ${storageData.accessToken.length})` : '❌ 없음');
+    console.log('  - refreshToken:', storageData.refreshToken ? 
+      `존재 (길이: ${storageData.refreshToken.length})` : '❌ 없음');
+    console.log('  - user:', storageData.user ? 
+      `존재 (${storageData.user.email})` : '❌ 없음');
+
+    // ⭐ 2. 토큰이 하나라도 없으면 즉시 로그아웃 UI
+    if (!storageData.accessToken || !storageData.refreshToken) {
+      console.log('❌ 토큰 부족 - 로그아웃 UI 표시');
+      console.log('  → loginSection.display = block');
+      console.log('  → authenticatedSection.display = none');
+      
       loginSection.style.display = 'block';
       authenticatedSection.style.display = 'none';
+      
+      console.log('===========================================');
+      console.log('✅ 로그아웃 UI 표시 완료');
+      console.log('===========================================');
+      return;
+    }
+
+    // ⭐ 3. 토큰이 있으면 Background 확인
+    console.log('✅ 토큰 존재 - Background에 인증 상태 요청');
+    
+    const response = await chrome.runtime.sendMessage({ action: 'checkAuth' });
+
+    console.log('📨 Background 응답:', response);
+    console.log('  - isAuthenticated:', response.isAuthenticated);
+    console.log('  - user:', response.user);
+
+    if (response.isAuthenticated && response.user) {
+      // 로그인 상태
+      console.log('✅ 로그인 상태 - 인증된 UI 표시');
+      console.log('  → loginSection.display = none');
+      console.log('  → authenticatedSection.display = block');
+      
+      loginSection.style.display = 'none';
+      authenticatedSection.style.display = 'block';
+      updateUserInfo(response.user);
+      
+      console.log('===========================================');
+      console.log('✅ 로그인 UI 표시 완료');
+      console.log('===========================================');
+    } else {
+      // 로그아웃 상태
+      console.log('❌ 로그아웃 상태 - 로그인 UI 표시');
+      console.log('  → loginSection.display = block');
+      console.log('  → authenticatedSection.display = none');
+      
+      loginSection.style.display = 'block';
+      authenticatedSection.style.display = 'none';
+      
+      console.log('===========================================');
+      console.log('✅ 로그아웃 UI 표시 완료');
+      console.log('===========================================');
     }
 
   } catch (error) {
-    console.error('인증 상태 확인 실패:', error);
+    console.error('❌ 인증 상태 확인 중 에러:', error);
+    console.error('에러 스택:', error.stack);
+    
+    // 에러 시 안전하게 로그아웃 UI
+    const loginSection = document.getElementById('login-section');
+    const authenticatedSection = document.getElementById('authenticated-section');
+    
+    console.log('⚠️ 에러로 인한 로그아웃 UI 표시');
+    loginSection.style.display = 'block';
+    authenticatedSection.style.display = 'none';
+    
+    console.log('===========================================');
   }
 }
 
@@ -79,38 +184,57 @@ function updateUserInfo(user) {
  * 로그인 처리
  */
 async function handleLogin() {
+  console.log('===========================================');
+  console.log('🔐 handleLogin 시작');
+  console.log('===========================================');
+  
   const loginSection = document.getElementById('login-section');
   const loading = document.getElementById('loading');
 
   try {
     // 로딩 표시
+    console.log('⏳ 로딩 화면 표시');
     loginSection.style.display = 'none';
     loading.style.display = 'block';
 
-    console.log('로그인 요청 중...');
+    console.log('📤 Background로 로그인 요청 전송...');
 
     // Background script에 로그인 요청
     const response = await chrome.runtime.sendMessage({ action: 'login' });
 
-    console.log('로그인 응답:', response);
+    console.log('📨 Background 응답 수신:', response);
 
     if (response.success) {
+      console.log('✅ 로그인 성공!');
+      
+      // 잠시 대기 (토큰이 storage에 저장되는 시간)
+      console.log('⏳ Storage 저장 대기 (500ms)...');
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      console.log('🔄 UI 업데이트 시작...');
       // 로그인 성공 - UI 업데이트
       await checkAuthAndUpdateUI();
+      
+      console.log('✅ UI 업데이트 완료');
+      console.log('===========================================');
     } else {
       throw new Error(response.error || '로그인 실패');
     }
 
   } catch (error) {
-    console.error('로그인 오류:', error);
+    console.error('❌ 로그인 오류:', error);
+    console.error('에러 스택:', error.stack);
     alert('로그인에 실패했습니다: ' + error.message);
 
     // 로그인 화면으로 복귀
+    console.log('🔙 로그인 화면 복귀');
     loginSection.style.display = 'block';
 
   } finally {
     // 로딩 숨김
+    console.log('⏳ 로딩 화면 숨김');
     loading.style.display = 'none';
+    console.log('===========================================');
   }
 }
 
@@ -272,15 +396,44 @@ async function getCurrentTabUrl() {
  * storage 변경 감지하여 UI 자동 업데이트
  */
 chrome.storage.onChanged.addListener((changes, areaName) => {
+  console.log('===========================================');
+  console.log('🔔 Storage 변경 감지됨!');
+  console.log('===========================================');
+  console.log('Area:', areaName);
+  console.log('변경된 키:', Object.keys(changes));
+  
   if (areaName === 'local') {
-    // 인증 정보 변경 시 UI 업데이트
-    if (changes.accessToken || changes.user) {
-      checkAuthAndUpdateUI();
+    // 각 변경사항 상세 출력
+    for (const [key, { oldValue, newValue }] of Object.entries(changes)) {
+      console.log(`📝 ${key}:`);
+      console.log('  - oldValue:', oldValue ? '있음' : '없음');
+      console.log('  - newValue:', newValue ? '있음' : '없음');
     }
-
-    // 통계 변경 시 업데이트
-    if (changes.captureCount || changes.textCount) {
-      // updateStats();
+    
+    // 인증 관련 정보 변경 시 즉시 UI 업데이트
+    if (changes.accessToken || changes.refreshToken || changes.user) {
+      console.log('✅ 인증 관련 변경 감지 - UI 업데이트 시작');
+      
+      // accessToken이 추가되었는지 확인
+      if (changes.accessToken && changes.accessToken.newValue) {
+        console.log('✅ Access Token 추가됨 - 로그인 상태');
+      }
+      
+      // accessToken이 삭제되었는지 확인
+      if (changes.accessToken && !changes.accessToken.newValue) {
+        console.log('❌ Access Token 삭제됨 - 로그아웃 상태');
+      }
+      
+      // refreshToken이 삭제되었는지 확인
+      if (changes.refreshToken && !changes.refreshToken.newValue) {
+        console.log('❌ Refresh Token 삭제됨 - 로그아웃 상태');
+      }
+      
+      checkAuthAndUpdateUI();
+      console.log('===========================================');
+    } else {
+      console.log('⏭️ 인증 관련 변경 아님 - 무시');
+      console.log('===========================================');
     }
   }
 });
