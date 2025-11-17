@@ -1,5 +1,5 @@
+import PolaroidDetail from "@/app/(pola)/categories/[id]/components/PolaroidDetail";
 import { getSharedFileByToken } from "@/services/shareService";
-import PolaroidDetail from "@/app/categories/[id]/components/PolaroidDetail";
 import { redirect } from "next/navigation";
 
 type Params = { token: string };
