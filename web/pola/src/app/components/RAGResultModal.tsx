@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import ChatBubble from "./ChatBubble";
-import PolaroidDetail from "../categories/[id]/components/PolaroidDetail";
 import ChatInput from "./ChatInput";
 import SourcePolaroidGrid from "./SourcePolaroidGrid";
+import PolaroidDetail from "../(pola)/categories/[id]/components/PolaroidDetail";
 
 interface RAGResultModalProps {
   onClose: () => void;
