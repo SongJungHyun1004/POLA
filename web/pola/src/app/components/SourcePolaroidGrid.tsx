@@ -1,6 +1,6 @@
 "use client";
 
-import PolaroidCard from "@/app/home/components/PolaroidCard";
+import PolaroidCard from "@/app/(pola)/home/components/PolaroidCard";
 
 interface SourcePolaroidGridProps {
   sources: {

@@ -37,6 +37,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StopWatch;
 
 import java.net.URL;
@@ -64,16 +65,37 @@ public class DataService {
     private final CategoryTagRepository categoryTagRepository;
     private final FileTagRepository fileTagRepository;
     private final FileSearchService fileSearchService;
+    private final RemindCacheRepository remindCacheRepository;
 
     @Transactional(readOnly = true)
     public List<DataResponse> getRemindFiles(Long userId) {
-        LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
 
-        //  최근 7일 이내에 보지 않은 파일 30개 조회
-        List<File> files = fileRepository.findRemindFiles(userId, sevenDaysAgo, PageRequest.of(0, 30));
+        List<DataResponse> cached = remindCacheRepository.getRemindFiles(userId);
+
+        if (cached != null) {
+            log.debug("[Remind] Redis hit for userId={}", userId);
+            return cached;
+        }
+
+        log.debug("[Remind] Redis miss for userId={}, rebuilding...", userId);
+
+        List<DataResponse> fresh = buildRemindFiles(userId);
+
+        remindCacheRepository.saveRemindFiles(userId, fresh);
+
+        return fresh;
+    }
+
+    @Transactional(readOnly = true)
+    public List<DataResponse> buildRemindFiles(Long userId) {
+
+        List<File> files = fileRepository.findLeastViewedFiles(
+                userId,
+                PageRequest.of(0, 30)
+        );
+
         if (files.isEmpty()) return List.of();
 
-        // presigned URL 생성 (파일 ID → S3 key 매핑)
         Map<Long, S3Service.FileMeta> metaMap = files.stream()
                 .collect(Collectors.toMap(
                         File::getId,
@@ -82,35 +104,35 @@ public class DataService {
 
         Map<Long, String> previewUrls = s3Service.generatePreviewUrls(metaMap);
 
-        // 파일별 태그 조회 (file_tags 기준)
         List<Long> fileIds = files.stream().map(File::getId).toList();
 
         List<FileTag> fileTags = fileTagRepository.findAllByFileIds(fileIds);
+
         Map<Long, List<String>> tagMap = fileTags.stream()
                 .collect(Collectors.groupingBy(
                         ft -> ft.getFile().getId(),
                         Collectors.mapping(ft -> ft.getTag().getTagName(), Collectors.toList())
                 ));
 
-        // DataResponse 변환
         return files.stream()
                 .map(file -> DataResponse.builder()
                         .id(file.getId())
-                        .src(previewUrls.get(file.getId())) // presigned URL 반환
+                        .src(previewUrls.get(file.getId()))
                         .type(file.getType())
                         .context(file.getContext())
                         .ocrText(file.getOcrText())
                         .createdAt(file.getCreatedAt())
                         .favorite(file.getFavorite())
-                        .tags(tagMap.getOrDefault(file.getId(), List.of())) // 파일별 태그 리스트
+                        .tags(tagMap.getOrDefault(file.getId(), List.of()))
                         .build())
                 .toList();
     }
 
     @Transactional
-    public void deleteFile(Long fileId) {
-        File file = fileRepository.findById(fileId)
+    public void deleteFile(Long fileId,Users user) {
+        File file = fileRepository.findByIdAndUserId(fileId, user.getId())
                 .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
+
 
         try {
             Long categoryId = file.getCategoryId();
@@ -124,6 +146,7 @@ public class DataService {
 
 
             fileRepository.delete(file);
+            remindCacheRepository.deleteRemindFiles(user.getId());
 
             category.decreaseCount(1);
             categoryRepository.save(category);
@@ -132,9 +155,6 @@ public class DataService {
             throw new CustomException(ErrorCode.FILE_DELETE_FAIL, e.getMessage());
         }
     }
-
-
-
 
 
     @Transactional
@@ -185,7 +205,6 @@ public class DataService {
                 .tags(tags)
                 .build();
     }
-
 
 
     @Transactional(readOnly = true)
@@ -242,7 +261,6 @@ public class DataService {
     }
 
 
-
     @Transactional(readOnly = true)
     public String getFilterName(String filterType, Long filterId) {
         if (filterType == null || filterType.isEmpty()) {
@@ -266,8 +284,6 @@ public class DataService {
             default -> filterType;
         };
     }
-
-
 
 
     /**
@@ -456,35 +472,66 @@ public class DataService {
         target.setFavoriteSort(newSort);
         return fileRepository.save(target);
     }
+    @Transactional
     public FileShareResponse createShareLink(Long userId, Long fileId, FileShareRequest request) {
+
         File file = fileRepository.findByIdAndUserId(fileId, userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
+        log.info("[DEBUG] shareStatus={}, shareToken={}, expiredAt={}",
+                file.getShareStatus(),
+                file.getShareToken(),
+                file.getShareExpiredAt()
+        );
 
-        // 이미 공유 중이면 기존 토큰 재활용 or 덮어쓰기
-        if (Boolean.TRUE.equals(file.getShareStatus()) && file.getShareToken() != null) {
+        LocalDateTime now = LocalDateTime.now();
+        int expireHours = Optional.ofNullable(request.getExpireHours()).orElse(24);
+
+        // 최초 공유
+        if (!Boolean.TRUE.equals(file.getShareStatus()) || file.getShareToken() == null) {
+            String token = UUID.randomUUID().toString();
+            LocalDateTime expiredAt = now.plusHours(expireHours);
+
+            file.setShareStatus(true);
+            file.setShareToken(token);
+            file.setShareExpiredAt(expiredAt);
+
             return FileShareResponse.builder()
-                    .shareUrl(buildShareUrl(file.getShareToken()))
-                    .expiredAt(String.valueOf(file.getShareExpiredAt()))
+                    .shareUrl(buildShareUrl(token))
+                    .expiredAt(expiredAt.toString())
                     .build();
         }
 
-        String token = UUID.randomUUID().toString();
-        LocalDateTime expiredAt = LocalDateTime.now().plusHours(
-                Optional.ofNullable(request.getExpireHours()).orElse(24)
-        );
+        // 이미 공유됨
+        LocalDateTime expiredAt = file.getShareExpiredAt();
+
+        // 연장
+        if (expiredAt != null && expiredAt.isAfter(now)) {
+            LocalDateTime newExpiredAt = now.plusHours(expireHours);
+            file.setShareExpiredAt(newExpiredAt);
+
+            return FileShareResponse.builder()
+                    .shareUrl(buildShareUrl(file.getShareToken()))
+                    .expiredAt(newExpiredAt.toString())
+                    .build();
+        }
+
+        // 만료됨 → 새 토큰 발급
+        String newToken = UUID.randomUUID().toString();
+        LocalDateTime newExpiredAt = now.plusHours(expireHours);
 
         file.setShareStatus(true);
-        file.setShareToken(token);
-        file.setShareExpiredAt(expiredAt);
-
-        fileRepository.save(file);
+        file.setShareToken(newToken);
+        file.setShareExpiredAt(newExpiredAt);
 
         return FileShareResponse.builder()
-                .shareUrl(buildShareUrl(token))
-                .expiredAt(expiredAt.toString())
+                .shareUrl(buildShareUrl(newToken))
+                .expiredAt(newExpiredAt.toString())
                 .build();
     }
-//링크수정
+
+
+
+    //링크수정
     private String buildShareUrl(String token) {
         return String.format("%s", token);
     }
@@ -607,7 +654,7 @@ public class DataService {
         sw.stop();
 
         sw.start("TagSave");
-        fileTagService.addTagsToFile(fileId, analyzeResponse.getTags());
+        fileTagService.addTagsToFile(fileId, analyzeResponse.getTags(),user);
         sw.stop();
 
         sw.start("Embedding");

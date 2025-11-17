@@ -29,6 +29,9 @@ class CategoryViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
+    private val _sortOrder = MutableStateFlow("최신순")
+    val sortOrder: StateFlow<String> = _sortOrder.asStateFlow()
+
     data class UiState(
         val isLoading: Boolean = false,
         val categoryId: Long = -1L,
@@ -120,6 +123,16 @@ class CategoryViewModel @Inject constructor(
 
     fun updateSort(sortBy: String, direction: String) {
         _uiState.update { it.copy(sortBy = sortBy, direction = direction) }
+
+        // sortBy/direction을 UI 표시 레이블로 변환
+        val sortLabel = when {
+            sortBy == "createdAt" && direction == "DESC" -> "최신순"
+            sortBy == "createdAt" && direction == "ASC" -> "오래된순"
+            sortBy == "views" && direction == "DESC" -> "조회순"
+            else -> "최신순"
+        }
+        _sortOrder.value = sortLabel
+
         loadCategoryFiles(0, sortBy = sortBy, direction = direction)
     }
 
