@@ -17,7 +17,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-import PolaroidCard from "@/app/home/components/PolaroidCard";
+import PolaroidCard from "@/app/(pola)/home/components/PolaroidCard";
 import PolaroidDetail from "../categories/[id]/components/PolaroidDetail";
 import { getFavoriteFiles } from "@/services/favoriteService";
 import { getFileDetail } from "@/services/categoryService";
@@ -90,7 +90,7 @@ const SortableItem = memo(
               fill={file.favorite ? "#FFD700" : "transparent"}
               stroke="#FFD700"
               strokeWidth={2.5}
-              className="absolute top-2 right-2 drop-shadow-sm w-6 h-6 z-10"               
+              className="absolute top-2 right-2 drop-shadow-sm w-6 h-6 z-10"
             />
           )}
         </button>
@@ -212,11 +212,11 @@ export default function FavoritePage() {
 
   return (
     <div className="w-full h-full flex justify-center bg-[#FFFEF8] text-[#4C3D25]">
-      <div className="w-full max-w-[1200px] h-full flex gap-8 px-6 py-6">
+      <div className="w-full max-w-[1200px] h-full flex gap-8 p-6">
         {/* 좌측 리스트 */}
         <div className="flex flex-col flex-1 overflow-hidden">
           <div className="flex items-center justify-between mb-2 pl-4">
-            <h1 className="text-5xl font-bold mb-6 mt-8">Favorite</h1>
+            <h1 className="text-5xl font-bold mb-6">Favorite</h1>
           </div>
           <div className="flex items-center justify-between mb-2 pl-4">
             즐겨찾기 해둔 파일들을 둘러보세요.

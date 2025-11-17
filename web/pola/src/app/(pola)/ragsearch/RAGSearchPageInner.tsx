@@ -3,10 +3,10 @@
 import { useSearchParams } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import PolaroidDetail from "../categories/[id]/components/PolaroidDetail";
-import PolaroidCard from "../home/components/PolaroidCard";
 import { Send } from "lucide-react";
 import { ragSearch } from "@/services/ragService";
 import { Star } from "lucide-react";
+import PolaroidCard from "../home/components/PolaroidCard";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -153,7 +153,7 @@ export default function RAGSearchPageInner() {
   };
 
   return (
-    <div className="w-full h-[calc(100vh-100px)] flex justify-center bg-[#FFFEF8] text-[#4C3D25] overflow-hidden">
+    <div className="w-full h-full flex justify-center bg-[#FFFEF8] text-[#4C3D25] overflow-hidden">
       <div
         className="h-full flex flex-row gap-6 pb-6 pl-6 transition-all duration-500"
         style={{ width: layoutExpanded ? "1200px" : "720px" }}

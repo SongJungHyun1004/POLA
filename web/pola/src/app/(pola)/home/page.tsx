@@ -4,11 +4,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getUserMe, getUserHome } from "@/services/userService";
 import useAuthStore from "@/store/useAuthStore";
-import { Home, Star, Bell, Clock } from "lucide-react";
-import Link from "next/link";
-import Timeline from "./components/Timeline";
 import PolaroidCard from "./components/PolaroidCard";
-import CategoryDropdown from "../components/CategoryDropdown";
 
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination, Navigation, Autoplay } from "swiper/modules";
@@ -127,7 +123,7 @@ export default function HomePage() {
                     onClick={() => router.push(`/categories/${cat.categoryId}`)}
                     className="cursor-pointer flex-shrink-0" // mx-6 제거 (spaceBetween이 대신함)
                   >
-                    <div className="relative w-72 h-96">
+                    <div className="relative w-72 h-96 m-4">
                       {/* 배경 카드 2 */}
                       <div className="absolute w-72 h-96 bg-white border-2 border-[#E5DCC5] rounded-lg shadow-sm transform rotate-[-4deg] translate-y-2 translate-x-1.5" />
 

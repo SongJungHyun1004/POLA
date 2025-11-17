@@ -16,8 +16,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.window.Popup
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -69,7 +72,7 @@ fun FavoriteScreen(
 
     var searchText by remember { mutableStateOf("") }
     var isMenuExpanded by remember { mutableStateOf(false) }
-    var selectedSort by remember { mutableStateOf("최신순") }
+    val selectedSort by viewModel.sortOrder.collectAsState()
     var viewMode by remember { mutableStateOf(ViewMode.LIST) }
 
     // UI 상태에 따른 분기
@@ -184,7 +187,7 @@ fun FavoriteScreen(
                 isMenuExpanded = isMenuExpanded,
                 onMenuExpandedChange = { isMenuExpanded = it },
                 selectedSort = selectedSort,
-                onSelectedSortChange = { selectedSort = it },
+                onSelectedSortChange = { viewModel.setSortOrder(it) },
                 viewMode = viewMode,
                 onViewModeChange = { viewMode = it },
                 onBackClick = onBackClick,
@@ -354,16 +357,19 @@ private fun FavoriteScreenContent(
                         })
                     }
             )
-
+            Spacer(modifier = Modifier.width(8.dp))
             Box {
                 Row(
-                    modifier = Modifier.clickable { onMenuExpandedChange(true) },
+                    modifier = Modifier.clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { onMenuExpandedChange(true) },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = selectedSort,
                         color = MaterialTheme.colorScheme.tertiary,
-                        fontSize = 12.sp
+                        fontSize = 14.sp
                     )
                     Icon(
                         imageVector = Icons.Default.KeyboardArrowDown,
@@ -371,34 +377,56 @@ private fun FavoriteScreenContent(
                         tint = MaterialTheme.colorScheme.tertiary
                     )
                 }
+                if (isMenuExpanded) {
+                    Popup(
+                        alignment = Alignment.TopEnd,
+                        onDismissRequest = { onMenuExpandedChange(false) },
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .width(140.dp)
+                                .shadow(12.dp, RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color.White)
+                                .padding(vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = "정렬",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.tertiary,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                            )
 
-                DropdownMenu(
-                    expanded = isMenuExpanded,
-                    onDismissRequest = { onMenuExpandedChange(false) },
-                    modifier = Modifier.background(Color.White)
-                ) {
-                    listOf("최신순", "오래된순").forEach { sort ->
-                        DropdownMenuItem(
-                            text = {
+                            val sortOptions = listOf("최신순", "오래된순")
+                            sortOptions.forEach { sort ->
                                 Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            onSelectedSortChange(sort)
+                                            onMenuExpandedChange(false)
+                                        }
+                                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(sort, color = MaterialTheme.colorScheme.tertiary)
+                                    Text(
+                                        text = sort,
+                                        color = MaterialTheme.colorScheme.tertiary,
+                                        fontSize = 14.sp
+                                    )
                                     if (sort == selectedSort) {
                                         Icon(
                                             imageVector = Icons.Default.Check,
                                             contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.tertiary
+                                            tint = MaterialTheme.colorScheme.tertiary,
+                                            modifier = Modifier.size(16.dp)
                                         )
                                     }
                                 }
-                            },
-                            onClick = {
-                                onSelectedSortChange(sort)
-                                onMenuExpandedChange(false)
                             }
-                        )
+                        }
                     }
                 }
             }

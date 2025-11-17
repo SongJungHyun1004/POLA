@@ -43,6 +43,7 @@ export default function Header() {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState<number>(-1);
+  const [arrowNavigated, setArrowNavigated] = useState(false);
 
   /** 프로필 / 업로드 모달 */
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -71,48 +72,50 @@ export default function Header() {
     localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(next));
   };
 
-  /* -------------------- 자동완성 로직 -------------------- */
+  // 자동완성 로딩 useEffect 수정
   useEffect(() => {
-    // 입력이 비었으면 자동완성 숨김
     if (!query.trim()) {
       setSuggestions([]);
       setShowSuggestions(false);
       setHighlightIndex(-1);
+      setArrowNavigated(false);
       return;
     }
 
     async function load() {
       if (searchMode === "TAG") {
-        // 태그 검색: API 호출
         try {
           const tags = await fetchTagSuggestions(query);
           setSuggestions(tags);
           setShowSuggestions(tags.length > 0);
-          setHighlightIndex(tags.length > 0 ? 0 : -1);
-        } catch (e) {
-          console.error("태그 자동완성 실패:", e);
+
+          // 처음에는 하이라이트 없음
+          setHighlightIndex(-1);
+          setArrowNavigated(false);
+        } catch {
           setSuggestions([]);
           setShowSuggestions(false);
-          setHighlightIndex(-1);
         }
       } else {
-        // 통합 검색: 로컬스토리지 기반
         const history = getSearchHistory();
         const filtered = history.filter((t) => t.includes(query));
+
         setSuggestions(filtered);
         setShowSuggestions(filtered.length > 0);
-        setHighlightIndex(filtered.length > 0 ? 0 : -1);
+
+        // 처음에는 하이라이트 없음
+        setHighlightIndex(-1);
+        setArrowNavigated(false);
       }
     }
 
     load();
   }, [query, searchMode]);
 
-  /* -------------------- 키보드 네비게이션 -------------------- */
+  // 방향키 네비게이션 수정
   const handleSearchInputKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (!showSuggestions || suggestions.length === 0) {
       if (e.key === "Enter") {
-        // 자동완성 없을 때는 바로 검색
         e.preventDefault();
         doSearch();
       }
@@ -121,26 +124,32 @@ export default function Header() {
 
     if (e.key === "ArrowDown") {
       e.preventDefault();
+      setArrowNavigated(true);
       setHighlightIndex((prev) =>
-        prev < suggestions.length - 1 ? prev + 1 : prev
+        prev < suggestions.length - 1 ? prev + 1 : 0
       );
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setHighlightIndex((prev) => (prev > 0 ? prev - 1 : prev));
+      setArrowNavigated(true);
+      setHighlightIndex((prev) =>
+        prev > 0 ? prev - 1 : suggestions.length - 1
+      );
     } else if (e.key === "Enter") {
       e.preventDefault();
-      if (highlightIndex >= 0 && highlightIndex < suggestions.length) {
+
+      if (arrowNavigated && highlightIndex >= 0) {
         const value = suggestions[highlightIndex];
         setQuery(value);
-        // 자동완성 값만 입력창에 채우고, 검색은 실행하지 않음
         setShowSuggestions(false);
         setHighlightIndex(-1);
-      } else {
-        doSearch();
+        return;
       }
+
+      doSearch();
     } else if (e.key === "Escape") {
       setShowSuggestions(false);
       setHighlightIndex(-1);
+      setArrowNavigated(false);
     }
   };
 
