@@ -72,19 +72,15 @@ public class DataService {
 
         List<DataResponse> cached = remindCacheRepository.getRemindFiles(userId);
 
-        if (cached != null) {
-            log.debug("[Remind] Redis hit for userId={}", userId);
-            return cached;
+        if (cached == null) {
+            log.debug("[Remind] Redis miss for userId={}, return empty list", userId);
+            return List.of();
         }
-
-        log.debug("[Remind] Redis miss for userId={}, rebuilding...", userId);
-
-        List<DataResponse> fresh = buildRemindFiles(userId);
-
-        remindCacheRepository.saveRemindFiles(userId, fresh);
-
-        return fresh;
+        log.debug("[Remind] Redis hit for userId={}", userId);
+        return cached;
     }
+
+
 
     @Transactional(readOnly = true)
     public List<DataResponse> buildRemindFiles(Long userId) {
