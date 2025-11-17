@@ -129,9 +129,10 @@ public class DataService {
     }
 
     @Transactional
-    public void deleteFile(Long fileId) {
-        File file = fileRepository.findById(fileId)
+    public void deleteFile(Long fileId,Users user) {
+        File file = fileRepository.findByIdAndUserId(fileId, user.getId())
                 .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
+
 
         try {
             Long categoryId = file.getCategoryId();
@@ -145,6 +146,7 @@ public class DataService {
 
 
             fileRepository.delete(file);
+            remindCacheRepository.deleteRemindFiles(user.getId());
 
             category.decreaseCount(1);
             categoryRepository.save(category);
@@ -652,7 +654,7 @@ public class DataService {
         sw.stop();
 
         sw.start("TagSave");
-        fileTagService.addTagsToFile(fileId, analyzeResponse.getTags());
+        fileTagService.addTagsToFile(fileId, analyzeResponse.getTags(),user);
         sw.stop();
 
         sw.start("Embedding");

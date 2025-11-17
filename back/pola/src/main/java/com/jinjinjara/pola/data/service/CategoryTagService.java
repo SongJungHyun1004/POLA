@@ -35,10 +35,14 @@ public class CategoryTagService {
     private final YamlRecommendedCatalogService yamlCatalog;
     private final ApplicationEventPublisher publisher;
 
-    // 카테고리에 태그 추가
-    public CategoryTagResponse addTagToCategory(Long categoryId, Long tagId) {
+    /**
+     * ✅ 카테고리에 태그 추가 (소유자 검증 포함)
+     */
+    public CategoryTagResponse addTagToCategory(Users user, Long categoryId, Long tagId) {
         Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
+                .filter(c -> c.getUser().getId().equals(user.getId()))
+                .orElseThrow(() -> new CustomException(ErrorCode.FILE_ACCESS_DENIED));
+
         Tag tag = tagRepository.findById(tagId)
                 .orElseThrow(() -> new CustomException(ErrorCode.TAG_NOT_FOUND));
 
@@ -61,10 +65,14 @@ public class CategoryTagService {
         }
     }
 
-    // 카테고리에서 태그 제거
-    public void removeTagFromCategory(Long categoryId, Long tagId) {
+    /**
+     * ✅ 카테고리에서 태그 제거 (소유자 검증 포함)
+     */
+    public void removeTagFromCategory(Users user, Long categoryId, Long tagId) {
         Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
+                .filter(c -> c.getUser().getId().equals(user.getId()))
+                .orElseThrow(() -> new CustomException(ErrorCode.FILE_ACCESS_DENIED));
+
         Tag tag = tagRepository.findById(tagId)
                 .orElseThrow(() -> new CustomException(ErrorCode.TAG_NOT_FOUND));
 
@@ -76,11 +84,14 @@ public class CategoryTagService {
         }
     }
 
-    // 특정 카테고리의 모든 태그 조회
+    /**
+     * ✅ 특정 카테고리의 모든 태그 조회 (소유자 검증 포함)
+     */
     @Transactional(readOnly = true)
-    public List<TagResponse> getTagsByCategory(Long categoryId) {
+    public List<TagResponse> getTagsByCategory(Users user, Long categoryId) {
         Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
+                .filter(c -> c.getUser().getId().equals(user.getId()))
+                .orElseThrow(() -> new CustomException(ErrorCode.FILE_ACCESS_DENIED));
 
         List<TagResponse> tags = categoryTagRepository.findByCategory(category)
                 .stream()
@@ -95,7 +106,9 @@ public class CategoryTagService {
         return tags;
     }
 
-    // 전체 태그 조회
+    /**
+     * 전체 태그 조회 (글로벌)
+     */
     @Transactional(readOnly = true)
     public List<TagResponse> getAllTags() {
         List<TagResponse> tags = tagRepository.findAll()
@@ -110,7 +123,9 @@ public class CategoryTagService {
         return tags;
     }
 
-    // 새 태그 생성
+    /**
+     * 새 태그 생성 (글로벌)
+     */
     public TagResponse createTag(String tagName) {
         if (tagRepository.findByTagName(tagName).isPresent()) {
             throw new CustomException(ErrorCode.TAG_ALREADY_EXISTS);
@@ -124,17 +139,34 @@ public class CategoryTagService {
         }
     }
 
-    // 태그 삭제
+    /**
+     * ✅ 태그 삭제
+     * - 어떤 카테고리에서도 사용 중이면 삭제 불가
+     * - 완전 미사용 태그만 삭제 허용
+     */
     public void deleteTag(Long tagId) {
-        if (!tagRepository.existsById(tagId)) {
-            throw new CustomException(ErrorCode.TAG_NOT_FOUND);
+        Tag tag = tagRepository.findById(tagId)
+                .orElseThrow(() -> new CustomException(ErrorCode.TAG_NOT_FOUND));
+
+        // 태그가 어떤 카테고리에서도 사용 중이면 삭제 불가
+        boolean inUse = categoryTagRepository.existsByTag(tag);
+        if (inUse) {
+            throw new CustomException(
+                    ErrorCode.DATA_DELETE_FAIL,
+                    "카테고리에서 사용 중인 태그는 삭제할 수 없습니다."
+            );
         }
+
         try {
-            tagRepository.deleteById(tagId);
+            tagRepository.delete(tag);
         } catch (Exception e) {
             throw new CustomException(ErrorCode.DATA_DELETE_FAIL, e.getMessage());
         }
     }
+
+    /**
+     * 카테고리/태그 초기 등록
+     */
     @Transactional
     public void initCategoriesAndTags(Users user, InitCategoryTagRequest request) {
         Set<String> categoryNames = request.getCategories().stream()
@@ -164,7 +196,7 @@ public class CategoryTagService {
                         .findByUserAndCategoryName(user, c.getCategoryName())
                         .orElseThrow(() -> new IllegalArgumentException("카테고리 없음: " + c.getCategoryName()));
 
-                //중복 연결 체크 추가
+                // 중복 연결 체크
                 boolean exists = categoryTagRepository.existsByCategoryAndTag(category, tag);
                 if (!exists) {
                     categoryTagRepository.save(CategoryTag.builder()
@@ -176,7 +208,6 @@ public class CategoryTagService {
         });
         publisher.publishEvent(new CategoryChangedEvent(user.getId()));
     }
-
 
     @Transactional(readOnly = true)
     public RecommendedCategoryList getRecommendedCategoriesAndTags() {
@@ -214,30 +245,31 @@ public class CategoryTagService {
                 })
                 .toList();
     }
+
     /**
-     * ✅ 카테고리에 여러 태그를 한 번에 추가
+     * ✅ 카테고리에 여러 태그를 한 번에 추가 (소유자 검증 포함)
      * - 같은 이름의 태그가 없으면 새로 생성
      * - 이미 연결된 태그는 중복 연결 방지
      */
     @Transactional
-    public List<CategoryTagResponse> addTagsToCategory(Long categoryId, List<String> tagNames) {
+    public List<CategoryTagResponse> addTagsToCategory(Users user, Long categoryId, List<String> tagNames) {
         Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
+                .filter(c -> c.getUser().getId().equals(user.getId()))
+                .orElseThrow(() -> new CustomException(ErrorCode.FILE_ACCESS_DENIED));
 
         List<CategoryTagResponse> results = tagNames.stream()
                 .map(tagName -> {
-                    //  태그 존재 확인 (없으면 생성)
+                    // 1. 태그 존재 확인 (없으면 생성)
                     Tag tag = tagRepository.findByTagName(tagName)
                             .orElseGet(() -> tagRepository.save(Tag.builder().tagName(tagName).build()));
 
-                    // 2이미 연결된 경우 건너뛰기
+                    // 2. 이미 연결된 경우 건너뛰기
                     boolean exists = categoryTagRepository.existsByCategoryAndTag(category, tag);
                     if (exists) {
-                        System.out.println("[CategoryTagService] 이미 연결된 태그: " + tagName);
                         return null;
                     }
 
-                    //  새로운 연결 저장
+                    // 3. 새로운 연결 저장
                     CategoryTag categoryTag = CategoryTag.builder()
                             .category(category)
                             .tag(tag)
