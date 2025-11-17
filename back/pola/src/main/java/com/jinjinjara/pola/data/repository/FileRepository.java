@@ -14,9 +14,6 @@ import java.util.Optional;
 @Repository
 public interface FileRepository extends JpaRepository<File, Long> {
 
-    /* ----------------------- [즐겨찾기 관련] ----------------------- */
-
-    // 즐겨찾기 전체 조회 (정렬용)
     List<File> findAllByUserIdAndFavoriteTrueOrderByFavoriteSortAscFavoritedAtDesc(Long userId);
 
     @Query("SELECT f FROM File f " +
@@ -27,7 +24,6 @@ public interface FileRepository extends JpaRepository<File, Long> {
             Pageable pageable
     );
 
-    // 즐겨찾기 페이지 조회 (페이징)
     Page<File> findAllByUserIdAndFavoriteTrueOrderByFavoriteSortAscFavoritedAtDesc(Long userId, Pageable pageable);
 
     Page<File> findAllByUserIdAndFavoriteTrue(Long userId, Pageable pageable);
@@ -46,29 +42,26 @@ public interface FileRepository extends JpaRepository<File, Long> {
             """, nativeQuery = true)
     List<File> findTop5FilesPerCategory(@Param("userId") Long userId);
 
-
-    // 즐겨찾기 정렬 순서 밀기 (+1)
     @Modifying
     @Query("""
-            UPDATE File f 
+            UPDATE File f
                SET f.favoriteSort = f.favoriteSort + 1
-             WHERE f.userId = :userId 
+             WHERE f.userId = :userId
                AND f.favorite = true
-               AND f.favoriteSort >= :start 
+               AND f.favoriteSort >= :start
                AND f.favoriteSort < :end
             """)
     void incrementSortRange(@Param("userId") Long userId,
                             @Param("start") int start,
                             @Param("end") int end);
 
-    // 즐겨찾기 정렬 순서 당기기 (-1)
     @Modifying
     @Query("""
-            UPDATE File f 
+            UPDATE File f
                SET f.favoriteSort = f.favoriteSort - 1
-             WHERE f.userId = :userId 
+             WHERE f.userId = :userId
                AND f.favorite = true
-               AND f.favoriteSort > :start 
+               AND f.favoriteSort > :start
                AND f.favoriteSort <= :end
             """)
     void decrementSortRange(@Param("userId") Long userId,
@@ -84,6 +77,7 @@ public interface FileRepository extends JpaRepository<File, Long> {
     List<File> findRemindFiles(@Param("userId") Long userId,
                                @Param("sevenDaysAgo") LocalDateTime sevenDaysAgo,
                                Pageable pageable);
+
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE File f SET f.shareExpiredAt = :expiredAt WHERE f.id = :id")
     void updateShareExpiredAt(@Param("id") Long id, @Param("expiredAt") LocalDateTime expiredAt);
@@ -97,10 +91,10 @@ public interface FileRepository extends JpaRepository<File, Long> {
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
-        UPDATE File f SET 
-            f.shareStatus = true, 
-            f.shareToken = :token, 
-            f.shareExpiredAt = :expiredAt 
+        UPDATE File f SET
+            f.shareStatus = true,
+            f.shareToken = :token,
+            f.shareExpiredAt = :expiredAt
         WHERE f.id = :id
         """)
     void updateShareInfo(
@@ -108,13 +102,6 @@ public interface FileRepository extends JpaRepository<File, Long> {
             @Param("token") String token,
             @Param("expiredAt") LocalDateTime expiredAt);
 
-
-    @Query("""
-                SELECT f.categoryId, COUNT(f)
-                FROM File f
-                WHERE f.userId = :userId
-                GROUP BY f.categoryId
-            """)
     List<File> findTop3ByUserIdAndFavoriteTrueOrderByCreatedAtDesc(Long userId);
 
     List<File> findTop10ByUserIdOrderByCreatedAtDesc(Long userId);
@@ -130,7 +117,6 @@ public interface FileRepository extends JpaRepository<File, Long> {
                                  Pageable pageable);
 
     Optional<File> findByIdAndUserId(Long id, Long userId);
-
 
     @Query("SELECT f FROM FileTag ft JOIN ft.file f " +
             "WHERE f.categoryId = :categoryId AND ft.tag.id = :tagId " +
@@ -154,22 +140,19 @@ public interface FileRepository extends JpaRepository<File, Long> {
                                        @Param("tagId") Long tagId,
                                        Pageable pageable);
 
-    // 유저 전체 파일 (페이징)
     Page<File> findAllByUserId(Long userId, Pageable pageable);
 
-    // 카테고리별 파일 (페이징)
     Page<File> findAllByUserIdAndCategoryId(Long userId, Long categoryId, Pageable pageable);
 
-
-    @Modifying(clearAutomatically = true, flushAutomatically = true) //추가
-    @Query(""" 
-            UPDATE File f SET 
-                f.categoryId = :categoryId, 
-                f.context    = :context,    
-                f.ocrText    = :ocrText,    
-                f.vectorId   = :vectorId    
-            WHERE f.id = :fileId            
-              AND f.userId = :userId        
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            UPDATE File f SET
+                f.categoryId = :categoryId,
+                f.context    = :context,
+                f.ocrText    = :ocrText,
+                f.vectorId   = :vectorId
+            WHERE f.id = :fileId
+              AND f.userId = :userId
             """)
     int updatePostProcessing(
             @Param("fileId") Long fileId,
