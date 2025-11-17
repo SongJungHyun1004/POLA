@@ -21,6 +21,7 @@ import {
 } from "@/services/categoryService";
 
 import CategoryModal from "@/app/onboarding/components/CategoryModal";
+import useCategoryStore from "@/store/useCategoryStore";
 
 interface SelectedFile {
   id: number;
@@ -109,6 +110,7 @@ export default function CategoryPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const refreshCategories = useCategoryStore((s) => s.refreshCategories);
 
   /* Metadata 로딩 */
   useEffect(() => {
@@ -252,6 +254,8 @@ export default function CategoryPage() {
 
       // 화면 반영
       setTags(newTags);
+
+      await refreshCategories();
 
       alert("카테고리가 성공적으로 수정되었습니다!");
     } catch (e) {

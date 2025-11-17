@@ -2,36 +2,23 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { getMyCategories } from "@/services/categoryService";
 import { ChevronDown, LayoutGrid } from "lucide-react";
+import useCategoryStore from "@/store/useCategoryStore";
 
 export default function CategoryDropdown() {
   const router = useRouter();
   const pathname = usePathname();
 
+  const { categories, refreshCategories, isLoading } = useCategoryStore();
+
   const currentCategoryId = pathname.startsWith("/categories/")
     ? Number(pathname.split("/")[2])
     : null;
 
-  // 🔥 초기부터 결정 → 깜빡임 제거
   const [isOpen, setIsOpen] = useState(Boolean(currentCategoryId));
 
-  const [categories, setCategories] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true); // 🔥 추가
-
   useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const list = await getMyCategories();
-        setCategories(list);
-      } catch (error) {
-        console.error("Failed to fetch categories:", error);
-      } finally {
-        setIsLoading(false); // 🔥 로딩 끝나면 true → false
-      }
-    };
-
-    fetchCategories();
+    refreshCategories();
   }, []);
 
   const handleCategoryClick = (categoryId: number) => {
@@ -41,7 +28,7 @@ export default function CategoryDropdown() {
 
   return (
     <div className="relative">
-      {/* 상단 버튼 */}
+      {/* Top Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-4 px-4 py-3 w-full rounded-xl transition-colors cursor-pointer hover:bg-gray-100"
@@ -50,36 +37,43 @@ export default function CategoryDropdown() {
         <span className="text-lg font-semibold text-[#4C3D25]">Categories</span>
 
         <ChevronDown
-          className={`w-5 h-5 text-[#8B7355] transition-transform ${
+          className={`w-5 h-5 text-[#8B7355] transition-transform duration-300 ${
             isOpen ? "rotate-180" : ""
           }`}
         />
       </button>
 
-      {/* 드롭다운 내용 */}
-      {isOpen && !isLoading && (
-        <div className="pl-12 bg-white">
-          {categories.map((category) => {
-            const isSelected = category.id === currentCategoryId;
-
-            return (
-              <div
-                key={category.id}
-                onClick={() => handleCategoryClick(category.id)}
-                className={`px-4 py-2 text-lg font-semibold text-[#4C3D25] rounded-xl cursor-pointer
-                  ${
-                    isSelected
-                      ? "bg-[#FFF4E0] hover:bg-[#FFE7C2]"
-                      : "hover:bg-gray-100"
-                  }
-                `}
-              >
-                {category.categoryName}
-              </div>
-            );
-          })}
-        </div>
-      )}
+      {/* Dropdown List with Animation */}
+      <div
+        className={`
+          overflow-hidden transition-all duration-300 
+          ${isOpen ? "max-h-[600px]" : "max-h-0"}
+        `}
+      >
+        {!isLoading && (
+          <div className="pl-12 bg-white">
+            {categories.map((category) => {
+              const isSelected = category.id === currentCategoryId;
+              return (
+                <div
+                  key={category.id}
+                  onClick={() => handleCategoryClick(category.id)}
+                  className={`
+                    px-4 py-2 text-lg font-semibold text-[#4C3D25] rounded-xl cursor-pointer
+                    ${
+                      isSelected
+                        ? "bg-[#FFF4E0] hover:bg-[#FFE7C2]"
+                        : "hover:bg-gray-100"
+                    }
+                  `}
+                >
+                  {category.categoryName}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
