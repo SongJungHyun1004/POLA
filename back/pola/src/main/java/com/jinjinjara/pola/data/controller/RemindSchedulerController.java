@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/dev/scheduler")
+@RequestMapping("/api/v1/scheduler") // 🔥 HomeController와 동일한 규칙에 맞춰 URL 통일
 @RequiredArgsConstructor
 public class RemindSchedulerController {
 
@@ -18,7 +18,6 @@ public class RemindSchedulerController {
     @PostMapping("/remind/{userId}")
     public ApiResponse<String> runRemindForUser(@PathVariable Long userId) {
         schedulerService.runSchedulerForUser(userId);
-
         return ApiResponse.ok("OK", "Manual remind scheduler executed for userId=" + userId);
     }
 
@@ -28,8 +27,6 @@ public class RemindSchedulerController {
     @PostMapping("/remind/all")
     public ApiResponse<String> runRemindForAllUsers() {
         schedulerService.runSchedulerForAllUsers();
-
         return ApiResponse.ok("OK", "Manual remind scheduler executed for ALL users");
     }
 }
-
