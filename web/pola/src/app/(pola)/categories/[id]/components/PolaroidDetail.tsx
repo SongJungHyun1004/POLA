@@ -7,7 +7,6 @@ import OCRModal from "./OCRModal";
 import EditModal from "./EditModal";
 import ShareModal from "./ShareModal";
 import {
-  RotateCcw,
   Download,
   Share2,
   Pencil,
@@ -15,7 +14,7 @@ import {
   Trash2,
   Globe,
   Smartphone,
-  Search, // 🔍 추가
+  Search,
 } from "lucide-react";
 import {
   getMyCategories,
@@ -27,6 +26,7 @@ import {
   removeFileFavorite,
   fileService,
 } from "@/services/fileService";
+import { useRouter } from "next/navigation";
 
 export interface PolaroidDetailProps {
   id?: number;
@@ -72,6 +72,8 @@ export default function PolaroidDetail({
   const [favorite, setFavorite] = useState(initialFavorite);
   const [updatingFavorite, setUpdatingFavorite] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  const router = useRouter();
 
   const isTextFile =
     type?.includes("text/plain") ||
@@ -217,6 +219,11 @@ export default function PolaroidDetail({
     }
   }
 
+  const handleTagClick = (tag: string) => {
+    const cleanTag = tag.startsWith("#") ? tag.substring(1) : tag;
+    router.push(`/files?tag=${encodeURIComponent(cleanTag)}`);
+  };
+
   return (
     <div className="flex flex-col items-center w-full">
       <p className="text-md mb-2">사진을 눌러서 뒤집어 보세요</p>
@@ -339,20 +346,24 @@ export default function PolaroidDetail({
       <div className="mt-4 text-center text-white flex flex-col items-center w-80 max-w-full">
         <div className="flex flex-wrap justify-start gap-2 mb-2 w-full">
           {tagState.map((t, idx) => (
-            <span
+            <button
               key={idx}
+              onClick={() => handleTagClick(t)}
               className="
-                bg-[#B0804C]/95
-                px-3 py-1
-                rounded-full
-                font-bold
-                text-sm
-                whitespace-nowrap
-                inline-block
-              "
+            bg-[#B0804C]/95
+            px-3 py-1
+            rounded-full
+            font-bold
+            text-sm
+            whitespace-nowrap
+            inline-block
+            text-white
+            hover:bg-[#99693E]
+            transition-colors
+          "
             >
               {t}
-            </span>
+            </button>
           ))}
         </div>
 
