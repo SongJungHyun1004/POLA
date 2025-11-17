@@ -10,16 +10,14 @@ export const metadata: Metadata = {
 
 export default function HomeLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex flex-col h-screen bg-[#FFFEF8]">
-      {/* 상단 */}
-      <Header />
-
-      {/* 사이드바 + 메인영역 */}
-      <div className="flex flex-1">
-        {/* 좌측 사이드바 */}
-        <HomeSidebar />
-
-        {/* 우측 컨텐츠 */}
+    <div className="flex flex-col h-screen bg-[#FFFEF8] overflow-hidden">
+      <div className="shrink-0">
+        <Header />
+      </div>
+      <div className="flex flex-1 overflow-hidden">
+        <div className="shrink-0 h-full">
+          <HomeSidebar />
+        </div>
         <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
     </div>
