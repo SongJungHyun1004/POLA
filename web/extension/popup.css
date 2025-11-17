@@ -141,8 +141,91 @@ h3 {
 /* ============================================
    사용 방법
 ============================================ */
+
+/* 간단 요약 (항상 보임) */
+.usage-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.summary-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #5f6368;
+}
+
+.summary-emoji {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+/* 상세 방법 (접었다 펼쳤다) */
+.usage-details {
+  margin-top: 12px;
+  border: 1px solid #e8eaed;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.usage-toggle {
+  padding: 10px 12px;
+  background: #f8f9fa;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1a73e8;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.2s;
+  user-select: none;
+}
+
+.usage-toggle:hover {
+  background: #e8f0fe;
+}
+
+.usage-toggle::marker {
+  display: none;
+}
+
+.usage-toggle::-webkit-details-marker {
+  display: none;
+}
+
+/* 펼쳤을 때 */
+.usage-details[open] .usage-toggle {
+  background: #e8f0fe;
+  border-bottom: 1px solid #e8eaed;
+}
+
+.usage-content {
+  padding: 16px 12px;
+  background: white;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .usage-category {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .usage-category:last-of-type {
