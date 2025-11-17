@@ -1,32 +1,19 @@
 package com.jinjinjara.pola.presentation.ui.component
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
@@ -34,14 +21,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
-import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnit
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.*
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import com.jinjinjara.pola.R
@@ -70,33 +53,29 @@ fun ClippedTagRowForCard(
             }
         }
     ) { measurables, constraints ->
-        val looseConstraints = constraints.copy(minWidth = 0, maxWidth = Constraints.Infinity)
-        val placeables = measurables.map { it.measure(looseConstraints) }
+        val loose = constraints.copy(minWidth = 0, maxWidth = Constraints.Infinity)
+        val placeables = measurables.map { it.measure(loose) }
+
         val spacingPx = spacing.roundToPx()
-
         var currentX = 0
-        val visiblePlaceables = mutableListOf<androidx.compose.ui.layout.Placeable>()
+        val visible = mutableListOf<androidx.compose.ui.layout.Placeable>()
 
-        for (i in placeables.indices) {
-            val placeable = placeables[i]
-            val spaceNeeded = if (i > 0) spacingPx else 0
-
-            if (currentX + spaceNeeded + placeable.width <= constraints.maxWidth) {
-                visiblePlaceables.add(placeable)
-                currentX += spaceNeeded + placeable.width
-            } else {
-                break
-            }
+        for ((i, p) in placeables.withIndex()) {
+            val needSpace = if (i > 0) spacingPx else 0
+            if (currentX + needSpace + p.width <= constraints.maxWidth) {
+                visible.add(p)
+                currentX += needSpace + p.width
+            } else break
         }
 
-        val height = visiblePlaceables.maxOfOrNull { it.height } ?: 0
+        val height = visible.maxOfOrNull { it.height } ?: 0
 
         layout(constraints.maxWidth, height) {
             var x = 0
-            visiblePlaceables.forEachIndexed { index, placeable ->
+            visible.forEachIndexed { index, p ->
                 if (index > 0) x += spacingPx
-                placeable.placeRelative(x, 0)
-                x += placeable.width
+                p.placeRelative(x, 0)
+                x += p.width
             }
         }
     }
@@ -105,7 +84,6 @@ fun ClippedTagRowForCard(
 @Composable
 fun PolaCard(
     modifier: Modifier = Modifier,
-    contentAlpha: Float? = null,
     backgroundColor: Color = Color.White,
     imageResId: Int? = null,
     imageUrl: String? = null,
@@ -116,9 +94,8 @@ fun PolaCard(
     paddingValues: PaddingValues = PaddingValues(
         top = 32.dp,
         start = 32.dp,
-        end = 32.dp
+        end = 32.dp,
     ),
-    borderColor: Color = MaterialTheme.colorScheme.tertiary,
     textList: List<String> = emptyList(),
     textSize: TextUnit = 24.sp,
     textSpacing: Dp = 8.dp,
@@ -129,65 +106,41 @@ fun PolaCard(
     onFavoriteClick: (() -> Unit)? = null,
     content: @Composable (() -> Unit)? = null
 ) {
-    // 전체 폴라로이드 카드
     Card(
         shape = RoundedCornerShape(5.dp),
         modifier = modifier
             .shadow(
-                elevation = 2.dp,
+                elevation = 8.dp,
                 shape = RoundedCornerShape(5.dp),
                 clip = false
             )
-            .shadow(
-                elevation = 2.dp,
-                shape = RoundedCornerShape(5.dp),
+            .graphicsLayer {
                 clip = false
-            )
-            .shadow(
-                elevation = 2.dp,
-                shape = RoundedCornerShape(5.dp),
-                clip = false
-            )
-            .shadow(
-                elevation = 2.dp,
-                shape = RoundedCornerShape(5.dp),
-                clip = false
-            )
+            }
             .aspectRatio(ratio),
-//            .border(
-//                BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary),
-//                RoundedCornerShape(5.dp)
-//            ),
-        colors = CardDefaults.cardColors(containerColor = backgroundColor),
-
+        colors = CardDefaults.cardColors(containerColor = backgroundColor)
     ) {
         Column(
             modifier = Modifier
                 .padding(paddingValues)
-                .fillMaxSize(),
+                .fillMaxSize()
         ) {
-            // 내부 사진 영역
+
+            // ★ 내부 이미지 영역 (clip 제거!)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .let { base ->
-                        if (contentAlpha != null) {
-                            base.alpha(contentAlpha)
-                        } else {
-                            base // alpha 적용 안함
-                        }
-                    }
                     .aspectRatio(imageRatio)
-                    .clip(RoundedCornerShape(5.dp))
+                    .graphicsLayer {
+                        clip = false
+                    }
                     .drawWithContent {
                         drawContent()
 
-                        // 인너섀도우
-                        val shadowColor = Color.Black.copy(alpha = 0.2f)  // 반투명 검정
-                        val cornerRadius = 5.dp.toPx()
+                        // Inner Shadow 효과
+                        val shadowColor = Color.Black.copy(alpha = 0.2f)
                         val shadowSize = 4.dp.toPx()
 
-                        // 네 방향 그라데이션
                         drawRect(
                             brush = Brush.verticalGradient(
                                 colors = listOf(shadowColor, Color.Transparent),
@@ -217,26 +170,21 @@ fun PolaCard(
                             )
                         )
                     },
-//                    .border(1.dp, borderColor, RoundedCornerShape(5.dp)),
                 contentAlignment = Alignment.TopCenter
             ) {
                 when {
-                    // 이미지 파일
                     type?.startsWith("image") == true && imageUrl != null -> {
                         AsyncImage(
                             model = imageUrl,
                             contentDescription = "Image Content",
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop,
-                            placeholder = if (!placeholderImageUrl.isNullOrEmpty()) {
-                                rememberAsyncImagePainter(placeholderImageUrl)
-                            } else {
-                                null
-                            },
+                            placeholder = placeholderImageUrl?.let {
+                                rememberAsyncImagePainter(it)
+                            }
                         )
                     }
 
-                    // 텍스트 파일
                     type?.startsWith("text") == true && imageUrl != null -> {
                         var textContent by remember { mutableStateOf<String?>(null) }
 
@@ -245,8 +193,7 @@ fun PolaCard(
                                 textContent = withContext(Dispatchers.IO) {
                                     URL(imageUrl).readText(Charsets.UTF_8)
                                 }
-                            } catch (e: Exception) {
-                                e.printStackTrace()
+                            } catch (_: Exception) {
                                 textContent = "(텍스트 로드 실패)"
                             }
                         }
@@ -268,7 +215,6 @@ fun PolaCard(
                         }
                     }
 
-                    // 기본 이미지 (빈 경우)
                     else -> {
                         val painter = painterResource(
                             id = imageResId ?: R.drawable.temp_image
@@ -283,11 +229,11 @@ fun PolaCard(
                 }
             }
 
-            // 메타 정보 영역
+            // 메타 정보 + 즐겨찾기
             if (timeAgo != null || sourceIcon != null || isFavorite) {
                 Row(
                     modifier = Modifier
-                        .fillMaxSize()
+                        .fillMaxWidth()
                         .padding(end = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
@@ -305,12 +251,8 @@ fun PolaCard(
                         }
 
                         if (sourceIcon != null) {
-                            if (timeAgo != null) {
-                                Text(
-                                    text = "•",
-                                    fontSize = 12.sp,
-                                )
-                            }
+                            if (timeAgo != null) Text("•", fontSize = 12.sp)
+
                             Icon(
                                 painter = painterResource(id = sourceIcon),
                                 contentDescription = "출처",
@@ -332,14 +274,12 @@ fun PolaCard(
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
-                            ) {
-                                onFavoriteClick?.invoke()
-                            }
+                            ) { onFavoriteClick?.invoke() }
                     )
                 }
             }
 
-            // 정보 영역
+            // 태그 영역
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.CenterStart
@@ -361,13 +301,12 @@ fun PolaCard(
                             Text(
                                 text = "#$text",
                                 fontSize = textSize,
-                                color = MaterialTheme.colorScheme.tertiary,
+                                color = MaterialTheme.colorScheme.tertiary
                             )
                         }
                     }
                 }
             }
-
         }
     }
 }
@@ -375,7 +314,5 @@ fun PolaCard(
 @Preview(showBackground = true)
 @Composable
 private fun PolaCardPreview() {
-    PolaCard() {
-        // 미리보기용 빈 콘텐츠
-    }
+    PolaCard()
 }

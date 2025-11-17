@@ -546,8 +546,8 @@ fun CategoryCard(
                 ) {
                     PolaCard(
                         modifier = Modifier
-                            .matchParentSize(),
-                        contentAlpha = 0.4f,
+                            .matchParentSize()
+                            .alpha(0.4f),
                         ratio = 0.7816f,
                         imageRatio = 0.9152f,
                         paddingValues = PaddingValues(
