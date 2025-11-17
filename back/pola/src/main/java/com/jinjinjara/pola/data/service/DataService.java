@@ -37,6 +37,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StopWatch;
 
 import java.net.URL;
@@ -154,9 +155,6 @@ public class DataService {
     }
 
 
-
-
-
     @Transactional
     public FileDetailResponse getFileDetail(Long userId, Long fileId) {
         File file = fileRepository.findByIdAndUserId(fileId, userId)
@@ -205,7 +203,6 @@ public class DataService {
                 .tags(tags)
                 .build();
     }
-
 
 
     @Transactional(readOnly = true)
@@ -262,7 +259,6 @@ public class DataService {
     }
 
 
-
     @Transactional(readOnly = true)
     public String getFilterName(String filterType, Long filterId) {
         if (filterType == null || filterType.isEmpty()) {
@@ -286,8 +282,6 @@ public class DataService {
             default -> filterType;
         };
     }
-
-
 
 
     /**
@@ -476,35 +470,66 @@ public class DataService {
         target.setFavoriteSort(newSort);
         return fileRepository.save(target);
     }
+    @Transactional
     public FileShareResponse createShareLink(Long userId, Long fileId, FileShareRequest request) {
+
         File file = fileRepository.findByIdAndUserId(fileId, userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
+        log.info("[DEBUG] shareStatus={}, shareToken={}, expiredAt={}",
+                file.getShareStatus(),
+                file.getShareToken(),
+                file.getShareExpiredAt()
+        );
 
-        // 이미 공유 중이면 기존 토큰 재활용 or 덮어쓰기
-        if (Boolean.TRUE.equals(file.getShareStatus()) && file.getShareToken() != null) {
+        LocalDateTime now = LocalDateTime.now();
+        int expireHours = Optional.ofNullable(request.getExpireHours()).orElse(24);
+
+        // 최초 공유
+        if (!Boolean.TRUE.equals(file.getShareStatus()) || file.getShareToken() == null) {
+            String token = UUID.randomUUID().toString();
+            LocalDateTime expiredAt = now.plusHours(expireHours);
+
+            file.setShareStatus(true);
+            file.setShareToken(token);
+            file.setShareExpiredAt(expiredAt);
+
             return FileShareResponse.builder()
-                    .shareUrl(buildShareUrl(file.getShareToken()))
-                    .expiredAt(String.valueOf(file.getShareExpiredAt()))
+                    .shareUrl(buildShareUrl(token))
+                    .expiredAt(expiredAt.toString())
                     .build();
         }
 
-        String token = UUID.randomUUID().toString();
-        LocalDateTime expiredAt = LocalDateTime.now().plusHours(
-                Optional.ofNullable(request.getExpireHours()).orElse(24)
-        );
+        // 이미 공유됨
+        LocalDateTime expiredAt = file.getShareExpiredAt();
+
+        // 연장
+        if (expiredAt != null && expiredAt.isAfter(now)) {
+            LocalDateTime newExpiredAt = now.plusHours(expireHours);
+            file.setShareExpiredAt(newExpiredAt);
+
+            return FileShareResponse.builder()
+                    .shareUrl(buildShareUrl(file.getShareToken()))
+                    .expiredAt(newExpiredAt.toString())
+                    .build();
+        }
+
+        // 만료됨 → 새 토큰 발급
+        String newToken = UUID.randomUUID().toString();
+        LocalDateTime newExpiredAt = now.plusHours(expireHours);
 
         file.setShareStatus(true);
-        file.setShareToken(token);
-        file.setShareExpiredAt(expiredAt);
-
-        fileRepository.save(file);
+        file.setShareToken(newToken);
+        file.setShareExpiredAt(newExpiredAt);
 
         return FileShareResponse.builder()
-                .shareUrl(buildShareUrl(token))
-                .expiredAt(expiredAt.toString())
+                .shareUrl(buildShareUrl(newToken))
+                .expiredAt(newExpiredAt.toString())
                 .build();
     }
-//링크수정
+
+
+
+    //링크수정
     private String buildShareUrl(String token) {
         return String.format("%s", token);
     }

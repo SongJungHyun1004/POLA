@@ -7,9 +7,11 @@ import com.jinjinjara.pola.data.entity.Category;
 import com.jinjinjara.pola.data.entity.File;
 import com.jinjinjara.pola.data.repository.CategoryRepository;
 import com.jinjinjara.pola.data.repository.FileRepository;
+import com.jinjinjara.pola.data.repository.RemindCacheRepository;
 import com.jinjinjara.pola.s3.service.S3Service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -22,6 +24,7 @@ public class HomeService {
     private final FileRepository fileRepository;
     private final CategoryRepository categoryRepository;
     private final S3Service s3Service;
+    private final RemindCacheRepository remindCacheRepository;
     public HomeResponse getHomeData(Long userId) {
 
         List<Category> categories = categoryRepository.findAllSorted(userId);
@@ -38,8 +41,34 @@ public class HomeService {
         allFiles.addAll(favorites);
 
         LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
-        List<File> reminds = fileRepository.findRemindPreview(userId, sevenDaysAgo, PageRequest.of(0, 3));
+
+        List<DataResponse> cachedReminds = remindCacheRepository.getRemindFiles(userId);
+        List<File> reminds;
+
+        if (cachedReminds != null) {
+            // Redis hit
+            reminds = cachedReminds.stream()
+                    .map(this::toFileEntity)
+                    .toList();
+        } else {
+            // Redis miss → DB에서 조회
+            reminds = fileRepository.findRemindPreview(
+                    userId,
+                    sevenDaysAgo,
+                    PageRequest.of(0, 3)
+            );
+
+             remindCacheRepository.saveRemindFiles(
+                  userId,
+                  reminds.stream()
+                         .map(f -> toDataResponse(f, Map.of()))
+                         .toList()
+             );
+        }
+
         allFiles.addAll(reminds);
+
+
 
         List<File> timeline = fileRepository.findTop10ByUserIdOrderByCreatedAtDesc(userId);
         allFiles.addAll(timeline);
@@ -74,6 +103,16 @@ public class HomeService {
                 .build();
     }
 
+    private File toFileEntity(DataResponse dto) {
+        File file = new File();
+        file.setId(dto.getId());
+        file.setSrc(dto.getSrc());
+        file.setType(dto.getType());
+        file.setOcrText(dto.getOcrText());
+        file.setContext(dto.getContext());
+        file.setFavorite(dto.getFavorite());
+        return file;
+    }
 
     private DataResponse toDataResponse(File f, Map<Long, String> previewUrls) {
         return DataResponse.builder()

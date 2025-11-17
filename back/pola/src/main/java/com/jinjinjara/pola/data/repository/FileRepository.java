@@ -84,6 +84,29 @@ public interface FileRepository extends JpaRepository<File, Long> {
     List<File> findRemindFiles(@Param("userId") Long userId,
                                @Param("sevenDaysAgo") LocalDateTime sevenDaysAgo,
                                Pageable pageable);
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE File f SET f.shareExpiredAt = :expiredAt WHERE f.id = :id")
+    void updateShareExpiredAt(@Param("id") Long id, @Param("expiredAt") LocalDateTime expiredAt);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE File f SET f.shareToken = :token, f.shareExpiredAt = :expiredAt WHERE f.id = :id")
+    void updateShareTokenAndExpiredAt(
+            @Param("id") Long id,
+            @Param("token") String token,
+            @Param("expiredAt") LocalDateTime expiredAt);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+        UPDATE File f SET 
+            f.shareStatus = true, 
+            f.shareToken = :token, 
+            f.shareExpiredAt = :expiredAt 
+        WHERE f.id = :id
+        """)
+    void updateShareInfo(
+            @Param("id") Long id,
+            @Param("token") String token,
+            @Param("expiredAt") LocalDateTime expiredAt);
 
 
     @Query("""
@@ -92,11 +115,6 @@ public interface FileRepository extends JpaRepository<File, Long> {
                 WHERE f.userId = :userId
                 GROUP BY f.categoryId
             """)
-    List<Object[]> countFilesByCategory(Long userId);
-
-
-    List<File> findTop5ByUserIdAndCategoryIdOrderByCreatedAtDesc(Long userId, Long categoryId);
-
     List<File> findTop3ByUserIdAndFavoriteTrueOrderByCreatedAtDesc(Long userId);
 
     List<File> findTop10ByUserIdOrderByCreatedAtDesc(Long userId);
@@ -142,11 +160,6 @@ public interface FileRepository extends JpaRepository<File, Long> {
     // 카테고리별 파일 (페이징)
     Page<File> findAllByUserIdAndCategoryId(Long userId, Long categoryId, Pageable pageable);
 
-    // 공유 파일 (필요시)
-    Page<File> findAllByUserIdAndShareStatusTrue(Long userId, Pageable pageable);
-
-    // 특정 플랫폼별 파일 (e.g. "web", "app")
-    Page<File> findAllByUserIdAndPlatform(Long userId, String platform, Pageable pageable);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true) //추가
     @Query(""" 
