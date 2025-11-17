@@ -829,6 +829,31 @@ async function handleImageUpload(info, tab) {
 
     console.log('✅ 이미지 다운로드 완료, 크기:', fileSize, 'bytes, 타입:', contentType);
 
+    // ⚠️ 이미지 타입 검증 (PNG, JPEG만 허용)
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+    const blobType = contentType.toLowerCase();
+
+    console.log('🔍 타입 검증 중...');
+    console.log('Content Type (소문자):', blobType);
+    console.log('허용된 타입:', allowedTypes);
+    console.log('검증 결과:', allowedTypes.includes(blobType));
+
+    if (!allowedTypes.includes(blobType)) {
+      const displayType = contentType.split('/')[1]?.toUpperCase() || '알 수 없음';
+      const errorMessage = `지원하지 않는 이미지 형식입니다.\n현재 형식: ${displayType}\n지원 형식: PNG, JPEG만 가능합니다.`;
+
+      console.warn('⚠️ 지원하지 않는 이미지 타입:', contentType);
+      console.warn('업로드 차단됨');
+
+      showNotification(
+        'POLA - 이미지 형식 오류',
+        errorMessage
+      );
+
+      return; // 함수 종료
+    }
+
+    console.log('✅ 이미지 타입 검증 통과:', contentType);
     // 토큰 가져오기
     const { accessToken } = await chrome.storage.local.get(['accessToken']);
 
@@ -950,6 +975,32 @@ async function handleDragDropImageUpload(request, sendResponse) {
     console.log('파일 크기:', blob.size, 'bytes');
     console.log('원본 URL:', request.imageUrl);
     console.log('==================');
+
+    // ⚠️ 이미지 타입 검증 (PNG, JPEG만 허용)
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+
+    if (!allowedTypes.includes(blob.type.toLowerCase())) {
+      const displayType = blob.type.split('/')[1]?.toUpperCase() || '알 수 없음';
+      const errorMessage = `지원하지 않는 이미지 형식입니다.\n현재 형식: ${displayType}\n지원 형식: PNG, JPEG만 가능합니다.`;
+
+      console.warn('⚠️ 지원하지 않는 이미지 타입:', blob.type);
+
+      chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'icons/icon128.png',
+        title: 'POLA - 이미지 형식 오류',
+        message: errorMessage,
+        priority: 2
+      });
+
+      sendResponse({
+        success: false,
+        error: errorMessage
+      });
+      return;
+    }
+
+    console.log('✅ 이미지 타입 검증 통과:', blob.type);
 
     const base64 = await new Promise((resolve) => {
       const reader = new FileReader();

@@ -378,9 +378,20 @@ function showDropZoneDialog() {
   `;
   subText.textContent = '여기에 이미지를 드롭하세요';
 
+  // 지원 형식 안내 추가
+const formatInfo = document.createElement('div');
+formatInfo.style.cssText = `
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 12px;
+  color: #999;
+  margin-top: 8px;
+`;
+formatInfo.textContent = '지원 형식: PNG, JPEG';
+
   dropZone.appendChild(icon);
   dropZone.appendChild(text);
   dropZone.appendChild(subText);
+  dropZone.appendChild(formatInfo);
   dropZoneDialog.appendChild(dropZone);
   document.body.appendChild(dropZoneDialog);
 
