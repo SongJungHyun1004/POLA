@@ -18,7 +18,6 @@ export default function TimeLinePage() {
   // 2. 모달 상태(State)
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
-  const [isModalLoading, setIsModalLoading] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -76,29 +75,34 @@ export default function TimeLinePage() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [hasMore, loading]);
 
-  const handleItemClick = async (fileId: number) => {
-    if (!fileId || isModalLoading) return;
+  const handleItemClick = (img: any) => {
+    // 1. 썸네일 데이터로 즉시 모달 열기
+    setSelectedItem({
+      ...img,
+      tags: [], // 상세 정보는 나중에 로드
+      contexts: "",
+    });
+    setIsModalOpen(true);
 
-    setIsModalLoading(true);
-
-    try {
-      const fileData = await getFileDetail(fileId);
-
-      const modalProps = {
-        ...fileData,
-        contexts: fileData.context || "", 
-        tags: fileData.tags ? fileData.tags.map((t: any) => t.tagName) : [], 
-        date: fileData.created_at || fileData.date, 
-      };
-
-      setSelectedItem(modalProps);
-      setIsModalOpen(true);
-    } catch (error) {
-      console.error("❌ Failed to fetch file detail:", error);
-      alert("파일 상세 정보를 불러오는 데 실패했습니다.");
-    } finally {
-      setIsModalLoading(false); 
-    }
+    // 2. 백그라운드에서 상세 정보(원본 URL 포함) 가져오기
+    getFileDetail(img.id)
+      .then((fileData) => {
+        // 3. 상세 정보로 모달 내용 업데이트
+        const modalProps = {
+          ...fileData,
+          contexts: fileData.context || "",
+          tags: fileData.tags ? fileData.tags.map((t: any) => t.tagName) : [],
+          date: fileData.created_at || fileData.date,
+        };
+        setSelectedItem(modalProps);
+      })
+      .catch((error) => {
+        console.error("❌ Failed to fetch file detail:", error);
+        alert("파일 상세 정보를 불러오는 데 실패했습니다.");
+        // 에러 발생 시 모달을 닫을 수도 있음
+        setIsModalOpen(false);
+        setSelectedItem(null);
+      });
   };
 
   if (timelineData.length === 0 && loading) {
@@ -141,7 +145,7 @@ export default function TimeLinePage() {
                         <div
                           key={i}
                           className="relative aspect-[4/3] rounded-md cursor-pointer"
-                          onClick={() => handleItemClick(img.id)}
+                          onClick={() => handleItemClick(img)}
                         >
                           {/* 필름 프레임 */}
                           <Image
@@ -162,15 +166,15 @@ export default function TimeLinePage() {
                                   {img.ocr_text || "(텍스트 없음)"}
                                 </div>
                               ) : (
-                                <Image
-                                  src={
-                                    img.src || "/images/dummy_image_1.png"
-                                  }
-                                  alt="content"
-                                  fill
-                                  sizes="(max-width: 620px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                                  className="object-cover object-center"
-                                />
+                            <Image
+                              src={img.src || "/images/dummy_image_1.png"}
+                              alt="content"
+                              fill
+                              sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                              className="object-cover object-center"
+                              placeholder="blur"
+                              blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+                            />
                               )}
                             </div>
                           </div>
@@ -192,13 +196,7 @@ export default function TimeLinePage() {
         </div>
       </div>
 
-      {isModalLoading && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 backdrop-blur-sm">
-          <div className="text-white text-2xl">상세 정보 로딩 중...</div>
-        </div>
-      )}
-
-      {isModalOpen && selectedItem && !isModalLoading && (
+      {isModalOpen && selectedItem && (
         <PolaroidDetailModal
           {...selectedItem}
           onClose={() => {
