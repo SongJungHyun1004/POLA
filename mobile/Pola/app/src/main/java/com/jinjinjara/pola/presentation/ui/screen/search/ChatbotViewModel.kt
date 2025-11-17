@@ -43,7 +43,7 @@ class ChatbotViewModel @Inject constructor(
 
             if (savedMessages.isEmpty()) {
                 // 저장된 메시지가 없으면 초기 인사 메시지 추가
-                val greeting = ChatMessage.Bot("안녕하세요. 무엇을 도와드릴까요?")
+                val greeting = ChatMessage.Bot("저는 상담포아예요. 무엇을 도와드릴까요?")
                 _messages.value = listOf(greeting)
                 // 초기 메시지도 저장
                 chatRepository.saveMessage(greeting)
