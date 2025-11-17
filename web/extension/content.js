@@ -339,6 +339,23 @@ document.addEventListener('dragstart', (e) => {
   }
 }, true);
 
+// 드래그 종료 시
+document.addEventListener('dragend', (e) => {
+  console.log('🔚 dragend 이벤트 발생', e.target.tagName);
+  
+  if (e.target.tagName === 'IMG') {
+    console.log('✅ 이미지 드래그 종료 - 드롭존 제거 중...');
+    
+    // 드롭 이벤트가 발생했는지 확인하기 위해 짧은 지연
+    setTimeout(() => {
+      console.log('⏰ 타임아웃 실행 - 드롭존 숨기기');
+      hideDropZoneDialog();
+      draggedImageSrc = null;
+      dragStartedInCenter = false; // 상태 초기화
+    }, 100);
+  }
+}, true);
+
 /**
  * 드롭존 다이얼로그 표시
  */
