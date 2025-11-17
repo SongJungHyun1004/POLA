@@ -19,8 +19,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.net.URL
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -105,7 +112,7 @@ fun ClippedTagRow(
 @Composable
 fun <T : DisplayItem> ItemListItem(
     item: T,
-    onFavoriteToggle: (T) -> Unit,
+    onFavoriteToggle: ((T) -> Unit)? = null,
     onItemClick: ((T) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -123,35 +130,74 @@ fun <T : DisplayItem> ItemListItem(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 왼쪽: 1:1 이미지
-        if (item.imageRes != 0) {
-            Image(
-                painter = painterResource(id = item.imageRes),
-                contentDescription = null,
-                modifier = Modifier
-                    .size(80.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.tertiary,
-                        shape = RoundedCornerShape(8.dp)
-                    ),
-                contentScale = ContentScale.Crop
-            )
-        } else {
-            AsyncImage(
-                model = item.imageUrl,
-                contentDescription = null,
-                modifier = Modifier
-                    .size(80.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.tertiary,
-                        shape = RoundedCornerShape(8.dp)
-                    ),
-                contentScale = ContentScale.Crop
-            )
+        // 왼쪽: 1:1 이미지 또는 텍스트 미리보기
+        when {
+            item.imageRes != 0 -> {
+                Image(
+                    painter = painterResource(id = item.imageRes),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            shape = RoundedCornerShape(8.dp)
+                        ),
+                    contentScale = ContentScale.Crop
+                )
+            }
+            item.type.startsWith("text") -> {
+                var textContent by remember { mutableStateOf<String?>(null) }
+
+                LaunchedEffect(item.imageUrl) {
+                    try {
+                        textContent = withContext(Dispatchers.IO) {
+                            URL(item.imageUrl).readText(Charsets.UTF_8)
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        textContent = "(텍스트 로드 실패)"
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .background(Color(0xFFF5F5F5))
+                        .padding(6.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = textContent ?: "로딩 중...",
+                        color = Color.DarkGray,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 4,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            else -> {
+                AsyncImage(
+                    model = item.imageUrl,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            shape = RoundedCornerShape(8.dp)
+                        ),
+                    contentScale = ContentScale.Crop
+                )
+            }
         }
 
         // 중간: 태그와 설명
@@ -178,23 +224,25 @@ fun <T : DisplayItem> ItemListItem(
             )
         }
 
-        // 오른쪽: 즐겨찾기 토글 버튼
-        Icon(
-            painter = painterResource(
-                id = if (item.isFavorite) R.drawable.star_primary_solid
-                else R.drawable.star_primary
-            ),
-            contentDescription = "즐겨찾기",
-            tint = Color.Unspecified,
-            modifier = Modifier
-                .size(30.dp)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) {
-                    onFavoriteToggle(item)
-                }
-        )
+        // 오른쪽: 즐겨찾기 토글 버튼 (onFavoriteToggle이 null이 아닐 때만 표시)
+        if (onFavoriteToggle != null) {
+            Icon(
+                painter = painterResource(
+                    id = if (item.isFavorite) R.drawable.star_primary_solid
+                    else R.drawable.star_primary
+                ),
+                contentDescription = "즐겨찾기",
+                tint = Color.Unspecified,
+                modifier = Modifier
+                    .size(30.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {
+                        onFavoriteToggle(item)
+                    }
+            )
+        }
     }
 }
 
@@ -202,7 +250,7 @@ fun <T : DisplayItem> ItemListItem(
 @Composable
 fun <T : DisplayItem> ItemListView(
     items: List<T>,
-    onFavoriteToggle: (T) -> Unit,
+    onFavoriteToggle: ((T) -> Unit)? = null,
     onItemClick: ((T) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {

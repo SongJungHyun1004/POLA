@@ -50,7 +50,7 @@ public class File {
     @Column(name = "share_token", unique = true)
     private String shareToken; // 공유 링크용 UUID 토큰
 
-    @Column(name = "share_expired_at", nullable = true)
+    @Column(name = "share_expired_at", columnDefinition = "timestamp(6)")
     private LocalDateTime shareExpiredAt;
 
 

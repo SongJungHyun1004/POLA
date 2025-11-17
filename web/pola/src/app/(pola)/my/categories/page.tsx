@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import useCategoryStore from "@/store/useCategoryStore";
 
 import {
   updateCategoryName,
@@ -21,6 +22,8 @@ export default function MyCategoryPage() {
   const [tagInput, setTagInput] = useState("");
 
   const [isAddMode, setIsAddMode] = useState(false); // + 버튼 클릭 시 활성화
+
+  const refreshCategories = useCategoryStore((s) => s.refreshCategories);
 
   /* ---------------------- 초기 로딩 ---------------------- */
   useEffect(() => {
@@ -107,6 +110,7 @@ export default function MyCategoryPage() {
         await removeCategoryTag(selectedId, r.id);
       }
 
+      await refreshCategories();
       alert("카테고리가 수정되었습니다!");
     } catch (err) {
       console.error(err);
@@ -134,6 +138,7 @@ export default function MyCategoryPage() {
         setName("");
         setTags([]);
       }
+      await refreshCategories();
     } catch {
       alert("삭제 실패");
     }
@@ -177,6 +182,8 @@ export default function MyCategoryPage() {
       loadCategoryDetail(newId, name);
 
       setIsAddMode(false);
+
+      await refreshCategories();
     } catch (err) {
       alert("카테고리 생성 중 오류 발생");
     }
@@ -185,9 +192,9 @@ export default function MyCategoryPage() {
   /* ---------------------- 화면 렌더 ---------------------- */
   return (
     <div className="w-full h-full flex justify-center pb-6">
-      <div className="w-full h-full max-w-[900px] flex gap-6">
+      <div className="w-full h-full max-w-[1200px] flex gap-6">
         {/* ---------------- LEFT: 카테고리 목록 ---------------- */}
-        <div className="w-1/3 bg-[#F4EFE2] rounded-2xl p-6 shadow-sm h-full flex flex-col">
+        <div className="w-[300px] bg-[#F4EFE2] rounded-2xl p-6 shadow-sm h-full flex flex-col">
           {/* 스크롤 가능한 카테고리 리스트 */}
           <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-[#CBBF9E]/50 pr-2">
             {categories.map((c) => (
@@ -243,7 +250,7 @@ export default function MyCategoryPage() {
         {/* ----------------------- RIGHT: 카테고리 편집 패널 ----------------------- */}
         <div className="flex-1 bg-[#FFFFFF] border border-[#E3DCC8] rounded-2xl shadow-sm p-8 flex flex-col">
           {/* ---- 스크롤 가능한 영역 ---- */}
-          <div className="flex-1 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-[#CBBF9E]/50">
+          <div className="flex-1 overflow-y-auto px-2 scrollbar-thin scrollbar-thumb-[#CBBF9E]/50">
             {/* 카테고리 이름 */}
             <label className="text-xl font-semibold text-[#4C3D25] mb-3 block">
               카테고리 이름

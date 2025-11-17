@@ -25,5 +25,6 @@ data class TagSearchResult(
     @Json(name = "context") val context: String,
     @Json(name = "ocrText") val ocrText: String,
     @Json(name = "imageUrl") val imageUrl: String,
+    @Json(name = "fileType") val fileType: String,
     @Json(name = "createdAt") val createdAt: String
 )

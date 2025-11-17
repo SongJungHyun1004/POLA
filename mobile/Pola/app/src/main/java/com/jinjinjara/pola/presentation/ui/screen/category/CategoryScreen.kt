@@ -13,6 +13,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,6 +30,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.jinjinjara.pola.R
 import com.jinjinjara.pola.presentation.ui.component.PolaCard
 import com.jinjinjara.pola.presentation.ui.component.PolaSearchBar
+import com.jinjinjara.pola.presentation.ui.component.SearchBar
+import com.jinjinjara.pola.navigation.Screen
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -43,6 +48,7 @@ import androidx.compose.ui.window.Popup
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -51,13 +57,15 @@ import com.jinjinjara.pola.presentation.ui.component.CategoryChips
 import com.jinjinjara.pola.presentation.ui.component.DisplayItem
 import com.jinjinjara.pola.presentation.ui.component.ItemGrid2View
 import com.jinjinjara.pola.presentation.ui.component.ItemGrid3View
+import com.jinjinjara.pola.presentation.ui.component.ItemListView
 import com.jinjinjara.pola.domain.model.UserCategory
 
 
 enum class ViewMode {
-    GRID_3, GRID_2
+    LIST, GRID_3, GRID_2
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategoryScreen(
     categoryId: Long = -1L,
@@ -120,17 +128,22 @@ fun CategoryScreen(
         }
     }
     var isMenuExpanded by remember { mutableStateOf(false) }
-    var selectedSort by remember { mutableStateOf("최신순") }
+    val selectedSort by viewModel.sortOrder.collectAsState()
     var viewMode by remember { mutableStateOf(ViewMode.GRID_2) }
 
     val categories = uiState.files
 
-    var searchText by remember { mutableStateOf("") }
-
     val gridState = rememberLazyGridState()
+    val coroutineScope = rememberCoroutineScope()
+    var isRefreshing by remember { mutableStateOf(false) }
+    val pullRefreshState = rememberPullToRefreshState()
+
+    val showScrollToTopButton by remember {
+        derivedStateOf { gridState.firstVisibleItemIndex > 0 }
+    }
 
     // 헤더 높이
-    val headerHeightDp = 220.dp
+    val headerHeightDp = 160.dp
     val density = LocalDensity.current
     val headerHeightPx = with(density) { headerHeightDp.roundToPx() }
     val toolbarOffset = remember { mutableStateOf(0f) }
@@ -173,6 +186,13 @@ fun CategoryScreen(
                     toolbarOffset.value = 0f
                 }
             }
+    }
+
+    // Pull-to-Refresh 상태 관리
+    LaunchedEffect(uiState) {
+        if (!uiState.isLoading) {
+            isRefreshing = false
+        }
     }
 
     // animated offset for smooth movement
@@ -229,43 +249,76 @@ fun CategoryScreen(
                 }
             }
             else -> {
-                when (viewMode) {
-                    ViewMode.GRID_3 -> {
-                        ItemGrid3View(
-                            items = categories,
-                            onItemClick = { item ->
-                                onNavigateToContents(item.fileId, item.imageUrl)
-                            },
-                            onFavoriteToggle = { }, // 빈 람다 (기능 없음)
-                            state = gridState,
-                            contentPadding = PaddingValues(
-                                top = headerHeightDp + 8.dp,
-                                start = 16.dp,
-                                end = 16.dp,
-                                bottom = 16.dp
-                            ),
-                            showFavoriteIcon = false,
-                            modifier = Modifier.fillMaxSize()
+                PullToRefreshBox(
+                    isRefreshing = isRefreshing,
+                    onRefresh = {
+                        isRefreshing = true
+                        viewModel.refresh()
+                    },
+                    state = pullRefreshState,
+                    indicator = {
+                        PullToRefreshDefaults.Indicator(
+                            state = pullRefreshState,
+                            isRefreshing = isRefreshing,
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .offset(y = 160.dp),
+                            color = MaterialTheme.colorScheme.background,
+                            containerColor = MaterialTheme.colorScheme.primary
                         )
                     }
+                ) {
+                    when (viewMode) {
+                        ViewMode.LIST -> {
+                            ItemListView(
+                                items = categories,
+                                onItemClick = { item ->
+                                    onNavigateToContents(item.fileId, item.imageUrl)
+                                },
+                                onFavoriteToggle = null, // 즐겨찾기 아이콘 숨김
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(top = headerHeightDp + 8.dp)
+                            )
+                        }
 
-                    ViewMode.GRID_2 -> {
-                        ItemGrid2View(
-                            items = categories,
-                            onItemClick = { item ->
-                                onNavigateToContents(item.fileId, item.imageUrl)
-                            },
-                            onFavoriteToggle = { }, // 빈 람다 (기능 없음)
-                            state = gridState,
-                            contentPadding = PaddingValues(
-                                top = headerHeightDp + 8.dp,
-                                start = 16.dp,
-                                end = 16.dp,
-                                bottom = 16.dp
-                            ),
-                            showFavoriteIcon = false,
-                            modifier = Modifier.fillMaxSize()
-                        )
+                        ViewMode.GRID_3 -> {
+                            ItemGrid3View(
+                                items = categories,
+                                onItemClick = { item ->
+                                    onNavigateToContents(item.fileId, item.imageUrl)
+                                },
+                                onFavoriteToggle = { }, // 빈 람다 (기능 없음)
+                                state = gridState,
+                                contentPadding = PaddingValues(
+                                    top = headerHeightDp + 8.dp,
+                                    start = 16.dp,
+                                    end = 16.dp,
+                                    bottom = 16.dp
+                                ),
+                                showFavoriteIcon = false,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
+                        ViewMode.GRID_2 -> {
+                            ItemGrid2View(
+                                items = categories,
+                                onItemClick = { item ->
+                                    onNavigateToContents(item.fileId, item.imageUrl)
+                                },
+                                onFavoriteToggle = { }, // 빈 람다 (기능 없음)
+                                state = gridState,
+                                contentPadding = PaddingValues(
+                                    top = headerHeightDp + 8.dp,
+                                    start = 16.dp,
+                                    end = 16.dp,
+                                    bottom = 16.dp
+                                ),
+                                showFavoriteIcon = false,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
                     }
                 }
             }
@@ -294,7 +347,12 @@ fun CategoryScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(
+                            start = 16.dp,
+                            top = 16.dp,
+                            end = 16.dp,
+                            bottom = 8.dp
+                        ),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -312,12 +370,17 @@ fun CategoryScreen(
                             }
                     )
 
-                    Text(
-                        text = uiState.categoryName.ifEmpty { "전체" },
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.tertiary
+                    Spacer(Modifier.width(12.dp))
+
+                    SearchBar(
+                        searchText = "",
+                        onSearchClick = {
+                            navController.navigate(Screen.SearchScreen.createRoute())
+                        },
+                        modifier = Modifier.weight(1f)
                     )
+
+                    Spacer(Modifier.width(12.dp))
 
                     Icon(
                         painter = painterResource(R.drawable.star),
@@ -331,20 +394,6 @@ fun CategoryScreen(
                                 onNavigateToFavorite()
                             }
                             .size(30.dp)
-                    )
-                }
-                // Search Bar
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(64.dp)
-                        .padding(horizontal = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    PolaSearchBar(
-                        searchText = searchText,
-                        onValueChange = { searchText = it },
-                        modifier = Modifier.weight(1f)
                     )
                 }
 
@@ -369,7 +418,7 @@ fun CategoryScreen(
                     }
                 )
 
-                // Grid Icon and Sort Menu
+                // Category Title, Grid Icon and Sort Menu
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -377,23 +426,44 @@ fun CategoryScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        painter = painterResource(
-                            id = if (viewMode == ViewMode.GRID_3) R.drawable.grid_3 else R.drawable.gird_2
-                        ),
-                        contentDescription = "뷰 모드 변경",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) {
-                                viewMode =
-                                    if (viewMode == ViewMode.GRID_3) ViewMode.GRID_2 else ViewMode.GRID_3
-                            }
+                    // Category Title
+                    Text(
+                        text = uiState.categoryName.ifEmpty { "전체" },
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.tertiary
                     )
-                    Box {
+
+                    // Grid Toggle + Sort Menu
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(
+                                id = when (viewMode) {
+                                    ViewMode.LIST -> R.drawable.list
+                                    ViewMode.GRID_3 -> R.drawable.grid_3
+                                    ViewMode.GRID_2 -> R.drawable.gird_2
+                                }
+                            ),
+                            contentDescription = "뷰 모드 변경",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) {
+                                    viewMode = when (viewMode) {
+                                        ViewMode.LIST -> ViewMode.GRID_3
+                                        ViewMode.GRID_3 -> ViewMode.GRID_2
+                                        ViewMode.GRID_2 -> ViewMode.LIST
+                                    }
+                                }
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Box {
                         Row(
                             modifier = Modifier.clickable(
                                 interactionSource = remember { MutableInteractionSource() },
@@ -404,7 +474,7 @@ fun CategoryScreen(
                             Text(
                                 text = selectedSort,
                                 color = MaterialTheme.colorScheme.tertiary,
-                                fontSize = 12.sp
+                                fontSize = 14.sp
                             )
                             Icon(
                                 imageVector =
@@ -441,7 +511,6 @@ fun CategoryScreen(
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .clickable {
-                                                    selectedSort = sort
                                                     isMenuExpanded = false
                                                     val (sortBy, direction) = when (sort) {
                                                         "최신순" -> "createdAt" to "DESC"
@@ -459,7 +528,7 @@ fun CategoryScreen(
                                             Text(
                                                 text = sort,
                                                 color = MaterialTheme.colorScheme.tertiary,
-                                                fontSize = 12.sp
+                                                fontSize = 14.sp
                                             )
                                             if (sort == selectedSort) {
                                                 Icon(
@@ -474,11 +543,36 @@ fun CategoryScreen(
                                 }
                             }
                         }
+                        }
                     }
                 }
             }
         }
 
+        // 맨 위로 버튼
+        if (showScrollToTopButton) {
+            FloatingActionButton(
+                onClick = {
+                    coroutineScope.launch {
+                        gridState.animateScrollToItem(0)
+                    }
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 12.dp)
+                    .size(36.dp),
+                containerColor = MaterialTheme.colorScheme.primary,
+                shape = RoundedCornerShape(50),
+                elevation = FloatingActionButtonDefaults.elevation(2.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowUp,
+                    contentDescription = "맨 위로",
+                    tint = MaterialTheme.colorScheme.background,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
 
     }
 }

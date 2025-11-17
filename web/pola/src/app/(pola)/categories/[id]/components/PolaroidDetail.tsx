@@ -219,6 +219,7 @@ export default function PolaroidDetail({
 
   return (
     <div className="flex flex-col items-center w-full">
+      <p className="text-md mb-2">사진을 눌러서 뒤집어 보세요</p>
       {/* ---------- 카드 ---------- */}
       <div
         className={`relative bg-white rounded-md shadow-custom w-[340px] h-[460px] flex items-center justify-center transition-transform duration-500 [transform-style:preserve-3d] ${
@@ -335,13 +336,13 @@ export default function PolaroidDetail({
       </div>
 
       {/* ---------- TAG + 확대 버튼 ---------- */}
-      <div className="mt-4 text-center text-[#4C3D25] flex flex-col items-center w-80 max-w-full">
+      <div className="mt-4 text-center text-white flex flex-col items-center w-80 max-w-full">
         <div className="flex flex-wrap justify-start gap-2 mb-2 w-full">
           {tagState.map((t, idx) => (
             <span
               key={idx}
               className="
-                bg-[#D0A773]/95
+                bg-[#B0804C]/95
                 px-3 py-1
                 rounded-full
                 font-bold
@@ -361,8 +362,6 @@ export default function PolaroidDetail({
         >
           <Search className="w-5 h-5 text-[#4C3D25]" />
         </button>
-
-        <p className="text-md mt-2">버튼을 눌러서 사진을 크게 보세요</p>
       </div>
 
       {/* 모달 */}

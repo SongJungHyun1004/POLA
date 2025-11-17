@@ -2,7 +2,7 @@
 
 export default function PrivacyPolicyPage() {
   return (
-    <div className="h-screen overflow-y-auto bg-[#FFFEF8] text-[#4C3D25] flex flex-col">
+    <div className="h-full overflow-y-auto bg-[#FFFEF8] text-[#4C3D25] flex flex-col">
       {/* 콘텐츠 영역 */}
       <div className="px-8 py-10 max-w-4xl mx-auto leading-relaxed pb-32">
         <h1 className="text-4xl font-bold mb-6">POLA 개인정보처리방침</h1>
@@ -228,24 +228,6 @@ export default function PrivacyPolicyPage() {
           마지막 업데이트: 2025년 11월 13일
         </p>
       </div>
-
-      {/* Footer */}
-      <footer className="border-t border-[#D6CFBC] py-4 bg-[#F7F4EC] text-center text-sm text-[#4C3D25]">
-        <small>
-          © 2025 POLA. All rights reserved. | 버전 1.0.0 |
-          <a className="underline ml-1" href="mailto:starforce.mozzi@gmail.com">
-            문의하기
-          </a>{" "}
-          |
-          <a
-            className="underline ml-1"
-            href="https://k13d204.p.ssafy.io/privacy-policy"
-            target="_blank"
-          >
-            개인정보처리방침
-          </a>
-        </small>
-      </footer>
     </div>
   );
 }
