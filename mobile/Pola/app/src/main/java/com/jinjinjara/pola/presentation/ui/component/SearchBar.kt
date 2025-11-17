@@ -20,13 +20,11 @@ import com.jinjinjara.pola.R
 @Composable
 fun SearchBar(
     searchText: String,
-    onSearchClick: (Boolean) -> Unit,
+    onSearchClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var isAiMode by remember { mutableStateOf(false) }
-
     Surface(
-        modifier = modifier.height(48.dp),
+        modifier = modifier.height(40.dp),
         shape = RoundedCornerShape(20.dp),
         border = BorderStroke(
             color = MaterialTheme.colorScheme.tertiary,
@@ -37,74 +35,43 @@ fun SearchBar(
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(start = 8.dp, end = 16.dp),
+                .padding(start = 16.dp, end = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // AI 버튼
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = if (isAiMode)
-                    MaterialTheme.colorScheme.tertiary
-                else
-                    MaterialTheme.colorScheme.primary,
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .padding(vertical = 8.dp)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) {
-                        isAiMode = !isAiMode
-                    },
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxHeight(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "AI",
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        modifier = Modifier.padding(horizontal = 20.dp)
-                    )
-                }
-            }
-
             // 검색 영역
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(horizontal = 12.dp)
+                    .padding(start = 4.dp, end = 12.dp)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null
                     ) {
-                        onSearchClick(isAiMode)
+                        onSearchClick()
                     },
                 contentAlignment = Alignment.CenterStart
             ) {
-                val placeholder = if (isAiMode)
-                    "챗봇과 대화해보세요."
-                else
-                    "검색어를 입력하세요."
-
                 Text(
-                    text = if (searchText.isEmpty()) placeholder else searchText,
+                    text = if (searchText.isEmpty()) "검색어를 입력하세요." else searchText,
                     color = if (searchText.isEmpty()) Color.Gray else Color.Black,
                     fontSize = 16.sp,
                 )
             }
 
-            // 아이콘 전환
-            val iconRes = if (isAiMode) R.drawable.send else R.drawable.search
-
+            // 검색 아이콘
             Icon(
-                painter = painterResource(id = iconRes),
+                painter = painterResource(id = R.drawable.search),
                 tint = MaterialTheme.colorScheme.primary,
-                contentDescription = if (isAiMode) "send" else "search",
+                contentDescription = "search",
                 modifier = Modifier
                     .width(25.dp)
                     .fillMaxHeight()
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {
+                        onSearchClick()
+                    }
             )
         }
     }

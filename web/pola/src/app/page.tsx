@@ -146,20 +146,24 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen bg-[#FFFEF8]">
-      <Image
-        src="/images/POLA_logo_1.png"
-        alt="Pola Logo"
-        width={360}
-        height={360}
-        priority
-      />
+    <main className="flex flex-col items-center justify-center min-h-screen bg-white px-4">
+      {/* 반응형 컨테이너 */}
+      <div className="max-w-md w-full flex flex-col items-center">
+        <Image
+          src="/images/POLA_logo_1.png"
+          alt="Pola Logo"
+          width={300}
+          height={300}
+          priority
+          className="w-64 h-64 sm:w-72 sm:h-72 md:w-80 md:h-80"
+        />
 
-      <h1 className="text-4xl font-semibold text-[#4C3D25] mt-8 mb-6">
-        나만의 스크랩북, POLA
-      </h1>
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-[#4C3D25] mt-8 mb-6 text-center">
+          나만의 스크랩북, POLA
+        </h1>
 
-      <div id="googleSignInDiv"></div>
+        <div id="googleSignInDiv" className="mt-4"></div>
+      </div>
     </main>
   );
 }
