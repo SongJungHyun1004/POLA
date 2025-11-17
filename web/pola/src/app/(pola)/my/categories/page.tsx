@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import useCategoryStore from "@/store/useCategoryStore";
 
 import {
   updateCategoryName,
@@ -21,6 +22,8 @@ export default function MyCategoryPage() {
   const [tagInput, setTagInput] = useState("");
 
   const [isAddMode, setIsAddMode] = useState(false); // + 버튼 클릭 시 활성화
+
+  const refreshCategories = useCategoryStore((s) => s.refreshCategories);
 
   /* ---------------------- 초기 로딩 ---------------------- */
   useEffect(() => {
@@ -107,6 +110,7 @@ export default function MyCategoryPage() {
         await removeCategoryTag(selectedId, r.id);
       }
 
+      await refreshCategories();
       alert("카테고리가 수정되었습니다!");
     } catch (err) {
       console.error(err);
@@ -134,6 +138,7 @@ export default function MyCategoryPage() {
         setName("");
         setTags([]);
       }
+      await refreshCategories();
     } catch {
       alert("삭제 실패");
     }
@@ -177,6 +182,8 @@ export default function MyCategoryPage() {
       loadCategoryDetail(newId, name);
 
       setIsAddMode(false);
+
+      await refreshCategories();
     } catch (err) {
       alert("카테고리 생성 중 오류 발생");
     }
