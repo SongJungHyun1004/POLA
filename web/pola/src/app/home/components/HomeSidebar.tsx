@@ -15,7 +15,6 @@ export default function HomeSidebar() {
   const [favorites, setFavorites] = useState<any[]>([]);
   const [reminds, setReminds] = useState<any[]>([]);
 
-  // HomePage 안의 fetchData 중 일부만 가져옴
   useEffect(() => {
     const fetchData = async () => {
       const homeRes = await getUserHome();
@@ -35,12 +34,17 @@ export default function HomeSidebar() {
 
     return pathname === path
       ? `${base} bg-[#FFF4E0]`
-      : `${base} hover:bg-gray-50`;
+      : `${base} hover:bg-gray-100`;
   };
 
   return (
-    <aside className="w-70 ml-10">
-      <div className="bg-[#ffffff] border-[#E5DCC5] rounded-3xl p-6 shadow-lg">
+    <aside className="w-70 ml-10 pb-10 mr-2 h-full">
+      <div
+        className="
+          bg-[#ffffff] border-[#E5DCC5] rounded-3xl p-6 shadow-lg
+          max-h-full overflow-y-auto
+        "
+      >
         {/* Home */}
         <Link href="/home">
           <div className={`${getLinkClassName("/home")} mb-1`}>
@@ -49,6 +53,7 @@ export default function HomeSidebar() {
           </div>
         </Link>
 
+        {/* Category Dropdown */}
         <CategoryDropdown />
 
         {/* Favorite */}
