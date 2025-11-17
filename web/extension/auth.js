@@ -1,7 +1,6 @@
 // auth.js - 크롬 확장 프로그램용 인증 서비스
 
 // 설정 로드
-importScripts('config.js');
 
 const AUTH_CONFIG = {
   apiBaseUrl: CONFIG.API_BASE_URL,
@@ -191,6 +190,7 @@ async function refreshAccessToken() {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${refreshToken}`,
+        'X-Client-Type': 'APP',
         'Content-Type': 'application/json'
       }
     });
@@ -218,5 +218,128 @@ async function refreshAccessToken() {
   } catch (error) {
     console.error('토큰 갱신 실패:', error);
     throw error;
+  }
+}
+
+/**
+ * Access Token 검증
+ */
+async function verifyToken() {
+  try {
+    const { accessToken } = await getTokens();
+    
+    if (!accessToken) {
+      return { valid: false, user: null };
+    }
+    
+    const response = await fetch(`${AUTH_CONFIG.apiBaseUrl}/oauth/verify`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`
+      }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      return { 
+        valid: true, 
+        user: {
+          id: data.data.userId,
+          email: data.data.email
+        }
+      };
+    }
+    
+    return { valid: false, user: null };
+    
+  } catch (error) {
+    console.error('토큰 검증 실패:', error);
+    return { valid: false, user: null };
+  }
+}
+
+/**
+ * 자동 로그인
+ */
+async function autoLogin() {
+  try {
+    console.log('자동 로그인 시도 중...');
+    
+    // 1. Refresh Token 확인
+    const { refreshToken } = await getTokens();
+    
+    if (!refreshToken) {
+      console.log('❌ Refresh Token 없음 - 로그인 필요');
+      return { 
+        success: false, 
+        isAuthenticated: false,
+        needLogin: true 
+      };
+    }
+    
+    console.log('✅ Refresh Token 존재 - 토큰 재발급 시도');
+    
+    // 2. Refresh Token으로 새 Access Token 발급
+    try {
+      const response = await fetch(`${AUTH_CONFIG.apiBaseUrl}/oauth/reissue`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${refreshToken}`,
+          'X-Client-Type': 'APP',
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        console.log('❌ Refresh Token 만료 - 로그아웃 처리');
+        await signOut();
+        return { 
+          success: false, 
+          isAuthenticated: false,
+          needLogin: true,
+          error: 'Refresh Token 만료'
+        };
+      }
+      
+      const data = await response.json();
+      const newAccessToken = data.data?.accessToken || data.accessToken;
+      const newRefreshToken = data.data?.refreshToken || data.refreshToken;
+      
+      // 3. 새 토큰 저장
+      const { user } = await getTokens();
+      await saveTokens({
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+        user
+      });
+      
+      console.log('✅ 자동 로그인 성공 - Access Token 재발급 완료');
+      
+      return { 
+        success: true, 
+        isAuthenticated: true,
+        user: user 
+      };
+      
+    } catch (error) {
+      console.error('❌ 토큰 재발급 실패:', error);
+      await signOut();
+      return { 
+        success: false, 
+        isAuthenticated: false,
+        needLogin: true,
+        error: error.message 
+      };
+    }
+    
+  } catch (error) {
+    console.error('❌ 자동 로그인 오류:', error);
+    await signOut();
+    return { 
+      success: false, 
+      isAuthenticated: false,
+      needLogin: true,
+      error: error.message 
+    };
   }
 }
