@@ -86,14 +86,14 @@ export default function FilesPage() {
 
   return (
     <div className="w-full h-full flex justify-center bg-[#FFFEF8] text-[#4C3D25]">
-      <div className="w-full max-w-[1200px] h-full flex gap-8 px-6 pb-6">
+      <div className="w-full max-w-[1200px] h-full flex gap-8 p-6">
         {/* ------- LEFT LIST AREA ------- */}
         <div className="flex flex-col flex-1 overflow-hidden">
           <div className="mb-2 pl-4">
-            <h1 className="text-4xl font-bold mb-2">
+            <h1 className="text-5xl font-bold mb-6">
               {tag ? `#${tag} 검색 결과` : `"${search}" 검색 결과`}
             </h1>
-            <p className="text-xl text-[#7A6A48] pl-1">
+            <p className="text-2xl text-[#7A6A48] pl-1">
               {tag
                 ? `“#${tag}” 로 검색된 결과입니다.`
                 : `“${search}” 로 검색된 결과입니다.`}
