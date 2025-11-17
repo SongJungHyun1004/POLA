@@ -2,19 +2,11 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { getTimelineFiles } from "@/services/fileService";
-
-/** 배열을 size 만큼씩 자르기 (세로 5칸 채우기 용도) */
-function chunkArray<T>(array: T[], size: number): T[][] {
-  const result = [];
-  for (let i = 0; i < array.length; i += size) {
-    result.push(array.slice(i, i + size));
-  }
-  return result;
-}
+// 1. [수정] getTimelineFiles와 getFileDetail 함수를 import
+import { getTimelineFiles, getFileDetail } from "@/services/fileService";
+import PolaroidDetailModal from "./components/modals/PolaroidDetailModal";
 
 export default function TimeLinePage() {
-  const containerRef = useRef<HTMLDivElement>(null);
   const [timelineData, setTimelineData] = useState<
     { date: string; images: any[] }[]
   >([]);
@@ -23,10 +15,10 @@ export default function TimeLinePage() {
   const [hasMore, setHasMore] = useState(true);
   const didFetch = useRef(false);
 
-  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    if (!containerRef.current) return;
-    containerRef.current.scrollLeft += e.deltaY;
-  };
+  // 2. 모달 상태(State)
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [isModalLoading, setIsModalLoading] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -39,7 +31,7 @@ export default function TimeLinePage() {
       setLoading(true);
 
       try {
-        const grouped = await getTimelineFiles(page, 50);
+        const grouped = await getTimelineFiles(page, 20);
 
         if (!grouped || grouped.length === 0) {
           setHasMore(false);
@@ -67,22 +59,47 @@ export default function TimeLinePage() {
 
     load();
     return () => controller.abort();
-  }, [page]);
+  }, [page, hasMore, loading]);
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container || !hasMore) return;
+    if (!hasMore) return;
 
     const handleScroll = () => {
-      const { scrollLeft, scrollWidth, clientWidth } = container;
-      if (scrollLeft + clientWidth >= scrollWidth - 200 && !loading) {
+      if (loading) return;
+      const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+      if (scrollTop + clientHeight >= scrollHeight - 300) {
         setPage((p) => p + 1);
       }
     };
 
-    container.addEventListener("scroll", handleScroll);
-    return () => container.removeEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, [hasMore, loading]);
+
+  const handleItemClick = async (fileId: number) => {
+    if (!fileId || isModalLoading) return;
+
+    setIsModalLoading(true);
+
+    try {
+      const fileData = await getFileDetail(fileId);
+
+      const modalProps = {
+        ...fileData,
+        contexts: fileData.context || "", 
+        tags: fileData.tags ? fileData.tags.map((t: any) => t.tagName) : [], 
+        date: fileData.created_at || fileData.date, 
+      };
+
+      setSelectedItem(modalProps);
+      setIsModalOpen(true);
+    } catch (error) {
+      console.error("❌ Failed to fetch file detail:", error);
+      alert("파일 상세 정보를 불러오는 데 실패했습니다.");
+    } finally {
+      setIsModalLoading(false); 
+    }
+  };
 
   if (timelineData.length === 0 && loading) {
     return (
@@ -93,115 +110,103 @@ export default function TimeLinePage() {
   }
 
   return (
-    <div className="relative w-full h-full text-[#4C3D25] overflow-hidden flex bg-[#FFFEF8] px-8 pb-6">
-      {/* 왼쪽 세로 타이틀 */}
-      <div className="flex-none flex items-end justify-center pr-6 pb-20">
-        <h1 className="text-[56px] font-bold timeline-vertical">TimeLine</h1>
-      </div>
+    <div className="flex justify-center">
+      <div className="w-full bg-[#FFFEF8] text-[#4C3D25] max-w-[1200px]">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <h1 className="text-5xl font-bold mt-6 mb-4">TimeLine</h1>
 
-      {/* 콘텐츠 영역 */}
-      <div
-        ref={containerRef}
-        onWheel={handleWheel}
-        className="flex-1 overflow-x-auto overflow-y-hidden no-scrollbar"
-      >
-        <div className="h-full flex items-end gap-10 pb-2">
-          {timelineData.map((item, index) => {
-            const columns = chunkArray(item.images, 5);
-            const filmWidth = 160;
-            const filmGap = 12;
-            const extraWidth = (columns.length - 1) * (filmWidth + filmGap) * 2;
+          <div className="flex flex-col">
+            {timelineData.map((item, index) => (
+              <div key={index} className="flex flex-row gap-6">
+                <div className="flex flex-col items-center w-10 flex-shrink-0">
+                  <div className="w-4 h-4 bg-[#4C3D25] rounded-full mt-[10px]" />
+                  <div className="w-0.5 flex-grow bg-[#CBBF9E]" />
+                </div>
 
-            return (
-              <div
-                key={index}
-                className="flex flex-col items-center rounded-md"
-              >
-                {/* 필름 묶음 */}
-                <div className="flex items-end gap-2 mb-4 min-h-[500px] rounded-md">
-                  {columns.map((col, colIndex) => (
-                    <div
-                      key={colIndex}
-                      className="flex flex-col-reverse rounded-md"
-                    >
-                      {col.map((img, i) => {
-                        const isText =
-                          img.type?.includes("text/plain") ||
-                          img.src?.endsWith(".txt") ||
-                          img.src?.includes("/text/");
+                <div className="flex flex-col gap-4 pt-1 pb-8 w-full">
+                  {/* 날짜  */}
+                  <div className="flex items-center">
+                    <span className="text-3xl font-semibold">{item.date}</span>
+                  </div>
 
-                        return (
-                          <div
-                            key={i}
-                            className="relative h-[129px] w-40 rounded-md"
-                          >
-                            {/* 필름 프레임 */}
-                            <Image
-                              src="/images/flim_rotate.png"
-                              alt="film frame"
-                              fill
-                              className="object-contain pointer-events-none"
-                            />
+                  {/* 필름 묶음  */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 ">
+                    {item.images.map((img, i) => {
+                      const isText =
+                        img.type?.includes("text/plain") ||
+                        img.src?.endsWith(".txt") ||
+                        img.src?.includes("/text/");
 
-                            {/* 내부 콘텐츠 */}
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <div className="relative w-[120px] h-[120px] overflow-hidden rounded-md bg-[#FFFEF8] border border-[#CBBF9E] shadow-sm flex items-center justify-center p-1">
-                                {isText ? (
-                                  <div
-                                    className="w-full h-full overflow-hidden text-[10px] leading-tight text-[#4C3D25]
-                                    whitespace-pre-line break-words p-1 text-left"
-                                  >
-                                    {img.ocr_text || "(텍스트 없음)"}
-                                  </div>
-                                ) : (
-                                  <Image
-                                    src={img.src || "/images/dummy_image_1.png"}
-                                    alt="content"
-                                    fill
-                                    sizes="120px"
-                                    className="object-cover object-center"
-                                  />
-                                )}
-                              </div>
+                      return (
+                        <div
+                          key={i}
+                          className="relative aspect-[4/3] rounded-md cursor-pointer"
+                          onClick={() => handleItemClick(img.id)}
+                        >
+                          {/* 필름 프레임 */}
+                          <Image
+                            src="/images/flim.png"
+                            alt="film frame"
+                            fill
+                            className="object-fill pointer-events-none "
+                          />
+
+                          {/* 내부 콘텐츠 */}
+                          <div className="absolute inset-0 flex items-center justify-center py-[10%] px-[4%]">
+                            <div className="relative w-full h-full overflow-hidden rounded-xl bg-[#FFFEF8] border border-[#CBBF9E] shadow-sm flex items-center justify-center p-1">
+                              {isText ? (
+                                <div
+                                  className="w-full h-full overflow-hidden text-[10px] leading-tight text-[#4C3D25]
+                                        whitespace-pre-line break-words p-1 text-left"
+                                >
+                                  {img.ocr_text || "(텍스트 없음)"}
+                                </div>
+                              ) : (
+                                <Image
+                                  src={
+                                    img.src || "/images/dummy_image_1.png"
+                                  }
+                                  alt="content"
+                                  fill
+                                  sizes="(max-width: 620px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                                  className="object-cover object-center"
+                                />
+                              )}
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
-                  ))}
-                </div>
-
-                {/* 날짜 + 연결선 */}
-                <div className="flex flex-col items-center gap-2 relative">
-                  <div className="w-3 h-3 bg-[#4C3D25] rounded-full" />
-                  <span className="text-sm font-medium whitespace-nowrap">
-                    {item.date}
-                  </span>
-
-                  {index < timelineData.length - 1 && (
-                    <div
-                      className="absolute top-[6px] h-[2px] bg-[#4C3D25] left-1/2"
-                      style={{
-                        width: `calc(200% + 48px + ${extraWidth}px)`,
-                        transform: `translateX(calc(6px - ${
-                          extraWidth / 2
-                        }px))`,
-                      }}
-                    />
-                  )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
-            );
-          })}
+            ))}
+          </div>
 
-          {/* 로딩 인디케이터 */}
+          {/* 페이지 로딩 인디케이터 */}
           {loading && (
-            <div className="flex items-center justify-center min-w-[200px] text-[#A89B82]">
+            <div className="flex items-center justify-center py-10 text-[#A89B82]">
               불러오는 중...
             </div>
           )}
         </div>
       </div>
+
+      {isModalLoading && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="text-white text-2xl">상세 정보 로딩 중...</div>
+        </div>
+      )}
+
+      {isModalOpen && selectedItem && !isModalLoading && (
+        <PolaroidDetailModal
+          {...selectedItem}
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedItem(null); 
+          }}
+        />
+      )}
     </div>
   );
 }

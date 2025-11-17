@@ -351,7 +351,8 @@ export default function PolaroidDetail({
                 inline-block
               "
             >
-              {t}
+              {/* #가 디테일 모달에서 안떠서 여기 수정함 */}
+              {t.startsWith("#") ? t : `#${t}`}
             </span>
           ))}
         </div>

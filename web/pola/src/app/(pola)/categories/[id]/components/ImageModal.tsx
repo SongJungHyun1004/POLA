@@ -35,7 +35,7 @@ export default function ImageModal({ src, onClose }: ImageModalProps) {
         </div>
 
         <button
-          className="absolute top-3 left-3 bg-white/90 hover:bg-white p-2 rounded-full shadow-md flex items-center justify-center"
+          className="absolute top-3 right-3 bg-white/90 hover:bg-white p-2 rounded-full shadow-md flex items-center justify-center"
           onClick={onClose}
         >
           <X className="w-8 h-8 text-black" strokeWidth={2.5} />
