@@ -128,8 +128,6 @@ public class DataService {
     public void deleteFile(Long fileId,Users user) {
         File file = fileRepository.findByIdAndUserId(fileId, user.getId())
                 .orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
-
-
         try {
             Long categoryId = file.getCategoryId();
             Category category = categoryRepository.findById(categoryId)
@@ -142,7 +140,7 @@ public class DataService {
 
 
             fileRepository.delete(file);
-            remindCacheRepository.deleteRemindFiles(user.getId());
+            remindCacheRepository.removeItem(user.getId(), fileId);
 
             category.decreaseCount(1);
             categoryRepository.save(category);
