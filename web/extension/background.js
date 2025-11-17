@@ -853,7 +853,7 @@ async function handleImageUpload(info, tab) {
     console.log('✅ 이미지 다운로드 완료, 크기:', fileSize, 'bytes, 타입:', contentType);
 
     // ⚠️ 이미지 타입 검증 (PNG, JPEG만 허용)
-    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
     const blobType = contentType.toLowerCase();
 
     console.log('🔍 타입 검증 중...');
@@ -863,7 +863,7 @@ async function handleImageUpload(info, tab) {
 
     if (!allowedTypes.includes(blobType)) {
       const displayType = contentType.split('/')[1]?.toUpperCase() || '알 수 없음';
-      const errorMessage = `지원하지 않는 이미지 형식입니다.\n현재 형식: ${displayType}\n지원 형식: PNG, JPEG만 가능합니다.`;
+      const errorMessage = `지원하지 않는 이미지 형식입니다.\n현재 형식: ${displayType}\n지원 형식: PNG, JPEG, WebP만 가능합니다.`;
 
       console.warn('⚠️ 지원하지 않는 이미지 타입:', contentType);
       console.warn('업로드 차단됨');
@@ -1000,11 +1000,11 @@ async function handleDragDropImageUpload(request, sendResponse) {
     console.log('==================');
 
     // ⚠️ 이미지 타입 검증 (PNG, JPEG만 허용)
-    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
 
     if (!allowedTypes.includes(blob.type.toLowerCase())) {
       const displayType = blob.type.split('/')[1]?.toUpperCase() || '알 수 없음';
-      const errorMessage = `지원하지 않는 이미지 형식입니다.\n현재 형식: ${displayType}\n지원 형식: PNG, JPEG만 가능합니다.`;
+      const errorMessage = `지원하지 않는 이미지 형식입니다.\n현재 형식: ${displayType}\n지원 형식: PNG, JPEG, WebP만 가능합니다.`;
 
       console.warn('⚠️ 지원하지 않는 이미지 타입:', blob.type);
 

@@ -2,7 +2,7 @@
 console.log('🟢 popup.js 파일 로드됨!');
 
 // 즉시 실행되는 테스트 코드
-(function() {
+(function () {
   console.log('🟢 popup.js 즉시 실행 함수 실행됨!');
   console.log('현재 URL:', window.location.href);
   console.log('document.readyState:', document.readyState);
@@ -38,14 +38,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // 이벤트 리스너 등록
   console.log('🎯 이벤트 리스너 등록 중...');
-  
+
   if (loginBtn) {
     loginBtn.addEventListener('click', handleLogin);
     console.log('  ✅ loginBtn 클릭 이벤트 등록');
   } else {
     console.error('  ❌ loginBtn을 찾을 수 없음!');
   }
-  
+
   if (logoutBtn) {
     logoutBtn.addEventListener('click', handleLogout);
     console.log('  ✅ logoutBtn 클릭 이벤트 등록');
@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     fileInput.addEventListener('change', handleFileSelect);
     console.log('  ✅ 드롭존 이벤트 등록');
   }
-  
+
   console.log('===========================================');
   console.log('✅ popup.js 초기화 완료');
   console.log('===========================================');
@@ -78,7 +78,7 @@ async function checkAuthAndUpdateUI() {
   console.log('===========================================');
   console.log('🔍 checkAuthAndUpdateUI 시작');
   console.log('===========================================');
-  
+
   try {
     const loginSection = document.getElementById('login-section');
     const authenticatedSection = document.getElementById('authenticated-section');
@@ -91,11 +91,11 @@ async function checkAuthAndUpdateUI() {
     });
 
     console.log('📦 Storage 직접 확인 결과:');
-    console.log('  - accessToken:', storageData.accessToken ? 
+    console.log('  - accessToken:', storageData.accessToken ?
       `존재 (길이: ${storageData.accessToken.length})` : '❌ 없음');
-    console.log('  - refreshToken:', storageData.refreshToken ? 
+    console.log('  - refreshToken:', storageData.refreshToken ?
       `존재 (길이: ${storageData.refreshToken.length})` : '❌ 없음');
-    console.log('  - user:', storageData.user ? 
+    console.log('  - user:', storageData.user ?
       `존재 (${storageData.user.email})` : '❌ 없음');
 
     // ⭐ 2. 토큰이 하나라도 없으면 즉시 로그아웃 UI
@@ -103,10 +103,10 @@ async function checkAuthAndUpdateUI() {
       console.log('❌ 토큰 부족 - 로그아웃 UI 표시');
       console.log('  → loginSection.display = block');
       console.log('  → authenticatedSection.display = none');
-      
+
       loginSection.style.display = 'block';
       authenticatedSection.style.display = 'none';
-      
+
       console.log('===========================================');
       console.log('✅ 로그아웃 UI 표시 완료');
       console.log('===========================================');
@@ -115,7 +115,7 @@ async function checkAuthAndUpdateUI() {
 
     // ⭐ 3. 토큰이 있으면 Background 확인
     console.log('✅ 토큰 존재 - Background에 인증 상태 요청');
-    
+
     const response = await chrome.runtime.sendMessage({ action: 'checkAuth' });
 
     console.log('📨 Background 응답:', response);
@@ -127,11 +127,11 @@ async function checkAuthAndUpdateUI() {
       console.log('✅ 로그인 상태 - 인증된 UI 표시');
       console.log('  → loginSection.display = none');
       console.log('  → authenticatedSection.display = block');
-      
+
       loginSection.style.display = 'none';
       authenticatedSection.style.display = 'block';
       updateUserInfo(response.user);
-      
+
       console.log('===========================================');
       console.log('✅ 로그인 UI 표시 완료');
       console.log('===========================================');
@@ -140,10 +140,10 @@ async function checkAuthAndUpdateUI() {
       console.log('❌ 로그아웃 상태 - 로그인 UI 표시');
       console.log('  → loginSection.display = block');
       console.log('  → authenticatedSection.display = none');
-      
+
       loginSection.style.display = 'block';
       authenticatedSection.style.display = 'none';
-      
+
       console.log('===========================================');
       console.log('✅ 로그아웃 UI 표시 완료');
       console.log('===========================================');
@@ -152,15 +152,15 @@ async function checkAuthAndUpdateUI() {
   } catch (error) {
     console.error('❌ 인증 상태 확인 중 에러:', error);
     console.error('에러 스택:', error.stack);
-    
+
     // 에러 시 안전하게 로그아웃 UI
     const loginSection = document.getElementById('login-section');
     const authenticatedSection = document.getElementById('authenticated-section');
-    
+
     console.log('⚠️ 에러로 인한 로그아웃 UI 표시');
     loginSection.style.display = 'block';
     authenticatedSection.style.display = 'none';
-    
+
     console.log('===========================================');
   }
 }
@@ -187,7 +187,7 @@ async function handleLogin() {
   console.log('===========================================');
   console.log('🔐 handleLogin 시작');
   console.log('===========================================');
-  
+
   const loginSection = document.getElementById('login-section');
   const loading = document.getElementById('loading');
 
@@ -206,15 +206,15 @@ async function handleLogin() {
 
     if (response.success) {
       console.log('✅ 로그인 성공!');
-      
+
       // 잠시 대기 (토큰이 storage에 저장되는 시간)
       console.log('⏳ Storage 저장 대기 (500ms)...');
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       console.log('🔄 UI 업데이트 시작...');
       // 로그인 성공 - UI 업데이트
       await checkAuthAndUpdateUI();
-      
+
       console.log('✅ UI 업데이트 완료');
       console.log('===========================================');
     } else {
@@ -291,7 +291,7 @@ function handleDrop(e) {
   e.preventDefault();
   e.stopPropagation();
   e.currentTarget.classList.remove('drag-over');
-  
+
   const files = e.dataTransfer.files;
   if (files.length > 0) {
     handleImageUpload(files[0]);
@@ -313,25 +313,26 @@ function handleFileSelect(e) {
  */
 async function handleImageUpload(file) {
   const uploadStatus = document.getElementById('uploadStatus');
-  
+
   // 이미지 파일 확인
-  if (!file.type.startsWith('image/')) {
-    showUploadStatus('이미지 파일만 업로드 가능합니다.', 'error');
+  const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+  if (!allowedTypes.includes(file.type)) {
+    showUploadStatus('PNG, JPEG, WebP 파일만 업로드 가능합니다.', 'error');
     return;
   }
-  
+
   // 파일 크기 확인 (10MB 제한)
   if (file.size > 10 * 1024 * 1024) {
     showUploadStatus('파일 크기는 10MB 이하여야 합니다.', 'error');
     return;
   }
-  
+
   try {
     showUploadStatus('업로드 중...', 'uploading');
-    
+
     // 파일을 Base64로 변환
     const base64 = await fileToBase64(file);
-    
+
     // Background script로 업로드 요청
     const response = await chrome.runtime.sendMessage({
       action: 'uploadImage',
@@ -341,7 +342,7 @@ async function handleImageUpload(file) {
         url: await getCurrentTabUrl()
       }
     });
-    
+
     if (response.success) {
       showUploadStatus('업로드 완료!', 'success');
       // 3초 후 상태 메시지 숨김
@@ -351,7 +352,7 @@ async function handleImageUpload(file) {
     } else {
       throw new Error(response.error || '업로드 실패');
     }
-    
+
   } catch (error) {
     console.error('업로드 오류:', error);
     showUploadStatus('업로드 실패: ' + error.message, 'error');
@@ -401,7 +402,7 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
   console.log('===========================================');
   console.log('Area:', areaName);
   console.log('변경된 키:', Object.keys(changes));
-  
+
   if (areaName === 'local') {
     // 각 변경사항 상세 출력
     for (const [key, { oldValue, newValue }] of Object.entries(changes)) {
@@ -409,26 +410,26 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
       console.log('  - oldValue:', oldValue ? '있음' : '없음');
       console.log('  - newValue:', newValue ? '있음' : '없음');
     }
-    
+
     // 인증 관련 정보 변경 시 즉시 UI 업데이트
     if (changes.accessToken || changes.refreshToken || changes.user) {
       console.log('✅ 인증 관련 변경 감지 - UI 업데이트 시작');
-      
+
       // accessToken이 추가되었는지 확인
       if (changes.accessToken && changes.accessToken.newValue) {
         console.log('✅ Access Token 추가됨 - 로그인 상태');
       }
-      
+
       // accessToken이 삭제되었는지 확인
       if (changes.accessToken && !changes.accessToken.newValue) {
         console.log('❌ Access Token 삭제됨 - 로그아웃 상태');
       }
-      
+
       // refreshToken이 삭제되었는지 확인
       if (changes.refreshToken && !changes.refreshToken.newValue) {
         console.log('❌ Refresh Token 삭제됨 - 로그아웃 상태');
       }
-      
+
       checkAuthAndUpdateUI();
       console.log('===========================================');
     } else {

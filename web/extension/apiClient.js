@@ -127,7 +127,7 @@ function clearAuth() {
   console.log('===========================================');
   console.log('🔓 clearAuth 호출됨 - 인증 정보 삭제 시작');
   console.log('===========================================');
-  
+
   return new Promise((resolve) => {
     // 먼저 현재 storage 상태 확인
     chrome.storage.local.get(['accessToken', 'refreshToken', 'user'], (before) => {
@@ -135,11 +135,11 @@ function clearAuth() {
       console.log('  - accessToken:', before.accessToken ? '있음' : '없음');
       console.log('  - refreshToken:', before.refreshToken ? '있음' : '없음');
       console.log('  - user:', before.user ? '있음' : '없음');
-      
+
       // 삭제 실행
       chrome.storage.local.remove(['accessToken', 'refreshToken', 'user'], () => {
         console.log('✅ Storage.remove() 호출 완료');
-        
+
         // 삭제 후 확인
         chrome.storage.local.get(['accessToken', 'refreshToken', 'user'], (after) => {
           console.log('📦 삭제 후 Storage 상태:');
@@ -149,7 +149,7 @@ function clearAuth() {
           console.log('===========================================');
           console.log('✅ clearAuth 완료');
           console.log('===========================================');
-          
+
           resolve();
         });
       });
@@ -170,8 +170,19 @@ async function uploadImage(imageData, metadata = {}) {
     // Base64를 Blob으로 변환
     const blob = base64ToBlob(imageData);
     const fileSize = blob.size;
+    const mimeType = blob.type; // 'image/png', 'image/jpeg', 'image/webp'
 
-    console.log('이미지 Blob 생성 완료, 크기:', fileSize, 'bytes');
+    console.log('이미지 Blob 생성 완료');
+    console.log('  - 크기:', fileSize, 'bytes');
+    console.log('  - MIME 타입:', mimeType);
+
+    // 파일 확장자 결정
+    let fileExtension = 'png';
+    if (mimeType === 'image/jpeg' || mimeType === 'image/jpg') {
+      fileExtension = 'jpg';
+    } else if (mimeType === 'image/webp') {
+      fileExtension = 'png';
+    }
 
     // 토큰 가져오기
     const tokens = await getStoredTokens();
@@ -183,7 +194,7 @@ async function uploadImage(imageData, metadata = {}) {
     // 1단계: S3 Presigned URL 생성
     console.log('1단계: S3 업로드 URL 생성 중...');
     const timestamp = Date.now();
-    const fileName = `upload_${timestamp}.png`;
+    const fileName = `upload_${timestamp}.${fileExtension}`;
 
     console.log('📤 Presigned URL 요청 시작');
     console.log('URL:', `${CONFIG.API_BASE_URL}s3/presigned/upload?fileName=${encodeURIComponent(fileName)}`);
@@ -244,7 +255,7 @@ async function uploadImage(imageData, metadata = {}) {
     const s3UploadResponse = await fetch(uploadUrl, {
       method: 'PUT',
       headers: {
-        'Content-Type': 'image/png'
+        'Content-Type': mimeType
       },
       body: blob
     });
@@ -327,8 +338,18 @@ async function triggerPostProcessInBackground(fileId, accessToken) {
  * Base64를 Blob으로 변환
  */
 function base64ToBlob(base64) {
-  // data:image/png;base64, 제거
-  const base64Data = base64.split(',')[1];
+  // data:image/png;base64, 에서 MIME 타입 추출
+  const matches = base64.match(/^data:([^;]+);base64,(.+)$/);
+
+  if (!matches) {
+    throw new Error('잘못된 Base64 형식입니다.');
+  }
+
+  const mimeType = matches[1]; // 'image/png', 'image/jpeg', 'image/webp' 등
+  const base64Data = matches[2];
+
+  console.log('감지된 MIME 타입:', mimeType);
+
   const byteCharacters = atob(base64Data);
   const byteNumbers = new Array(byteCharacters.length);
 
@@ -337,7 +358,7 @@ function base64ToBlob(base64) {
   }
 
   const byteArray = new Uint8Array(byteNumbers);
-  return new Blob([byteArray], { type: 'image/png' });
+  return new Blob([byteArray], { type: mimeType });
 }
 
 /**

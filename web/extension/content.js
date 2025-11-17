@@ -492,7 +492,7 @@ function showDropZoneDialog(type) {
     color: #999;
     margin-top: 8px;
   `;
-  formatInfo.textContent = type === 'text' ? '선택한 텍스트 저장' : '지원 형식: PNG, JPEG';
+  formatInfo.textContent = type === 'text' ? '선택한 텍스트 저장' : '지원 형식: PNG, JPEG, WebP';
 
   dropZone.appendChild(icon);
   dropZone.appendChild(text);
