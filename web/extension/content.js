@@ -282,27 +282,60 @@ async function cropImage(imageDataUrl, area) {
 
 let dropZoneDialog = null;
 let draggedImageSrc = null;
+let dragStartedInCenter = false;
 
-// 모든 이미지에 드래그 이벤트 리스너 추가
+
+// 드래그 종료 시
 document.addEventListener('dragstart', (e) => {
   // 이미지 태그인지 확인
   if (e.target.tagName === 'IMG') {
     draggedImageSrc = e.target.src;
     console.log('이미지 드래그 시작:', draggedImageSrc);
-
+    
+    // 🎯 이미지와 드롭존(중앙 위치)이 겹치는지 확인
+    const imgRect = e.target.getBoundingClientRect();
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    
+    // 드롭존의 예상 크기와 위치 (중앙)
+    const dropZoneWidth = 400;
+    const dropZoneHeight = 300;
+    const dropZoneLeft = (windowWidth - dropZoneWidth) / 2;
+    const dropZoneRight = (windowWidth + dropZoneWidth) / 2;
+    const dropZoneTop = (windowHeight - dropZoneHeight) / 2;
+    const dropZoneBottom = (windowHeight + dropZoneHeight) / 2;
+    
+    // 이미지와 드롭존이 겹치는지 확인 (사각형 충돌 감지)
+    const isOverlapping = !(
+      imgRect.right < dropZoneLeft ||    // 이미지가 드롭존 왼쪽에
+      imgRect.left > dropZoneRight ||    // 이미지가 드롭존 오른쪽에
+      imgRect.bottom < dropZoneTop ||    // 이미지가 드롭존 위에
+      imgRect.top > dropZoneBottom       // 이미지가 드롭존 아래에
+    );
+    
+    dragStartedInCenter = isOverlapping;
+    
+    console.log('🔍 겹침 감지:', {
+      이미지위치: {
+        left: Math.round(imgRect.left),
+        right: Math.round(imgRect.right),
+        top: Math.round(imgRect.top),
+        bottom: Math.round(imgRect.bottom),
+        width: Math.round(imgRect.width),
+        height: Math.round(imgRect.height)
+      },
+      드롭존예상위치: {
+        left: Math.round(dropZoneLeft),
+        right: Math.round(dropZoneRight),
+        top: Math.round(dropZoneTop),
+        bottom: Math.round(dropZoneBottom)
+      },
+      겹침여부: isOverlapping,
+      드롭존위치: isOverlapping ? '오른쪽' : '중앙'
+    });
+    
     // 드롭존 다이얼로그 표시
     showDropZoneDialog();
-  }
-}, true);
-
-// 드래그 종료 시
-document.addEventListener('dragend', (e) => {
-  if (e.target.tagName === 'IMG') {
-    // 잠시 후 드롭존 제거 (드롭 이벤트 처리 시간 확보)
-    setTimeout(() => {
-      hideDropZoneDialog();
-      draggedImageSrc = null;
-    }, 300);
   }
 }, true);
 
@@ -347,7 +380,8 @@ function showDropZoneDialog() {
     justify-content: center;
     gap: 16px;
     pointer-events: auto;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   `;
 
   // 아이콘
@@ -378,15 +412,14 @@ function showDropZoneDialog() {
   `;
   subText.textContent = '여기에 이미지를 드롭하세요';
 
-  // 지원 형식 안내 추가
-const formatInfo = document.createElement('div');
-formatInfo.style.cssText = `
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  font-size: 12px;
-  color: #999;
-  margin-top: 8px;
-`;
-formatInfo.textContent = '지원 형식: PNG, JPEG';
+  const formatInfo = document.createElement('div');
+  formatInfo.style.cssText = `
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 12px;
+    color: #999;
+    margin-top: 8px;
+  `;
+  formatInfo.textContent = '지원 형식: PNG, JPEG';
 
   dropZone.appendChild(icon);
   dropZone.appendChild(text);
@@ -394,6 +427,21 @@ formatInfo.textContent = '지원 형식: PNG, JPEG';
   dropZone.appendChild(formatInfo);
   dropZoneDialog.appendChild(dropZone);
   document.body.appendChild(dropZoneDialog);
+
+  // 🎯 드래그 시작 위치에 따라 드롭존 위치 결정
+  if (dragStartedInCenter) {
+    // 이미지가 원래 중앙에 있었다면 → 드롭존을 오른쪽으로
+    dropZoneDialog.style.justifyContent = 'flex-end';
+    dropZoneDialog.style.paddingRight = '40px';
+    console.log('🔄 드롭존 → 오른쪽 고정 (이미지가 중앙에서 시작)');
+  } else {
+    // 이미지가 원래 사이드에 있었다면 → 드롭존을 중앙에
+    dropZoneDialog.style.justifyContent = 'center';
+    dropZoneDialog.style.paddingRight = '0';
+    console.log('🔄 드롭존 → 중앙 고정 (이미지가 사이드에서 시작)');
+  }
+
+  // dragover 이벤트는 필요 없음 (고정 위치이므로)
 
   // 드롭존 이벤트
   dropZone.addEventListener('dragover', (e) => {
@@ -433,17 +481,10 @@ formatInfo.textContent = '지원 형식: PNG, JPEG';
 
     // 백그라운드로 업로드 요청
     try {
-      console.log('🔍 Step 1: Extension context 체크');
-      console.log('chrome.runtime.id:', chrome.runtime?.id);
       if (!chrome.runtime?.id) {
         throw new Error('확장 프로그램이 다시 로드되었습니다. 페이지를 새로고침해주세요.');
       }
-      console.log('🔍 Step 2: 메시지 전송 준비');
-      console.log('드래그된 이미지 URL:', draggedImageSrc);
-      console.log('페이지 URL:', window.location.href);
-      console.log('페이지 제목:', document.title);
 
-      console.log('📤 Step 3: Background로 메시지 전송 중...');
       chrome.runtime.sendMessage({
         action: 'uploadImageFromDrag',
         imageUrl: draggedImageSrc,
@@ -451,25 +492,23 @@ formatInfo.textContent = '지원 형식: PNG, JPEG';
         pageTitle: document.title
       }, (response) => {
         if (chrome.runtime.lastError) {
-          console.log('📨 Step 4: Background 응답 수신');
-          console.log('Response:', response);
-          console.log('Runtime Error:', chrome.runtime.lastError);
           console.error('Runtime 에러:', chrome.runtime.lastError);
           text.textContent = '❌ 업로드 실패';
           subText.textContent = '확장 프로그램을 확인해주세요';
           icon.innerHTML = `
-          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#f44336" stroke-width="2">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="8" x2="12" y2="12"></line>
-            <line x1="12" y1="16" x2="12.01" y2="16"></line>
-          </svg>
-        `;
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#f44336" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+          `;
 
           setTimeout(() => {
             hideDropZoneDialog();
           }, 3000);
           return;
         }
+
         if (response && response.success) {
           // 성공
           text.textContent = '✅ 업로드 완료!';
@@ -489,12 +528,12 @@ formatInfo.textContent = '지원 형식: PNG, JPEG';
           text.textContent = '❌ 업로드 실패';
           subText.textContent = response?.error || '다시 시도해주세요';
           icon.innerHTML = `
-          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#f44336" stroke-width="2">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="8" x2="12" y2="12"></line>
-            <line x1="12" y1="16" x2="12.01" y2="16"></line>
-          </svg>
-        `;
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#f44336" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+          `;
 
           setTimeout(() => {
             hideDropZoneDialog();
@@ -506,18 +545,33 @@ formatInfo.textContent = '지원 형식: PNG, JPEG';
       text.textContent = '❌ 업로드 실패';
       subText.textContent = error.message;
       icon.innerHTML = `
-      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#f44336" stroke-width="2">
-        <circle cx="12" cy="12" r="10"></circle>
-        <line x1="12" y1="8" x2="12" y2="12"></line>
-        <line x1="12" y1="16" x2="12.01" y2="16"></line>
-      </svg>
-    `;
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#f44336" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+      `;
 
       setTimeout(() => {
         hideDropZoneDialog();
-      }, 2000);
+      }, 3000);
     }
   });
+
+  // ESC 키로 취소
+  const handleEscape = (e) => {
+    if (e.key === 'Escape') {
+      console.log('드롭존 취소됨');
+      hideDropZoneDialog();
+    }
+  };
+
+  document.addEventListener('keydown', handleEscape);
+
+  // cleanup 함수 저장
+  dropZone._cleanup = () => {
+    document.removeEventListener('keydown', handleEscape);
+  };
 }
 
 /**
@@ -525,6 +579,10 @@ formatInfo.textContent = '지원 형식: PNG, JPEG';
  */
 function hideDropZoneDialog() {
   if (dropZoneDialog && dropZoneDialog.parentNode) {
+    const dropZone = document.getElementById('pola-dropzone');
+    if (dropZone && dropZone._cleanup) {
+      dropZone._cleanup();
+    }
     dropZoneDialog.remove();
     dropZoneDialog = null;
   }
