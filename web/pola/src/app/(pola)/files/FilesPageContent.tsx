@@ -68,14 +68,12 @@ export default function FilesPage() {
       if (nextState) await addFileFavorite(fileId);
       else await removeFileFavorite(fileId);
 
-      // 리스트 반영
       setFiles((prev) =>
         prev.map((f) =>
           f.fileId === fileId ? { ...f, favorite: nextState } : f
         )
       );
 
-      // Detail 반영
       if (selectedFile?.id === fileId) {
         setSelectedFile((prev) => prev && { ...prev, favorite: nextState });
       }
@@ -151,6 +149,18 @@ export default function FilesPage() {
           </div>
 
           <div className="flex-1 overflow-y-auto pr-2 scrollbar-thin">
+            {/* EMPTY UI */}
+            {!loading && files.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-20 opacity-80">
+                <img
+                  src="/images/POLA_file_empty.png"
+                  className="w-72 h-72 object-contain mb-6"
+                />
+                <p className="text-lg text-[#7A6A48]">검색된 결과가 없습니다</p>
+              </div>
+            )}
+
+            {/* FILE LIST */}
             {files.length > 0 && (
               <div className="grid gap-6 p-10 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 place-items-center">
                 {files.map((f, i) => {
@@ -165,6 +175,9 @@ export default function FilesPage() {
                         transform: rotations[i],
                         transition: "transform .25s ease",
                         transformOrigin: "center bottom",
+
+                        /* ⭐ 선택된 카드 앞으로 */
+                        zIndex: isSelected ? 30 : 1,
                       }}
                     >
                       <button
@@ -179,7 +192,7 @@ export default function FilesPage() {
                           transformOrigin: "center bottom",
                         }}
                       >
-                        {/* ⭐ button 내부, transform과 완전히 동기화 */}
+                        {/* ⭐ 즐겨찾기 버튼 */}
                         {f.favorite && (
                           <div
                             onClick={(e) => {
@@ -206,6 +219,12 @@ export default function FilesPage() {
                     </div>
                   );
                 })}
+              </div>
+            )}
+
+            {loading && (
+              <div className="text-center text-[#7A6A48] py-4">
+                검색 중입니다...
               </div>
             )}
           </div>

@@ -2,7 +2,7 @@ import { apiClient } from "@/api/apiClient";
 import { FileListRequest, FileListResponse, FileResult } from "@/dtos/file";
 
 export async function getFileDownloadUrl(fileId: number): Promise<string> {
-  const res = await apiClient(`/files/download/${fileId}`, {
+  const res = await apiClient(`/s3/download/${fileId}`, {
     method: "GET",
   });
 

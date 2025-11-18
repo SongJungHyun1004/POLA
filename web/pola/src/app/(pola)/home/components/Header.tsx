@@ -533,14 +533,6 @@ export default function Header() {
                     setShowProfileModal(false);
                   }}
                 />
-                <MenuItem
-                  icon={<PersonStanding />}
-                  text="내 타입"
-                  onClick={() => {
-                    router.push("/my/type");
-                    setShowProfileModal(false);
-                  }}
-                />
                 <hr />
                 <MenuItem
                   icon={<Puzzle />}

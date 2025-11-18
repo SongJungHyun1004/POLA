@@ -41,11 +41,11 @@ interface SortableItemProps {
   file: any;
   selectedId: number | null;
   onSelect: (file: any) => void;
-  onUnfavorite: (id: number) => void; // ⭐ 리스트에서 해제 기능
+  onUnfavorite: (id: number) => void;
 }
 
 /* ============================================================
-    SortableItem — CategoryPage 방식 그대로 ⭐ 적용!
+    SortableItem — 리스트 아이템
 ============================================================ */
 const SortableItem = memo(
   ({ file, selectedId, onSelect, onUnfavorite }: SortableItemProps) => {
@@ -85,7 +85,6 @@ const SortableItem = memo(
             transformOrigin: "center bottom",
           }}
         >
-          {/* ⭐ 버튼이 아닌 div (CategoryPage와 동일) */}
           {file.favorite && (
             <div
               onClick={(e) => {
@@ -134,21 +133,16 @@ export default function FavoritePage() {
     })
   );
 
-  /* -----------------------------------------------------------
-      ⭐ 즐겨찾기 해제
-      FavoritePage에서는 해제 = 리스트에서 제거
-  ------------------------------------------------------------ */
+  /* ⭐ 리스트에서 즐겨찾기 해제 = 제거 */
   const handleUnfavorite = async (fileId: number) => {
     try {
       await removeFileFavorite(fileId);
 
-      // 리스트에서 제거
       setFiles((prev) => prev.filter((f) => f.id !== fileId));
 
-      // Detail에서도 반영
       if (selectedFile?.id === fileId) {
-        const remaining = files.filter((f) => f.id !== fileId);
-        setSelectedFile(remaining[0] ?? null);
+        const remain = files.filter((f) => f.id !== fileId);
+        setSelectedFile(remain[0] ?? null);
       }
     } catch (err) {
       console.error(err);
@@ -156,22 +150,15 @@ export default function FavoritePage() {
     }
   };
 
-  /* -----------------------------------------------------------
-      ⭐ Detail에서 즐겨찾기 등록/해제
-      등록 → FavoritePage에서는 리스트에 추가해야 하지만,
-      FavoritePage는 '즐겨찾기 목록 페이지'라 등록 로직은 없음
-      → 따라서 state만 반영
-  ------------------------------------------------------------ */
+  /* ⭐ Detail에서 즐겨찾기 등록/해제 */
   const handleFavoriteChange = async (state: boolean) => {
     if (!selectedFile) return;
 
     const id = selectedFile.id;
 
     if (!state) {
-      // 해제
       await handleUnfavorite(id);
     } else {
-      // 이 페이지에서는 등록해도 리스트에 추가 X
       await addFileFavorite(id);
 
       setSelectedFile((prev) => prev && { ...prev, favorite: true });
@@ -181,9 +168,7 @@ export default function FavoritePage() {
     }
   };
 
-  /* -----------------------------------------------------------
-      삭제 처리
-  ------------------------------------------------------------ */
+  /* 🗑 삭제 */
   const handleFileDeleted = (fileId: number) => {
     setFiles((prev) => prev.filter((f) => f.id !== fileId));
 
@@ -193,9 +178,7 @@ export default function FavoritePage() {
     }
   };
 
-  /* -----------------------------------------------------------
-      파일 상세 조회
-  ------------------------------------------------------------ */
+  /* 상세 조회 */
   const handleSelectFile = async (file: any) => {
     setSelectedFile({
       id: file.id,
@@ -211,14 +194,11 @@ export default function FavoritePage() {
 
     try {
       const detail = await getFileDetail(file.id);
-      const normalizedTags = (detail.tags ?? []).map(
-        (t: any) => `#${t.tagName}`
-      );
 
       setSelectedFile({
         id: detail.id,
         src: detail.src ?? file.src,
-        tags: normalizedTags,
+        tags: (detail.tags ?? []).map((t: any) => `#${t.tagName}`),
         context: detail.context ?? "",
         created_at: detail.created_at,
         category_id: detail.category_id,
@@ -232,9 +212,7 @@ export default function FavoritePage() {
     }
   };
 
-  /* -----------------------------------------------------------
-      무한 스크롤 로드
-  ------------------------------------------------------------ */
+  /* 무한 스크롤 */
   async function loadMore() {
     if (isFetching || !hasMore) return;
 
@@ -255,8 +233,6 @@ export default function FavoritePage() {
 
       setFiles((prev) => {
         const merged = [...prev, ...rotated];
-
-        // ⭐ 중복 ID 제거 (중요!)
         return merged.filter(
           (v, i, arr) => arr.findIndex((t) => t.id === v.id) === i
         );
@@ -276,9 +252,7 @@ export default function FavoritePage() {
     loadMore();
   }, []);
 
-  /* -----------------------------------------------------------
-      드래그 앤 드롭
-  ------------------------------------------------------------ */
+  /* 드래그 앤 드롭 */
   const handleDragEnd = (event: any) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -289,9 +263,9 @@ export default function FavoritePage() {
     setFiles((prev) => arrayMove(prev, oldIndex, newIndex));
   };
 
-  /* -----------------------------------------------------------
-      렌더링
-  ------------------------------------------------------------ */
+  /* ============================================================
+                      렌더링
+  ============================================================ */
   return (
     <div className="w-full h-full flex justify-center bg-[#FFFEF8] text-[#4C3D25]">
       <div className="w-full max-w-[1200px] h-full flex gap-8 p-6">
@@ -306,6 +280,19 @@ export default function FavoritePage() {
             ref={containerRef}
             className="flex-1 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-[#CBBF9E]/50"
           >
+            {/* ⭐ EMPTY UI 추가 */}
+            {files.length === 0 && !isFetching && (
+              <div className="flex flex-col items-center justify-center py-20 opacity-80">
+                <img
+                  src="/images/POLA_file_empty.png"
+                  className="w-72 h-72 object-contain mb-6"
+                />
+                <p className="text-lg text-[#7A6A48]">
+                  즐겨찾기한 파일이 없습니다
+                </p>
+              </div>
+            )}
+
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
@@ -326,7 +313,7 @@ export default function FavoritePage() {
                       file={file}
                       selectedId={selectedFile?.id ?? null}
                       onSelect={handleSelectFile}
-                      onUnfavorite={handleUnfavorite} // ⭐ 여기서 해제
+                      onUnfavorite={handleUnfavorite}
                     />
                   ))}
                 </div>
@@ -338,7 +325,8 @@ export default function FavoritePage() {
                 불러오는 중...
               </div>
             )}
-            {!hasMore && (
+
+            {!hasMore && files.length > 0 && (
               <div className="text-center text-[#7A6A48] py-4">
                 더 이상 데이터가 없습니다.
               </div>
