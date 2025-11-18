@@ -62,23 +62,10 @@ export default function ThumbnailStrip({
             `}
             onClick={() => onSelect(i)}
           >
-            {/* TEXT FILE → 아이콘 또는 TXT 박스 */}
+            {/* TEXT FILE → 아이콘 대신 TXT 표시 */}
             {isText ? (
-              <div className="w-full h-full bg-[#F4F1E8] flex items-center justify-center text-[#4C3D25] font-semibold text-xs">
-                {/* 아이콘이 있으면 아이콘 표시 */}
-                <img
-                  src={TEXT_ICON}
-                  alt="text file"
-                  className="w-10 h-10 object-contain opacity-80"
-                  onError={(e) => {
-                    // 아이콘 로딩 실패 시 TXT 텍스트 표시
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = "none";
-                  }}
-                />
-
-                {/* Fallback TXT 표시 */}
-                <span className="absolute">TXT</span>
+              <div className="w-full h-full bg-[#F4F1E8] flex items-center justify-center text-[#4C3D25] font-semibold text-md">
+                TXT
               </div>
             ) : (
               /* IMAGE FILE */
