@@ -289,26 +289,42 @@ export default function CategoryPage() {
                 ))}
               </div>
             </div>
-
             <div
               ref={containerRef}
               className="flex-1 overflow-y-auto pr-2 scrollbar-thin"
             >
-              <div
-                className="grid gap-6 pt-12 px-10 pb-10
-                grid-cols-1 sm:grid-cols-2 md:grid-cols-3
-                lg:grid-cols-4 xl:grid-cols-5 place-items-center"
-              >
-                {files.map((file) => (
-                  <PolaroidItem
-                    key={file.id}
-                    file={file}
-                    selectedId={selectedFile?.id ?? null}
-                    onSelect={handleSelectFile}
-                    onUnfavorite={handleUnfavorite}
+              {/* 🟫 Empty UI */}
+              {!isFetching && files.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-20 opacity-80 w-full">
+                  <img
+                    src="/images/POLA_file_empty.png"
+                    alt="empty"
+                    className="w-72 h-72 object-contain mb-6"
                   />
-                ))}
-              </div>
+                  <p className="text-lg text-[#7A6A48]">
+                    아직 이 카테고리에 파일이 없습니다
+                  </p>
+                </div>
+              )}
+
+              {/* 🟦 File Grid */}
+              {files.length > 0 && (
+                <div
+                  className="grid gap-6 pt-12 px-10 pb-10
+      grid-cols-1 sm:grid-cols-2 md:grid-cols-3
+      lg:grid-cols-4 xl:grid-cols-5 place-items-center"
+                >
+                  {files.map((file) => (
+                    <PolaroidItem
+                      key={file.id}
+                      file={file}
+                      selectedId={selectedFile?.id ?? null}
+                      onSelect={handleSelectFile}
+                      onUnfavorite={handleUnfavorite}
+                    />
+                  ))}
+                </div>
+              )}
 
               {isFetching && (
                 <div className="text-center text-[#7A6A48] py-4 animate-pulse">
