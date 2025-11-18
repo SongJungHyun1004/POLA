@@ -286,14 +286,7 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
                 tagName = tagName,
                 searchType = searchType,
                 onBackClick = {
-                    navController.navigate(
-                        Screen.SearchScreen.createRoute(
-                            query = tagName,
-                            tab = searchType
-                        )
-                    ) {
-                        popUpTo(Screen.SearchScreen.route) { inclusive = true }
-                    }
+                    navController.popBackStack()
                 },
                 onSearchBarClick = {
                     navController.navigate(
@@ -335,7 +328,10 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
                 onEditClick = {
                     navController.navigate(Screen.ContentsEdit.createRoute(contentId))
                 },
-                onDeleteClick = { /* 내부 삭제 구현 */ }
+                onDeleteClick = { /* 내부 삭제 구현 */ },
+                onTagClick = { tagName ->
+                    navController.navigate(Screen.Tag.createRoute(tagName, "tag"))
+                }
             )
         }
 
