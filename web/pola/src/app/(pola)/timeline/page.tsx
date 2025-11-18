@@ -125,6 +125,20 @@ export default function TimeLinePage() {
       });
   };
 
+  const handleDeleteFromTimeline = (fileId: number) => {
+    setTimelineData((prev) =>
+      prev
+        .map((group) => ({
+          ...group,
+          images: group.images.filter((img) => img.id !== fileId),
+        }))
+        .filter((group) => group.images.length > 0)
+    );
+
+    setSelectedItem(null);
+    setIsModalOpen(false);
+  };
+
   return (
     <div className="flex justify-center h-full bg-[#FFFEF8]">
       <div
@@ -209,6 +223,7 @@ export default function TimeLinePage() {
             setIsModalOpen(false);
             setSelectedItem(null);
           }}
+          onFileDeleted={(id) => handleDeleteFromTimeline(id)}
         />
       )}
     </div>
