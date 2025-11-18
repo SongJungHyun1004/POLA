@@ -11,7 +11,10 @@ const API_BASE_URL = CONFIG.API_BASE_URL;
 function base64DecodeUnicode(base64) {
   try {
     // Base64를 바이너리 문자열로 변환
-    const binaryString = atob(base64);
+    const binaryString = atob(base64
+      .replace(/-/g, '+')   // - → +
+      .replace(/_/g, '/')   // _ → /
+    );
 
     // 바이너리 문자열을 Uint8Array로 변환
     const bytes = new Uint8Array(binaryString.length);

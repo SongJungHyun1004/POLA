@@ -156,7 +156,7 @@ export default function RAGSearchPageInner() {
     <div className="w-full h-full flex justify-center bg-[#FFFEF8] text-[#4C3D25] overflow-hidden">
       <div
         className="h-full flex flex-row gap-6 pb-6 pl-6 transition-all duration-500"
-        style={{ width: layoutExpanded ? "1200px" : "800px" }}
+        style={{ width: layoutExpanded ? "1200px" : "1200px" }}
       >
         {/* LEFT AREA */}
         <div
