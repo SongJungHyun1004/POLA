@@ -71,7 +71,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className="flex min-h-full bg-[#FFFEF8] ">
+    <div className="flex h-full bg-[#FFFEF8] ">
       {/* 메인 콘텐츠 영역 */}
       <main className="flex-1 overflow-y-auto py-8">
         <div className="max-w-container">
