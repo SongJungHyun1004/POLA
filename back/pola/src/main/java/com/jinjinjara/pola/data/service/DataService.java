@@ -768,5 +768,47 @@ public class DataService {
             // 실패해도 파일은 PostgreSQL에서 삭제되어 있음
         }
     }
+    @Transactional
+    public List<File> getUncategorizedFilesByUser(Users user) {
+        // "미분류" 카테고리 조회
+        Category uncategorized = categoryRepository
+                .findByUserAndCategoryName(user, "미분류")
+                .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
+
+        // 해당 유저의 미분류 카테고리 파일들 조회
+        return fileRepository.findByCategoryIdAndUserId(uncategorized.getId(), user.getId());
+    }
+    @Transactional
+    @Async
+    public CompletableFuture<Void> processFile(Long fileId, Users user) {
+        try {
+            // 각 파일에 대해 postProcessing을 비동기적으로 실행
+            postProcessingFile(user, fileId);  // 비동기적으로 postProcessing 호출
+            return CompletableFuture.completedFuture(null);  // 작업이 완료되었음을 나타내는 값 (Void)
+        } catch (Exception e) {
+            log.error("Failed to process file: " + fileId, e);
+            throw new CompletionException(e);
+        }
+    }
+
+    @Transactional
+    @Async
+    public void processUncategorizedFilesForUserAsync(Users user) {
+        // 유저의 미분류 카테고리 파일들을 조회
+        List<File> files = getUncategorizedFilesByUser(user);  // 미분류 파일 조회
+
+        if (files.isEmpty()) {
+            log.info("No uncategorized files found for user: {}", user.getId());
+            return; // 미분류 파일이 없으면 종료
+        }
+
+        // 각 파일에 대해 비동기적으로 postProcessing 호출
+        for (File file : files) {
+            processFile(file.getId(), user);  // 비동기적으로 postProcessing 실행
+        }
+
+        log.info("Post-processing started for all uncategorized files of user: {}", user.getId());
+    }
+
 
 }
