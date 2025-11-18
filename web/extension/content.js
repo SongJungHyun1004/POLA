@@ -275,3 +275,402 @@ async function cropImage(imageDataUrl, area) {
     img.src = imageDataUrl;
   });
 }
+
+// ========================================
+// 이미지 드래그앤드롭 업로드 기능
+// ========================================
+
+let dropZoneDialog = null;
+let draggedImageSrc = null;
+let draggedText = null;
+let dragType = null;
+let dragStartedInCenter = false;
+
+
+// 드래그 종료 시
+// 이미지 및 텍스트 드래그 이벤트 리스너
+document.addEventListener('dragstart', (e) => {
+  console.log('🎯 dragstart 이벤트:', e.target.tagName);
+
+  // 1. 이미지 드래그 감지
+  if (e.target.tagName === 'IMG') {
+    dragType = 'image';
+    draggedImageSrc = e.target.src;
+    draggedText = null;
+
+    console.log('📸 이미지 드래그 시작:', draggedImageSrc);
+
+    // 이미지와 드롭존(중앙 위치)이 겹치는지 확인
+    const imgRect = e.target.getBoundingClientRect();
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+
+    // 드롭존의 예상 크기와 위치 (중앙)
+    const dropZoneWidth = 400;
+    const dropZoneHeight = 300;
+    const dropZoneLeft = (windowWidth - dropZoneWidth) / 2;
+    const dropZoneRight = (windowWidth + dropZoneWidth) / 2;
+    const dropZoneTop = (windowHeight - dropZoneHeight) / 2;
+    const dropZoneBottom = (windowHeight + dropZoneHeight) / 2;
+
+    // 이미지와 드롭존이 겹치는지 확인 (사각형 충돌 감지)
+    const isOverlapping = !(
+      imgRect.right < dropZoneLeft ||
+      imgRect.left > dropZoneRight ||
+      imgRect.bottom < dropZoneTop ||
+      imgRect.top > dropZoneBottom
+    );
+
+    dragStartedInCenter = isOverlapping;
+
+    console.log('🔍 겹침 감지:', {
+      이미지위치: {
+        left: Math.round(imgRect.left),
+        right: Math.round(imgRect.right),
+        top: Math.round(imgRect.top),
+        bottom: Math.round(imgRect.bottom)
+      },
+      겹침여부: isOverlapping,
+      드롭존위치: isOverlapping ? '오른쪽' : '중앙'
+    });
+
+    // 드롭존 다이얼로그 표시
+    showDropZoneDialog('image');
+  }
+
+  // 2. 텍스트 선택 드래그 감지
+  const selectedText = window.getSelection().toString().trim();
+  if (selectedText && !draggedImageSrc) {
+    dragType = 'text';
+    draggedText = selectedText;
+    draggedImageSrc = null;
+
+    console.log('📝 텍스트 드래그 시작:', draggedText.substring(0, 50) + '...');
+
+    // 텍스트 선택 영역 확인
+    const selection = window.getSelection();
+    if (selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+
+      const windowWidth = window.innerWidth;
+      const windowHeight = window.innerHeight;
+
+      const dropZoneWidth = 400;
+      const dropZoneHeight = 300;
+      const dropZoneLeft = (windowWidth - dropZoneWidth) / 2;
+      const dropZoneRight = (windowWidth + dropZoneWidth) / 2;
+      const dropZoneTop = (windowHeight - dropZoneHeight) / 2;
+      const dropZoneBottom = (windowHeight + dropZoneHeight) / 2;
+
+      const isOverlapping = !(
+        rect.right < dropZoneLeft ||
+        rect.left > dropZoneRight ||
+        rect.bottom < dropZoneTop ||
+        rect.top > dropZoneBottom
+      );
+
+      dragStartedInCenter = isOverlapping;
+
+      console.log('🔍 텍스트 선택 영역 겹침:', isOverlapping);
+    } else {
+      dragStartedInCenter = false;
+    }
+
+    // 드롭존 다이얼로그 표시
+    showDropZoneDialog('text');
+  }
+}, true);
+
+// 드래그 종료 시
+document.addEventListener('dragend', (e) => {
+  console.log('🔚 dragend 이벤트 발생', e.target.tagName);
+
+  if (e.target.tagName === 'IMG' || draggedText) {
+    console.log('✅ 드래그 종료 - 드롭존 제거 중...');
+
+    setTimeout(() => {
+      console.log('⏰ 타임아웃 실행 - 드롭존 숨기기');
+      hideDropZoneDialog();
+      draggedImageSrc = null;
+      draggedText = null;
+      dragType = null;
+      dragStartedInCenter = false;
+    }, 100);
+  }
+}, true);
+
+/**
+ * 드롭존 다이얼로그 표시
+ */
+function showDropZoneDialog(type) {
+  // 기존 다이얼로그가 있으면 제거
+  if (dropZoneDialog) {
+    hideDropZoneDialog();
+  }
+
+  // 다이얼로그 컨테이너
+  dropZoneDialog = document.createElement('div');
+  dropZoneDialog.id = 'pola-dropzone-dialog';
+  dropZoneDialog.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 2147483647;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  `;
+
+  // 드롭존 박스
+  const dropZone = document.createElement('div');
+  dropZone.id = 'pola-dropzone';
+  dropZone.style.cssText = `
+    width: 400px;
+    height: 300px;
+    background: white;
+    border: 3px dashed #B0804C;
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    pointer-events: auto;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  `;
+
+  // 아이콘
+  const icon = document.createElement('div');
+  if (type === 'text') {
+    icon.innerHTML = `
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#B0804C" stroke-width="2">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+        <polyline points="14 2 14 8 20 8"></polyline>
+        <line x1="16" y1="13" x2="8" y2="13"></line>
+        <line x1="16" y1="17" x2="8" y2="17"></line>
+        <polyline points="10 9 9 9 8 9"></polyline>
+      </svg>
+    `;
+  } else {
+    icon.innerHTML = `
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#B0804C" stroke-width="2">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+        <polyline points="17 8 12 3 7 8"></polyline>
+        <line x1="12" y1="3" x2="12" y2="15"></line>
+      </svg>
+    `;
+  }
+
+  // 텍스트
+  const text = document.createElement('div');
+  text.style.cssText = `
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+  `;
+  text.textContent = type === 'text' ? 'POLA에 텍스트 저장하기' : 'POLA에 이미지 저장하기';
+
+  const subText = document.createElement('div');
+  subText.style.cssText = `
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    color: #666;
+  `;
+  subText.textContent = type === 'text' ? '여기에 텍스트를 드롭하세요' : '여기에 이미지를 드롭하세요';
+
+  const formatInfo = document.createElement('div');
+  formatInfo.style.cssText = `
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 12px;
+    color: #999;
+    margin-top: 8px;
+  `;
+  formatInfo.textContent = type === 'text' ? '선택한 텍스트 저장' : '지원 형식: PNG, JPEG, WebP';
+
+  dropZone.appendChild(icon);
+  dropZone.appendChild(text);
+  dropZone.appendChild(subText);
+  dropZone.appendChild(formatInfo);
+  dropZoneDialog.appendChild(dropZone);
+  document.body.appendChild(dropZoneDialog);
+
+  // 🎯 드래그 시작 위치에 따라 드롭존 위치 결정
+  if (dragStartedInCenter) {
+    // 이미지가 원래 중앙에 있었다면 → 드롭존을 오른쪽으로
+    dropZoneDialog.style.justifyContent = 'flex-end';
+    dropZoneDialog.style.paddingRight = '40px';
+    console.log('🔄 드롭존 → 오른쪽 고정 (이미지가 중앙에서 시작)');
+  } else {
+    // 이미지가 원래 사이드에 있었다면 → 드롭존을 중앙에
+    dropZoneDialog.style.justifyContent = 'center';
+    dropZoneDialog.style.paddingRight = '0';
+    console.log('🔄 드롭존 → 중앙 고정 (이미지가 사이드에서 시작)');
+  }
+
+  // dragover 이벤트는 필요 없음 (고정 위치이므로)
+
+  // 드롭존 이벤트
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dropZone.style.background = '#FFF8F0';
+    dropZone.style.borderColor = '#8B6340';
+    dropZone.style.transform = 'scale(1.05)';
+  });
+
+  dropZone.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dropZone.style.background = 'white';
+    dropZone.style.borderColor = '#B0804C';
+    dropZone.style.transform = 'scale(1)';
+  });
+
+  dropZone.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    console.log('드롭됨! 타입:', dragType);
+
+    // 로딩 상태로 변경
+    text.textContent = '업로드 중...';
+    subText.textContent = '잠시만 기다려주세요';
+    icon.innerHTML = `
+      <div style="width: 64px; height: 64px; border: 4px solid #f3f3f3; border-top: 4px solid #B0804C; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+      <style>
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      </style>
+    `;
+
+    // 백그라운드로 업로드 요청
+    try {
+      if (!chrome.runtime?.id) {
+        throw new Error('확장 프로그램이 다시 로드되었습니다. 페이지를 새로고침해주세요.');
+      }
+
+      let message;
+      if (dragType === 'text') {
+        console.log('📝 텍스트 업로드 요청:', draggedText?.substring(0, 50) + '...');
+        message = {
+          action: 'uploadTextFromDrag',
+          text: draggedText,
+          pageUrl: window.location.href,
+          pageTitle: document.title
+        };
+      } else {
+        console.log('📸 이미지 업로드 요청:', draggedImageSrc);
+        message = {
+          action: 'uploadImageFromDrag',
+          imageUrl: draggedImageSrc,
+          pageUrl: window.location.href,
+          pageTitle: document.title
+        };
+      }
+
+      chrome.runtime.sendMessage(message, (response) => {
+        if (chrome.runtime.lastError) {
+          console.error('Runtime 에러:', chrome.runtime.lastError);
+          text.textContent = '❌ 업로드 실패';
+          subText.textContent = '확장 프로그램을 확인해주세요';
+          icon.innerHTML = `
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#f44336" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+          `;
+
+          setTimeout(() => {
+            hideDropZoneDialog();
+          }, 3000);
+          return;
+        }
+
+        if (response && response.success) {
+          // 성공
+          text.textContent = '✅ 업로드 완료!';
+          subText.textContent = 'POLA에서 확인하세요';
+          icon.innerHTML = `
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+          `;
+
+          setTimeout(() => {
+            hideDropZoneDialog();
+          }, 2000);
+        } else {
+          // 실패
+          text.textContent = '❌ 업로드 실패';
+          subText.textContent = response?.error || '다시 시도해주세요';
+          icon.innerHTML = `
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#f44336" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+          `;
+
+          setTimeout(() => {
+            hideDropZoneDialog();
+          }, 2000);
+        }
+      });
+    } catch (error) {
+      console.error('업로드 오류:', error);
+      text.textContent = '❌ 업로드 실패';
+      subText.textContent = error.message;
+      icon.innerHTML = `
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#f44336" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+      `;
+
+      setTimeout(() => {
+        hideDropZoneDialog();
+      }, 3000);
+    }
+  });
+
+  // ESC 키로 취소
+  const handleEscape = (e) => {
+    if (e.key === 'Escape') {
+      console.log('드롭존 취소됨');
+      hideDropZoneDialog();
+    }
+  };
+
+  document.addEventListener('keydown', handleEscape);
+
+  // cleanup 함수 저장
+  dropZone._cleanup = () => {
+    document.removeEventListener('keydown', handleEscape);
+  };
+}
+
+/**
+ * 드롭존 다이얼로그 숨기기
+ */
+function hideDropZoneDialog() {
+  if (dropZoneDialog && dropZoneDialog.parentNode) {
+    const dropZone = document.getElementById('pola-dropzone');
+    if (dropZone && dropZone._cleanup) {
+      dropZone._cleanup();
+    }
+    dropZoneDialog.remove();
+    dropZoneDialog = null;
+  }
+}

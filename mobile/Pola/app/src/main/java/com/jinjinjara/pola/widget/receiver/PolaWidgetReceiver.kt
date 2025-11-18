@@ -1,6 +1,11 @@
 package com.jinjinjara.pola.widget.receiver
 
+import android.app.AlarmManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
+import android.os.Build
+import android.os.SystemClock
 import android.util.Log
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
@@ -23,6 +28,7 @@ class PolaWidgetReceiver : GlanceAppWidgetReceiver() {
     companion object {
         private const val TAG = "PolaWidgetReceiver"
         private const val UPDATE_INTERVAL_HOURS = 1L
+        private const val AUTO_FLIP_INTERVAL_MS = 5000L // 5초
     }
 
     override val glanceAppWidget: GlanceAppWidget
@@ -40,6 +46,9 @@ class PolaWidgetReceiver : GlanceAppWidgetReceiver() {
 
         // 주기적 업데이트 Worker 예약
         schedulePeriodicUpdate(context)
+
+        // 자동 넘김 알람 시작
+        scheduleAutoFlip(context)
     }
 
     /**
@@ -51,6 +60,9 @@ class PolaWidgetReceiver : GlanceAppWidgetReceiver() {
 
         // Worker 취소
         WorkManager.getInstance(context).cancelUniqueWork(WidgetUpdateWorker.WORK_NAME)
+
+        // 자동 넘김 알람 취소
+        cancelAutoFlip(context)
     }
 
     /**
@@ -106,5 +118,88 @@ class PolaWidgetReceiver : GlanceAppWidgetReceiver() {
             ExistingPeriodicWorkPolicy.KEEP,
             updateWorkRequest
         )
+    }
+
+    /**
+     * 자동 넘김 알람 시작
+     */
+    private fun scheduleAutoFlip(context: Context) {
+        Log.d(TAG, "[Widget] Scheduling auto-flip alarm (interval: ${AUTO_FLIP_INTERVAL_MS}ms)")
+
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val intent = Intent(context, WidgetAutoFlipReceiver::class.java).apply {
+            action = WidgetAutoFlipReceiver.ACTION_AUTO_FLIP
+        }
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val triggerTime = SystemClock.elapsedRealtime() + AUTO_FLIP_INTERVAL_MS
+
+        // Android 12+ (API 31+)는 정확한 알람 사용
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            try {
+                // canScheduleExactAlarms()로 권한 체크
+                if (alarmManager.canScheduleExactAlarms()) {
+                    Log.d(TAG, "[Widget] Using setExactAndAllowWhileIdle (exact alarm with permission)")
+                    alarmManager.setExactAndAllowWhileIdle(
+                        AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                        triggerTime,
+                        pendingIntent
+                    )
+                } else {
+                    Log.d(TAG, "[Widget] Using setAndAllowWhileIdle (inexact alarm, no permission)")
+                    alarmManager.setAndAllowWhileIdle(
+                        AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                        triggerTime,
+                        pendingIntent
+                    )
+                }
+            } catch (e: SecurityException) {
+                Log.e(TAG, "[Widget] SecurityException when scheduling alarm, falling back to inexact", e)
+                alarmManager.setAndAllowWhileIdle(
+                    AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                    triggerTime,
+                    pendingIntent
+                )
+            }
+        } else {
+            // Android 11 이하는 setRepeating 사용 가능
+            Log.d(TAG, "[Widget] Using setRepeating (pre-Android 12)")
+            alarmManager.setRepeating(
+                AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                triggerTime,
+                AUTO_FLIP_INTERVAL_MS,
+                pendingIntent
+            )
+        }
+
+        Log.d(TAG, "[Widget] Auto-flip alarm scheduled successfully")
+    }
+
+    /**
+     * 자동 넘김 알람 취소
+     */
+    private fun cancelAutoFlip(context: Context) {
+        Log.d(TAG, "[Widget] Canceling auto-flip alarm")
+
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val intent = Intent(context, WidgetAutoFlipReceiver::class.java).apply {
+            action = WidgetAutoFlipReceiver.ACTION_AUTO_FLIP
+        }
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        alarmManager.cancel(pendingIntent)
+        pendingIntent.cancel()
+
+        Log.d(TAG, "[Widget] Auto-flip alarm canceled successfully")
     }
 }

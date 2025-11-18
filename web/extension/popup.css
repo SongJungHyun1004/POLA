@@ -141,20 +141,174 @@ h3 {
 /* ============================================
    사용 방법
 ============================================ */
-ul {
-  margin: 0;
-  padding-left: 20px;
+
+/* 간단 요약 (항상 보임) */
+.usage-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.summary-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
   font-size: 13px;
   color: #5f6368;
 }
 
-li {
-  margin-bottom: 8px;
-  line-height: 1.5;
+.summary-emoji {
+  font-size: 18px;
+  flex-shrink: 0;
 }
 
-li:last-child {
-  margin-bottom: 0;
+/* 상세 방법 (접었다 펼쳤다) */
+.usage-details {
+  margin-top: 12px;
+  border: 1px solid #e8eaed;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.usage-toggle {
+  padding: 10px 12px;
+  background: #f8f9fa;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1a73e8;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.2s;
+  user-select: none;
+}
+
+.usage-toggle:hover {
+  background: #e8f0fe;
+}
+
+.usage-toggle::marker {
+  display: none;
+}
+
+.usage-toggle::-webkit-details-marker {
+  display: none;
+}
+
+/* 펼쳤을 때 */
+.usage-details[open] .usage-toggle {
+  background: #e8f0fe;
+  border-bottom: 1px solid #e8eaed;
+}
+
+.usage-content {
+  padding: 16px 12px;
+  background: white;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.usage-category {
+  margin-bottom: 16px;
+}
+
+.usage-category:last-of-type {
+  margin-bottom: 12px;
+}
+
+.category-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #202124;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #e8eaed;
+}
+
+.usage-methods {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.method-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.method-item:hover {
+  background: #e8f0fe;
+}
+
+.method-badge {
+  flex-shrink: 0;
+  display: inline-block;
+  padding: 2px 8px;
+  background: #B0804C;
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 10px;
+  line-height: 1.6;
+}
+
+.method-text {
+  font-size: 12px;
+  color: #5f6368;
+  line-height: 1.5;
+  flex: 1;
+}
+
+.method-text strong {
+  color: #202124;
+  font-weight: 600;
+}
+
+.usage-tip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #FFF9F0;
+  border: 1px solid #FFEDC9;
+  border-radius: 8px;
+  margin-top: 16px;
+}
+
+.tip-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.tip-text {
+  font-size: 11px;
+  color: #856404;
+  line-height: 1.4;
+}
+
+.tip-text strong {
+  font-weight: 600;
 }
 
 /* ============================================

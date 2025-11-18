@@ -1,12 +1,63 @@
 importScripts('config.js');
+importScripts('auth.js');
 importScripts('apiClient.js');
 
 const API_BASE_URL = CONFIG.API_BASE_URL;
 
+/**
+ * Base64 문자열을 UTF-8로 디코딩
+ * atob()는 ASCII만 지원하므로 한글 처리를 위해 별도 함수 사용
+ */
+function base64DecodeUnicode(base64) {
+  try {
+    // Base64를 바이너리 문자열로 변환
+    const binaryString = atob(base64);
+
+    // 바이너리 문자열을 Uint8Array로 변환
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+
+    // UTF-8 디코딩
+    const decoder = new TextDecoder('utf-8');
+    return decoder.decode(bytes);
+  } catch (error) {
+    console.error('Base64 UTF-8 디코딩 실패:', error);
+    // 폴백: 기본 atob 사용
+    return atob(base64);
+  }
+}
+
 // 확장 프로그램 설치 시 실행
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener(async () => {
   console.log('확장 프로그램이 설치되었습니다.');
+
+  // 컨텍스트 메뉴 생성
   createContextMenus();
+
+  // 자동 로그인 시도
+  const loginResult = await autoLogin();
+
+  if (loginResult.isAuthenticated) {
+    console.log('자동 로그인 성공:', loginResult.user);
+  } else if (loginResult.needLogin) {
+    console.log('로그인이 필요합니다');
+  }
+});
+
+// 확장 프로그램 시작 시 (브라우저 재시작 등)
+chrome.runtime.onStartup.addListener(async () => {
+  console.log('확장 프로그램 시작됨');
+
+  // 자동 로그인 시도
+  const loginResult = await autoLogin();
+
+  if (loginResult.isAuthenticated) {
+    console.log('자동 로그인 성공:', loginResult.user);
+  } else if (loginResult.needLogin) {
+    console.log('로그인이 필요합니다');
+  }
 });
 
 // 컨텍스트 메뉴 생성
@@ -49,7 +100,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
   if (info.menuItemId === "captureScreen") {
     await startAreaCaptureWithInjection(tab);
-  } else if (info.menuItemId === "uploadImage") { 
+  } else if (info.menuItemId === "uploadImage") {
     await handleImageUpload(info, tab);
   } else if (info.menuItemId === "copyText") {
     await handleTextCapture(info, tab);
@@ -60,14 +111,31 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 // 메시지 리스너
 // ============================================
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log('메시지 수신:', request);
+  console.log('=====================================');
+  console.log('📩 Background 메시지 리스너 실행됨');
+  console.log('Action:', request.action);
+  console.log('Request 전체:', request);
+  console.log('Sender:', sender);
+  console.log('=====================================');
 
   // 로그인 요청
   if (request.action === 'login') {
-    handleLogin().then(sendResponse).catch(error => {
-      sendResponse({ success: false, error: error.message });
-    });
-    return true;
+    console.log('📥 로그인 요청 수신 - handleLogin 호출');
+
+    handleLogin()
+      .then(result => {
+        console.log('✅ handleLogin 성공:', result);
+        console.log('📤 Popup으로 응답 전송:', { success: true, user: result.user });
+        sendResponse({ success: true, user: result.user });
+      })
+      .catch(error => {
+        console.error('❌ handleLogin 실패:', error);
+        console.log('📤 Popup으로 에러 응답 전송:', { success: false, error: error.message });
+        sendResponse({ success: false, error: error.message });
+      });
+
+    console.log('⏳ 비동기 응답 대기 중... (return true)');
+    return true; // 비동기 응답을 위해 필수!
   }
 
   // 로그아웃 요청
@@ -100,6 +168,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         console.error('이미지 업로드 실패:', error);
         sendResponse({ success: false, error: error.message });
       });
+    return true; // 비동기 응답
+  }
+
+  // 드래그앤드롭 이미지 업로드
+  if (request.action === 'uploadImageFromDrag') {
+    handleDragDropImageUpload(request, sendResponse);
+    return true; // 비동기 응답
+  }
+
+  // 드래그앤드롭 텍스트 업로드
+  if (request.action === 'uploadTextFromDrag') {
+    handleDragDropTextUpload(request, sendResponse);
     return true; // 비동기 응답
   }
 
@@ -178,14 +258,18 @@ async function handleLogin() {
     console.log('ID Token 길이:', idToken.length);
     console.log('ID Token 시작:', idToken.substring(0, 50) + '...');
 
-    // 3. ID Token에서 사용자 정보 디코딩 (JWT 디코딩)
+    // 3. ID Token에서 사용자 정보 디코딩 (JWT 디코딩 with UTF-8 지원)
     console.log('3. 사용자 정보 디코딩 중...');
-    const payload = JSON.parse(atob(idToken.split('.')[1]));
+    const payloadBase64 = idToken.split('.')[1];
+    const payloadJson = base64DecodeUnicode(payloadBase64);
+    const payload = JSON.parse(payloadJson);
+
     console.log('✅ 사용자 정보:', {
       email: payload.email,
       name: payload.name,
       picture: payload.picture
     });
+    console.log('이름 길이:', payload.name?.length, '바이트 길이:', new Blob([payload.name || '']).size);
 
     // 4. 백엔드에 ID Token 전송
     console.log('4. 백엔드 인증 요청 중...');
@@ -196,7 +280,7 @@ async function handleLogin() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Client-Type': 'WEB'
+        'X-Client-Type': 'APP'
       },
       body: JSON.stringify({ idToken: idToken })
     });
@@ -228,14 +312,23 @@ async function handleLogin() {
 
     // 토큰 추출
     const accessToken = authData.data?.accessToken || authData.accessToken;
-    // WEB 클라이언트는 refresh token을 쿠키로 받으므로 응답에 없음
+    const refreshToken = authData.data?.refreshToken || authData.refreshToken;
+
+    console.log('토큰 추출 결과:');
+    console.log('  - accessToken:', accessToken ? '있음' : '❌ 없음');
+    console.log('  - refreshToken:', refreshToken ? '있음' : '❌ 없음');
 
     if (!accessToken) {
       console.error('❌ Access Token 누락:', authData);
       throw new Error('서버 응답에 Access Token이 없습니다');
     }
 
-    console.log('✅ Access Token 추출 성공');
+    if (!refreshToken) {
+      console.error('❌ Refresh Token 누락:', authData);
+      throw new Error('서버 응답에 Refresh Token이 없습니다');
+    }
+
+    console.log('✅ 토큰 추출 성공');
 
     // 5. 백엔드 Access Token 검증 및 사용자 정보 가져오기
     console.log('5. Access Token 검증 중...');
@@ -254,8 +347,12 @@ async function handleLogin() {
 
     // 6. Access Token 및 사용자 정보 저장
     console.log('6. 토큰 저장 중...');
+    console.log('  - accessToken:', accessToken ? '있음' : '없음');
+    console.log('  - refreshToken:', refreshToken ? '있음' : '없음');
+
     await chrome.storage.local.set({
       accessToken: accessToken,
+      refreshToken: refreshToken,  // ⭐ refreshToken 추가!
       user: {
         id: verifyData.data.userId,
         email: verifyData.data.email || payload.email,
@@ -264,6 +361,8 @@ async function handleLogin() {
       },
       loginTime: Date.now()
     });
+
+    console.log('✅ 토큰 저장 완료');
 
     console.log('✅ 로그인 완료!');
     showNotification('로그인 성공', `${payload.name}님 환영합니다!`);
@@ -314,54 +413,47 @@ async function handleLogout() {
  * 인증 상태 확인 (토큰 검증 포함)
  */
 async function checkAuthStatus() {
+  console.log('===========================================');
+  console.log('🔍 Background: checkAuthStatus 호출됨');
+  console.log('===========================================');
+
   try {
-    const result = await chrome.storage.local.get(['accessToken', 'user']);
+    const result = await chrome.storage.local.get(['accessToken', 'refreshToken', 'user']);
 
-    if (!result.accessToken) {
+    console.log('📦 Background Storage 확인:');
+    console.log('  - accessToken:', result.accessToken ? '있음' : '❌ 없음');
+    console.log('  - refreshToken:', result.refreshToken ? '있음' : '❌ 없음');
+    console.log('  - user:', result.user ? '있음' : '❌ 없음');
+
+    // ⭐ accessToken이나 refreshToken이 없으면 즉시 로그아웃 상태 반환
+    if (!result.accessToken || !result.refreshToken) {
+      console.log('❌ 토큰 부족 - 로그아웃 상태 반환');
+      console.log('===========================================');
+
       return {
         isAuthenticated: false,
         user: null
       };
     }
 
-    // Access Token 검증
-    try {
-      const verifyResponse = await fetch(`${API_BASE_URL}oauth/verify`, {
-        headers: {
-          'Authorization': `Bearer ${result.accessToken}`
-        }
-      });
+    console.log('✅ 토큰 존재 - 인증된 상태 반환');
+    console.log('===========================================');
 
-      if (verifyResponse.ok) {
-        return {
-          isAuthenticated: true,
-          user: result.user
-        };
-      } else {
-        // 토큰이 만료되었으면 저장소에서 삭제
-        await chrome.storage.local.remove(['accessToken', 'user']);
-        return {
-          isAuthenticated: false,
-          user: null
-        };
-      }
-    } catch (error) {
-      console.error('토큰 검증 실패:', error);
-      return {
-        isAuthenticated: false,
-        user: null
-      };
-    }
+    return {
+      isAuthenticated: true,
+      user: result.user
+    };
 
   } catch (error) {
-    console.error('인증 상태 확인 실패:', error);
+    console.error('❌ 인증 상태 확인 실패:', error);
+    console.log('===========================================');
+
     return {
       isAuthenticated: false,
       user: null
     };
   }
 }
-
 // Content script 주입 후 영역 선택 시작
 async function startAreaCaptureWithInjection(tab) {
   try {
@@ -461,13 +553,10 @@ async function handleTextCapture(info, tab) {
       const timestamp = Date.now();
       const fileName = `text_${timestamp}.txt`;
 
-      const presignedResponse = await fetch(
-        `${API_BASE_URL}s3/presigned/upload?fileName=${encodeURIComponent(fileName)}`,
+      const presignedResponse = await apiRequest(
+        `s3/presigned/upload?fileName=${encodeURIComponent(fileName)}`,
         {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${accessToken}`
-          }
+          method: 'GET'
         }
       );
 
@@ -768,7 +857,7 @@ async function triggerPostProcess(fileId, accessToken) {
 async function handleImageUpload(info, tab) {
   try {
     const imageUrl = info.srcUrl;
-    
+
     if (!imageUrl) {
       throw new Error('이미지 URL을 찾을 수 없습니다.');
     }
@@ -779,19 +868,44 @@ async function handleImageUpload(info, tab) {
     // 1. 이미지 다운로드
     console.log('1단계: 이미지 다운로드 중...');
     const imageResponse = await fetch(imageUrl);
-    
+
     if (!imageResponse.ok) {
       throw new Error('이미지를 가져올 수 없습니다.');
     }
 
     const blob = await imageResponse.blob();
     const fileSize = blob.size;
-    
+
     // 이미지 타입 확인
     const contentType = blob.type || 'image/png';
-    
+
     console.log('✅ 이미지 다운로드 완료, 크기:', fileSize, 'bytes, 타입:', contentType);
 
+    // ⚠️ 이미지 타입 검증 (PNG, JPEG만 허용)
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    const blobType = contentType.toLowerCase();
+
+    console.log('🔍 타입 검증 중...');
+    console.log('Content Type (소문자):', blobType);
+    console.log('허용된 타입:', allowedTypes);
+    console.log('검증 결과:', allowedTypes.includes(blobType));
+
+    if (!allowedTypes.includes(blobType)) {
+      const displayType = contentType.split('/')[1]?.toUpperCase() || '알 수 없음';
+      const errorMessage = `지원하지 않는 이미지 형식입니다.\n현재 형식: ${displayType}\n지원 형식: PNG, JPEG, WebP만 가능합니다.`;
+
+      console.warn('⚠️ 지원하지 않는 이미지 타입:', contentType);
+      console.warn('업로드 차단됨');
+
+      showNotification(
+        'POLA - 이미지 형식 오류',
+        errorMessage
+      );
+
+      return; // 함수 종료
+    }
+
+    console.log('✅ 이미지 타입 검증 통과:', contentType);
     // 토큰 가져오기
     const { accessToken } = await chrome.storage.local.get(['accessToken']);
 
@@ -893,5 +1007,232 @@ async function handleImageUpload(info, tab) {
       '업로드 실패',
       error.message || '이미지 업로드 중 오류가 발생했습니다.'
     );
+  }
+}
+
+/**
+ * 드래그앤드롭 이미지 업로드 처리
+ */
+async function handleDragDropImageUpload(request, sendResponse) {
+  try {
+    console.log('드래그앤드롭 이미지 업로드 시작:', request.imageUrl);
+
+    // 1. 이미지 URL을 Base64로 변환
+    const response = await fetch(request.imageUrl);
+    const blob = await response.blob();
+
+    // 🔍 파일 타입 확인
+    console.log('=== 이미지 정보 ===');
+    console.log('파일 타입:', blob.type);
+    console.log('파일 크기:', blob.size, 'bytes');
+    console.log('원본 URL:', request.imageUrl);
+    console.log('==================');
+
+    // ⚠️ 이미지 타입 검증 (PNG, JPEG만 허용)
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+
+    if (!allowedTypes.includes(blob.type.toLowerCase())) {
+      const displayType = blob.type.split('/')[1]?.toUpperCase() || '알 수 없음';
+      const errorMessage = `지원하지 않는 이미지 형식입니다.\n현재 형식: ${displayType}\n지원 형식: PNG, JPEG, WebP만 가능합니다.`;
+
+      console.warn('⚠️ 지원하지 않는 이미지 타입:', blob.type);
+
+      chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'icons/icon128.png',
+        title: 'POLA - 이미지 형식 오류',
+        message: errorMessage,
+        priority: 2
+      });
+
+      sendResponse({
+        success: false,
+        error: errorMessage
+      });
+      return;
+    }
+
+    console.log('✅ 이미지 타입 검증 통과:', blob.type);
+
+    const base64 = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        // Base64 데이터의 MIME 타입도 확인
+        const mimeType = reader.result.split(';')[0].split(':')[1];
+        console.log('Base64 MIME Type:', mimeType);
+        resolve(reader.result);
+      };
+      reader.readAsDataURL(blob);
+    });
+
+    console.log('이미지 Base64 변환 완료');
+
+    // 2. 이미지 업로드
+    const uploadResult = await uploadImage(base64, {
+      title: request.pageTitle || '드래그 업로드',
+      url: request.pageUrl
+    });
+
+    console.log('✅ 드래그앤드롭 업로드 성공:', uploadResult);
+
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icons/icon128.png',
+      title: 'POLA - 이미지 저장 완료',
+      message: '드래그한 이미지가 성공적으로 저장되었습니다.',
+      priority: 2
+    });
+
+    sendResponse({
+      success: true,
+      data: uploadResult
+    });
+
+  } catch (error) {
+    console.error('❌ 드래그앤드롭 업로드 실패:', error);
+
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icons/icon128.png',
+      title: 'POLA - 이미지 저장 실패',
+      message: error.message || '이미지 저장 중 오류가 발생했습니다.',
+      priority: 2
+    });
+
+    sendResponse({
+      success: false,
+      error: error.message
+    });
+  }
+}
+
+/**
+ * 드래그앤드롭 텍스트 업로드 처리
+ */
+async function handleDragDropTextUpload(request, sendResponse) {
+  console.log('🎯 handleDragDropTextUpload 함수 진입!');
+  console.log('Request:', request);
+
+  try {
+    console.log('✅ Try 블록 시작');
+    console.log('드래그앤드롭 텍스트 업로드 시작');
+    console.log('텍스트 길이:', request.text?.length);
+    console.log('텍스트 미리보기:', request.text?.substring(0, 100) + '...');
+
+    // 토큰 가져오기
+    const { accessToken } = await chrome.storage.local.get(['accessToken']);
+
+    if (!accessToken) {
+      throw new Error('로그인이 필요합니다.');
+    }
+
+    // 텍스트를 Blob으로 변환
+    const textBlob = new Blob([request.text], { type: 'text/plain; charset=utf-8' });
+    const fileSize = textBlob.size;
+
+    console.log('텍스트 Blob 생성 완료, 크기:', fileSize, 'bytes');
+
+    // 1단계: S3 Presigned URL 생성
+    console.log('1단계: S3 업로드 URL 생성 중...');
+    const timestamp = Date.now();
+    const fileName = `text_${timestamp}.txt`;
+
+    const presignedResponse = await fetch(
+      `${API_BASE_URL}s3/presigned/upload?fileName=${encodeURIComponent(fileName)}`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      }
+    );
+
+    if (!presignedResponse.ok) {
+      throw new Error('업로드 URL 생성 실패');
+    }
+
+    const presignedData = await presignedResponse.json();
+    const uploadUrl = presignedData.data.url;
+    const fileKey = presignedData.data.key;
+
+    console.log('✅ 1단계 완료 - Upload URL 획득');
+
+    // 2단계: S3에 직접 업로드
+    console.log('2단계: S3에 텍스트 업로드 중...');
+
+    const s3UploadResponse = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8'
+      },
+      body: textBlob
+    });
+
+    if (!s3UploadResponse.ok) {
+      throw new Error('S3 업로드 실패');
+    }
+
+    console.log('✅ 2단계 완료 - S3 업로드 성공');
+
+    // 3단계: DB에 파일 메타데이터 저장
+    console.log('3단계: 파일 정보 저장 중...');
+
+    const originUrl = uploadUrl.split('?')[0];
+
+    const completeResponse = await fetch(`${API_BASE_URL}files/complete`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        key: fileKey,
+        type: 'text/plain',
+        fileSize: fileSize,
+        originUrl: originUrl,
+        platform: 'WEB'
+      })
+    });
+
+    if (!completeResponse.ok) {
+      throw new Error('파일 등록 실패');
+    }
+
+    const completeData = await completeResponse.json();
+    console.log('✅ 3단계 완료 - 파일 등록 성공');
+
+    // 4단계: 파일 분류 (백그라운드)
+    triggerPostProcess(completeData.data.id, accessToken);
+
+    console.log('✅ 드래그앤드롭 텍스트 업로드 성공:', completeData);
+
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icons/icon128.png',
+      title: 'POLA - 텍스트 저장 완료',
+      message: '드래그한 텍스트가 성공적으로 저장되었습니다.',
+      priority: 2
+    });
+
+    sendResponse({
+      success: true,
+      data: completeData
+    });
+
+  } catch (error) {
+    console.error('❌ 드래그앤드롭 텍스트 업로드 실패:', error);
+
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icons/icon128.png',
+      title: 'POLA - 텍스트 저장 실패',
+      message: error.message || '텍스트 저장 중 오류가 발생했습니다.',
+      priority: 2
+    });
+
+    sendResponse({
+      success: false,
+      error: error.message
+    });
   }
 }
