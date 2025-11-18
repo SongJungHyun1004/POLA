@@ -3,6 +3,7 @@ package com.jinjinjara.pola.presentation.ui.screen.remind
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.EaseInOutCubic
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -33,6 +34,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -197,68 +199,58 @@ private fun RemindScreenContent(
     // 애니메이션 상태
     val frontOffsetX = remember { Animatable(0f) }
     val frontRotationZ = remember { Animatable(0f) }
-    val frontAlpha = remember { Animatable(1f) }
 
     val backOffsetX = remember { Animatable(20f) }
     val backRotationZ = remember { Animatable(6f) }
-    val backAlpha = remember { Animatable(1f) }
 
-    val back2OffsetX = remember { Animatable(20f) }
-    val back2RotationZ = remember { Animatable(6f) }
+    val back2OffsetX = remember { Animatable(1200f) }
+    val back2RotationZ = remember { Animatable(12f) }
     val back2Alpha = remember { Animatable(0f) }
 
-    val prevOffsetX = remember { Animatable(-400f) }
+    val prevOffsetX = remember { Animatable(-1200f) }
     val prevRotationZ = remember { Animatable(-6f) }
-    val prevAlpha = remember { Animatable(0f) }
 
     val backIndex = (frontIndex + 1).coerceAtMost(imageList.lastIndex)
     val back2Index = (frontIndex + 2).coerceAtMost(imageList.lastIndex)
     val prevIndex = (frontIndex - 1).coerceAtLeast(0)
-
-    // frontIndex 변경 시 back2Alpha 조정
-    LaunchedEffect(frontIndex) {
-        if (!isAnimating) {
-            if (frontIndex < imageList.lastIndex - 1) {
-                back2Alpha.animateTo(1f, tween(300))
-            } else {
-                back2Alpha.animateTo(0f, tween(300))
-            }
-        }
-    }
 
     // 다음 이미지 이동
     suspend fun moveToNext() {
         if (isAnimating || frontIndex >= imageList.lastIndex) return
         isAnimating = true
         animationDirection = "left"
-        val dur = 520
+        val dur = 500
 
         displayIndex = (frontIndex + 1).coerceAtMost(imageList.lastIndex)
-
-        // 새로운 back2 페이드인
-        val newFrontIndex = frontIndex + 1
-        val needsNewBack2 = newFrontIndex < imageList.lastIndex - 1
-        if (needsNewBack2) {
-            scope.launch {
-                back2Alpha.animateTo(1f, tween(dur))
-            }
-        }
 
         // 왼쪽으로 사라지는 애니메이션
         scope.launch {
             awaitAll(
-                async { frontOffsetX.animateTo(-500f, tween(dur)) },
-                async { frontRotationZ.animateTo(-6f, tween(dur)) },
-                async { frontAlpha.animateTo(0f, tween(dur)) }
+                async { frontOffsetX.animateTo(-1200f, tween(dur, easing = EaseInOutCubic)) },
+                async { frontRotationZ.animateTo(-6f, tween(dur, easing = EaseInOutCubic)) }
             )
         }
 
         // 앞으로 이동하는 애니메이션
         scope.launch {
             awaitAll(
-                async { backOffsetX.animateTo(0f, tween(dur)) },
-                async { backRotationZ.animateTo(0f, tween(dur)) }
+                async { backOffsetX.animateTo(0f, tween(dur, easing = EaseInOutCubic)) },
+                async { backRotationZ.animateTo(0f, tween(dur, easing = EaseInOutCubic)) }
             )
+        }
+
+        // 새로운 back2가 1200f에서 back 위치(20f)로 날아옴 (front와 동시 시작)
+        val needsNewBack2 = (frontIndex + 1) < imageList.lastIndex - 1
+        if (needsNewBack2) {
+            scope.launch {
+                back2OffsetX.snapTo(1200f)
+                back2RotationZ.snapTo(12f)
+                back2Alpha.snapTo(1f)
+                awaitAll(
+                    async { back2OffsetX.animateTo(20f, tween(dur, easing = EaseInOutCubic)) },
+                    async { back2RotationZ.animateTo(6f, tween(dur, easing = EaseInOutCubic)) }
+                )
+            }
         }
 
         delay(dur.toLong())
@@ -267,11 +259,10 @@ private fun RemindScreenContent(
         // 상태 리셋
         backOffsetX.snapTo(20f)
         backRotationZ.snapTo(6f)
-        back2OffsetX.snapTo(20f)
-        back2RotationZ.snapTo(6f)
+        back2OffsetX.snapTo(1200f)
+        back2RotationZ.snapTo(12f)
         frontOffsetX.snapTo(0f)
         frontRotationZ.snapTo(0f)
-        frontAlpha.snapTo(1f)
 
         isAnimating = false
         animationDirection = ""
@@ -282,27 +273,33 @@ private fun RemindScreenContent(
         if (isAnimating || frontIndex <= 0) return
         isAnimating = true
         animationDirection = "right"
-        val dur = 520
+        val dur = 500
 
         displayIndex = (frontIndex - 1).coerceAtLeast(0)
 
         // 오른쪽 뒤로 이동하는 애니메이션
         scope.launch {
             awaitAll(
-                async { frontOffsetX.animateTo(20f, tween(dur)) },
-                async { frontRotationZ.animateTo(6f, tween(dur)) }
+                async { frontOffsetX.animateTo(20f, tween(dur, easing = EaseInOutCubic)) },
+                async { frontRotationZ.animateTo(6f, tween(dur, easing = EaseInOutCubic)) }
+            )
+        }
+
+        // back이 1200f로 날아가기 (back2 위치로)
+        scope.launch {
+            awaitAll(
+                async { backOffsetX.animateTo(1200f, tween(dur, easing = EaseInOutCubic)) },
+                async { backRotationZ.animateTo(12f, tween(dur, easing = EaseInOutCubic)) }
             )
         }
 
         // 왼쪽에서 등장하는 애니메이션
         scope.launch {
-            prevAlpha.snapTo(0f)
-            prevOffsetX.snapTo(-400f)
+            prevOffsetX.snapTo(-1200f)
             prevRotationZ.snapTo(-6f)
             awaitAll(
-                async { prevAlpha.animateTo(1f, tween(dur)) },
-                async { prevOffsetX.animateTo(0f, tween(dur)) },
-                async { prevRotationZ.animateTo(0f, tween(dur)) }
+                async { prevOffsetX.animateTo(0f, tween(dur, easing = EaseInOutCubic)) },
+                async { prevRotationZ.animateTo(0f, tween(dur, easing = EaseInOutCubic)) }
             )
         }
 
@@ -310,16 +307,14 @@ private fun RemindScreenContent(
         frontIndex -= 1
 
         // 상태 리셋
-        prevOffsetX.snapTo(-400f)
+        prevOffsetX.snapTo(-1200f)
         prevRotationZ.snapTo(-6f)
-        prevAlpha.snapTo(0f)
         frontOffsetX.snapTo(0f)
         frontRotationZ.snapTo(0f)
-        frontAlpha.snapTo(1f)
         backOffsetX.snapTo(20f)
         backRotationZ.snapTo(6f)
-        back2OffsetX.snapTo(20f)
-        back2RotationZ.snapTo(6f)
+        back2OffsetX.snapTo(1200f)
+        back2RotationZ.snapTo(12f)
 
         isAnimating = false
         animationDirection = ""
@@ -415,21 +410,21 @@ private fun RemindScreenContent(
 
                     Box(
                         modifier = Modifier
-                            .padding(top = 24.dp)
+                            .padding(top = 36.dp)
                             .graphicsLayer {
                                 clip = false
                             },
                         contentAlignment = Alignment.Center,
                     ) {
                         // 뒤쪽 카드들
-                        if (frontIndex < imageList.lastIndex - 1 && back2Alpha.value > 0f)
+                        if (frontIndex < imageList.lastIndex - 1)
                             RemindPolaCard(
                                 imageUrl = imageList[back2Index].imageUrl,
                                 type = imageList[back2Index].type,
                                 tags = imageList[back2Index].tags,
                                 translationX = back2OffsetX.value,
                                 rotationZ = back2RotationZ.value,
-                                alpha = 1f
+                                alpha = back2Alpha.value
                             )
                         if (frontIndex < imageList.lastIndex)
                             RemindPolaCard(
@@ -437,8 +432,7 @@ private fun RemindScreenContent(
                                 type = imageList[backIndex].type,
                                 tags = imageList[backIndex].tags,
                                 translationX = backOffsetX.value,
-                                rotationZ = backRotationZ.value,
-                                alpha = backAlpha.value
+                                rotationZ = backRotationZ.value
                             )
 
                         // 전면 카드 레이어
@@ -451,10 +445,8 @@ private fun RemindScreenContent(
                                     onNavigateToContents = onNavigateToContents,
                                     frontOffsetX = frontOffsetX.value,
                                     frontRotationZ = frontRotationZ.value,
-                                    frontAlpha = frontAlpha.value,
                                     prevOffsetX = prevOffsetX.value,
-                                    prevRotationZ = prevRotationZ.value,
-                                    prevAlpha = prevAlpha.value
+                                    prevRotationZ = prevRotationZ.value
                                 )
                             else
                                 FrontThenPrevLayer(
@@ -464,10 +456,8 @@ private fun RemindScreenContent(
                                     onNavigateToContents = onNavigateToContents,
                                     frontOffsetX = frontOffsetX.value,
                                     frontRotationZ = frontRotationZ.value,
-                                    frontAlpha = frontAlpha.value,
                                     prevOffsetX = prevOffsetX.value,
-                                    prevRotationZ = prevRotationZ.value,
-                                    prevAlpha = prevAlpha.value
+                                    prevRotationZ = prevRotationZ.value
                                 )
                         } else {
                             RemindPolaCard(
@@ -476,8 +466,7 @@ private fun RemindScreenContent(
                                 type = imageList[frontIndex].type,
                                 tags = imageList[frontIndex].tags,
                                 translationX = frontOffsetX.value,
-                                rotationZ = frontRotationZ.value,
-                                alpha = frontAlpha.value
+                                rotationZ = frontRotationZ.value
                             )
                         }
                     }
@@ -511,7 +500,6 @@ private fun RemindScreenContent(
                                             shape = RoundedCornerShape(8.dp)
                                         )
                                         .graphicsLayer {
-                                            alpha = if (isFocused) 1f else 0.8f
                                             scaleX = if (isFocused) 1.05f else 1f
                                             scaleY = if (isFocused) 1.05f else 1f
                                         }
@@ -525,12 +513,66 @@ private fun RemindScreenContent(
                                             }
                                         }
                                 ) {
-                                    AsyncImage(
-                                        model = remindData.imageUrl,
-                                        contentDescription = "Remind ${remindData.id}",
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier.fillMaxSize()
-                                    )
+                                    when {
+                                        remindData.type.startsWith("image") == true -> {
+                                            AsyncImage(
+                                                model = remindData.imageUrl,
+                                                contentDescription = "Remind ${remindData.id}",
+                                                contentScale = ContentScale.Crop,
+                                                modifier = Modifier.fillMaxSize()
+                                            )
+                                        }
+
+                                        remindData.type.startsWith("text") == true -> {
+                                            var textContent by remember {
+                                                mutableStateOf<String?>(null)
+                                            }
+
+                                            LaunchedEffect(remindData.imageUrl) {
+                                                try {
+                                                    textContent = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                                        java.net.URL(remindData.imageUrl).readText(Charsets.UTF_8)
+                                                    }
+                                                } catch (e: Exception) {
+                                                    textContent = "(텍스트 로드 실패)"
+                                                }
+                                            }
+
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .background(Color(0xFFF5F5F5))
+                                                    .padding(4.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    text = textContent ?: "로딩 중...",
+                                                    color = Color.DarkGray,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    maxLines = 3,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    fontSize = 8.sp
+                                                )
+                                            }
+                                        }
+
+                                        else -> {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .background(Color(0xFFE0E0E0)),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    painter = painterResource(R.drawable.empty),
+                                                    contentDescription = "Unknown file",
+                                                    tint = Color.DarkGray,
+                                                    modifier = Modifier.size(24.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+
                                     if (!isFocused) {
                                         Box(
                                             modifier = Modifier
@@ -606,7 +648,7 @@ private fun RemindPolaCard(
     tags: List<String>,
     translationX: Float,
     rotationZ: Float,
-    alpha: Float
+    alpha: Float = 1f
 ) {
     val context = LocalContext.current
 
@@ -618,9 +660,10 @@ private fun RemindPolaCard(
         textSpacing = 8.dp,
         clipTags = true,
         modifier = Modifier
-            .height(410.dp)
+            .height(390.dp)
             .aspectRatio(0.7816f)
             .graphicsLayer {
+                clip = false
                 this.translationX = translationX
                 this.rotationZ = rotationZ
                 this.alpha = alpha
@@ -646,10 +689,8 @@ private fun FrontThenPrevLayer(
     onNavigateToContents: (Long) -> Unit,
     frontOffsetX: Float,
     frontRotationZ: Float,
-    frontAlpha: Float,
     prevOffsetX: Float,
-    prevRotationZ: Float,
-    prevAlpha: Float
+    prevRotationZ: Float
 ) {
     RemindPolaCard(
         onNavigateToContents = { onNavigateToContents(imageList[prevIndex].id) },
@@ -657,8 +698,7 @@ private fun FrontThenPrevLayer(
         type = imageList[prevIndex].type,
         tags = imageList[prevIndex].tags,
         translationX = prevOffsetX,
-        rotationZ = prevRotationZ,
-        alpha = prevAlpha
+        rotationZ = prevRotationZ
     )
     RemindPolaCard(
         onNavigateToContents = { onNavigateToContents(imageList[frontIndex].id) },
@@ -666,8 +706,7 @@ private fun FrontThenPrevLayer(
         type = imageList[frontIndex].type,
         tags = imageList[frontIndex].tags,
         translationX = frontOffsetX,
-        rotationZ = frontRotationZ,
-        alpha = frontAlpha
+        rotationZ = frontRotationZ
     )
 }
 
@@ -679,10 +718,8 @@ private fun PrevThenFrontLayer(
     onNavigateToContents: (Long) -> Unit,
     frontOffsetX: Float,
     frontRotationZ: Float,
-    frontAlpha: Float,
     prevOffsetX: Float,
-    prevRotationZ: Float,
-    prevAlpha: Float
+    prevRotationZ: Float
 ) {
     RemindPolaCard(
         onNavigateToContents = { onNavigateToContents(imageList[frontIndex].id) },
@@ -690,8 +727,7 @@ private fun PrevThenFrontLayer(
         type = imageList[frontIndex].type,
         tags = imageList[frontIndex].tags,
         translationX = frontOffsetX,
-        rotationZ = frontRotationZ,
-        alpha = frontAlpha
+        rotationZ = frontRotationZ
     )
     RemindPolaCard(
         onNavigateToContents = { onNavigateToContents(imageList[prevIndex].id) },
@@ -699,8 +735,7 @@ private fun PrevThenFrontLayer(
         type = imageList[prevIndex].type,
         tags = imageList[prevIndex].tags,
         translationX = prevOffsetX,
-        rotationZ = prevRotationZ,
-        alpha = prevAlpha
+        rotationZ = prevRotationZ
     )
 }
 

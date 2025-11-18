@@ -32,7 +32,7 @@ public class File {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(nullable = false, length = 255)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String context; // LLM 컨텍스트 (기본값 Llava)
 
     @Column(name = "ocr_text", columnDefinition = "TEXT")

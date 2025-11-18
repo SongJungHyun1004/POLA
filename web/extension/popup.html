@@ -42,11 +42,70 @@
 
       <!-- 사용 방법 -->
       <div class="section">
-        <h3>사용 방법</h3>
-        <ul>
-          <li>페이지에서 우클릭 → "영역 선택하여 캡처하기"</li>
-          <li>텍스트 드래그 → 우클릭 → "선택한 텍스트 가져오기"</li>
-        </ul>
+        <h3>💡 사용 방법</h3>
+
+        <!-- 간단 요약 (항상 보임) -->
+        <div class="usage-summary">
+          <div class="summary-item">
+            <span class="summary-emoji">📸</span>
+            <span>이미지: 우클릭 메뉴 또는 드래그 앤 드롭</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-emoji">📝</span>
+            <span>텍스트: 선택 후 우클릭 또는 드래그 앱 드롭</span>
+          </div>
+        </div>
+
+        <!-- 상세 방법 (접었다 펼쳤다 가능) -->
+        <details class="usage-details">
+          <summary class="usage-toggle">📖 자세한 방법 보기</summary>
+
+          <div class="usage-content">
+            <!-- 이미지 수집 -->
+            <div class="usage-category">
+              <div class="category-title">📸 이미지 수집</div>
+              <div class="usage-methods">
+                <div class="method-item">
+                  <span class="method-badge">방법 1</span>
+                  <span class="method-text">페이지에서 <strong>우클릭</strong> → "영역 선택하여 캡처"</span>
+                </div>
+                <div class="method-item">
+                  <span class="method-badge">방법 2</span>
+                  <span class="method-text">이미지 위에서 <strong>우클릭</strong> → "이 이미지를 POLA에 저장"</span>
+                </div>
+                <div class="method-item">
+                  <span class="method-badge">방법 3</span>
+                  <span class="method-text">이미지를 <strong>드래그</strong>하여 나타나는 드롭존에 드롭</span>
+                </div>
+                <div class="method-item">
+                  <span class="method-badge">방법 4</span>
+                  <span class="method-text">아래 드롭존에 <strong>로컬 파일</strong> 업로드</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 텍스트 수집 -->
+            <div class="usage-category">
+              <div class="category-title">📝 텍스트 수집</div>
+              <div class="usage-methods">
+                <div class="method-item">
+                  <span class="method-badge">방법 1</span>
+                  <span class="method-text">텍스트 <strong>선택</strong> → 우클릭 → "선택한 텍스트 가져오기"</span>
+                </div>
+                <div class="method-item">
+                  <span class="method-badge">방법 2</span>
+                  <span class="method-text">텍스트를 <strong>선택 후 드래그</strong>하여 드롭존에 드롭</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 팁 -->
+            <div class="usage-tip">
+              <span class="tip-icon">💡</span>
+              <span class="tip-text"><strong>Tip:</strong> 드래그 앤 드롭이 가장 빠릅니다!</span>
+            </div>
+          </div>
+        </details>
       </div>
 
       <!-- 이미지 업로드 -->
@@ -57,7 +116,7 @@
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" />
           </svg>
           <p>이미지를 드래그하거나 클릭하여 업로드</p>
-          <input type="file" id="fileInput" accept="image/*" style="display: none;">
+          <p style="font-size: 12px; color: #999; margin-top: 4px;">지원 형식: PNG, JPEG, WebP</p>
         </div>
         <div id="uploadStatus" style="display: none;"></div>
       </div>

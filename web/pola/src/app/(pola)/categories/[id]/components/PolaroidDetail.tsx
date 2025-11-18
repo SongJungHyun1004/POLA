@@ -362,7 +362,7 @@ export default function PolaroidDetail({
             transition-colors
           "
             >
-              {t}
+            {t.startsWith("#") ? t : `#${t}`}
             </button>
           ))}
         </div>
