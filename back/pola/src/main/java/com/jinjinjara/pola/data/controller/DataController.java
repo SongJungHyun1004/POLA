@@ -1,6 +1,7 @@
 package com.jinjinjara.pola.data.controller;
 
 import com.jinjinjara.pola.common.ApiResponse;
+import com.jinjinjara.pola.common.ErrorCode;
 import com.jinjinjara.pola.common.dto.PageRequestDto;
 import com.jinjinjara.pola.common.dto.PagedResponseDto;
 import com.jinjinjara.pola.data.dto.request.FileShareRequest;
@@ -116,8 +117,14 @@ public class DataController {
             @AuthenticationPrincipal Users user
     ) {
         List<DataResponse> responses = dataService.getRemindFiles(user.getId());
+
+        if (responses == null) {
+            return ApiResponse.success("리마인드가 아직 생성되지 않았습니다.");
+        }
+
         return ApiResponse.ok(responses, "리마인드 목록을 불러왔습니다.");
     }
+
 
     /**
      * 파일 단건 상세 조회

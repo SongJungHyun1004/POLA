@@ -73,9 +73,10 @@ public class DataService {
         List<DataResponse> cached = remindCacheRepository.getRemindFiles(userId);
 
         if (cached == null) {
-            log.debug("[Remind] Redis miss for userId={}, return empty list", userId);
-            return List.of();
+            log.debug("[Remind] Redis miss for userId={}, return null", userId);
+            return null;
         }
+
         log.debug("[Remind] Redis hit for userId={}", userId);
         return cached;
     }
