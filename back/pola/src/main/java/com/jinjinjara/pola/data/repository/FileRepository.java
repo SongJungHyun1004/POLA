@@ -23,6 +23,7 @@ public interface FileRepository extends JpaRepository<File, Long> {
             @Param("userId") Long userId,
             Pageable pageable
     );
+    List<File> findByCategoryIdAndUserId(Long categoryId, Long userId);
 
     Page<File> findAllByUserIdAndFavoriteTrueOrderByFavoriteSortAscFavoritedAtDesc(Long userId, Pageable pageable);
 

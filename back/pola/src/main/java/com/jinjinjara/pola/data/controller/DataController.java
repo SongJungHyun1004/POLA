@@ -1,6 +1,8 @@
 package com.jinjinjara.pola.data.controller;
 
+import com.google.protobuf.Api;
 import com.jinjinjara.pola.common.ApiResponse;
+import com.jinjinjara.pola.common.ErrorCode;
 import com.jinjinjara.pola.common.dto.PageRequestDto;
 import com.jinjinjara.pola.common.dto.PagedResponseDto;
 import com.jinjinjara.pola.data.dto.request.FileShareRequest;
@@ -91,7 +93,8 @@ public class DataController {
     ) {
         File updated = dataService.removeFavorite(fileId, user);
         return ApiResponse.ok(updated, "파일이 즐겨찾기에서 제거되었습니다.");
-    }//    // 즐겨찾기된 파일 조회
+    }
+    //    // 즐겨찾기된 파일 조회
 //    @Operation(summary = "즐겨찾기된 파일 조회", description = "현재 로그인된 유저의 즐겨찾기 파일 목록을 조회합니다.")
 //    @GetMapping("/favorites")
 //    public ApiResponse<List<File>> getFavoriteFiles(@AuthenticationPrincipal Users user) {
@@ -116,8 +119,14 @@ public class DataController {
             @AuthenticationPrincipal Users user
     ) {
         List<DataResponse> responses = dataService.getRemindFiles(user.getId());
+
+        if (responses == null) {
+            return ApiResponse.success("리마인드가 아직 생성되지 않았습니다.");
+        }
+
         return ApiResponse.ok(responses, "리마인드 목록을 불러왔습니다.");
     }
+
 
     /**
      * 파일 단건 상세 조회
@@ -262,5 +271,13 @@ public class DataController {
     ) throws Exception {
         File updated = dataService.postProcessingFile(user, fileId);
         return ApiResponse.ok(updated, "파일 후처리가 완료되었습니다.");
+    }
+    @PostMapping("/processUncategorizedFiles")
+    public ApiResponse<String> processUncategorizedFiles(@AuthenticationPrincipal Users user) {
+        // 파일 처리 시작을 비동기적으로 호출
+        dataService.processUncategorizedFilesForUserAsync(user);  // 비동기 처리 시작
+
+        // 즉시 응답을 유저에게 보냄
+        return ApiResponse.ok("File processing started for uncategorized files.");
     }
 }
