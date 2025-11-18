@@ -412,7 +412,10 @@ export default function Header() {
                   icon={<Puzzle />}
                   text="POLA 익스텐션"
                   onClick={() =>
-                    window.open("https://chrome.google.com/webstore", "_blank")
+                    window.open(
+                      "https://chromewebstore.google.com/detail/pola/fclaojhnblpfnpneiipdkfkhpkghmbcp",
+                      "_blank"
+                    )
                   }
                 />
                 <MenuItem
