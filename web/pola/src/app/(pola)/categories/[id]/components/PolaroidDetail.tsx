@@ -238,10 +238,7 @@ export default function PolaroidDetail({
         <div className="absolute w-full h-full backface-hidden flex flex-col items-center justify-center cursor-pointer">
           <div className="relative w-[85%] h-[78%] overflow-hidden rounded-sm bg-[#FFFEF8]">
             {isTextFile ? (
-              <div
-                className="w-full h-full overflow-y-auto text-base leading-tight text-[#4C3D25] whitespace-pre-line break-words scrollbar-none p-2 shadow-inner-custom"
-                onWheel={(e) => e.stopPropagation()}
-              >
+              <div className="w-full h-full overflow-hidden text-base leading-tight text-[#4C3D25] whitespace-pre-line break-words p-2 shadow-inner-custom">
                 {ocr_text || "(텍스트 없음)"}
               </div>
             ) : (
@@ -362,7 +359,7 @@ export default function PolaroidDetail({
             transition-colors
           "
             >
-            {t.startsWith("#") ? t : `#${t}`}
+              {t.startsWith("#") ? t : `#${t}`}
             </button>
           ))}
         </div>
