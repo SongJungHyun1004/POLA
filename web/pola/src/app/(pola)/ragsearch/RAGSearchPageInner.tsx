@@ -13,7 +13,6 @@ interface ChatMessage {
   content: string;
 }
 
-// 카드 그룹
 interface CardGroup {
   answerIndex: number;
   cards: {
@@ -55,7 +54,6 @@ export default function RAGSearchPageInner() {
     });
   }, [messages, cardGroups]);
 
-  // 초기 자동 검색
   useEffect(() => {
     if (hasRun.current) return;
     hasRun.current = true;
@@ -72,17 +70,13 @@ export default function RAGSearchPageInner() {
 
     try {
       const response = await ragSearch(text);
-
-      //  API 구조 변경 반영
       const answer = response.data.answer;
       const sources = response.data.sources;
 
-      // AI 답변 추가
       setMessages((prev) => [...prev, { role: "assistant", content: answer }]);
 
       const answerIndex = messages.length;
 
-      // 카드 그룹 생성
       const newCards = (sources || []).map((s: any) => ({
         id: s.id,
         src: s.src,
@@ -98,7 +92,6 @@ export default function RAGSearchPageInner() {
 
       setCardGroups((prev) => [...prev, { answerIndex, cards: newCards }]);
 
-      // detail 설정
       if (newCards.length > 0) {
         const c = newCards[0];
         setDetail({
@@ -124,14 +117,23 @@ export default function RAGSearchPageInner() {
     }
   };
 
-  /** Detail에서 favorite 변경 → 카드/상세 */
+  const MAX_QUERY_LENGTH = 1000;
+
+  const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+
+    if (value.length > MAX_QUERY_LENGTH) {
+      alert(`질문은 최대 ${MAX_QUERY_LENGTH}자까지 입력할 수 있습니다.`);
+      return;
+    }
+    setQuery(value);
+  };
+
   const handleFavoriteChange = (newState: boolean) => {
     if (!detail) return;
 
-    // detail 업데이트
     setDetail((prev: any) => ({ ...prev, favorite: newState }));
 
-    // 카드 리스트에도 반영
     setCardGroups((prev) =>
       prev.map((group) => ({
         ...group,
@@ -142,7 +144,6 @@ export default function RAGSearchPageInner() {
     );
   };
 
-  /** 입력 전송 */
   const handleSend = () => {
     const text = query.trim();
     if (!text) return;
@@ -158,7 +159,7 @@ export default function RAGSearchPageInner() {
         className="h-full flex flex-row gap-6 pb-6 pl-6 transition-all duration-500"
         style={{ width: layoutExpanded ? "1200px" : "1200px" }}
       >
-        {/* LEFT AREA */}
+        {/* LEFT */}
         <div
           className="flex-1 h-full flex flex-col transition-all duration-500"
           style={{ width: "720px" }}
@@ -168,7 +169,6 @@ export default function RAGSearchPageInner() {
               ref={scrollRef}
               className="flex-1 overflow-y-auto p-6 pr-2 scrollbar-thin scrollbar-thumb-[#CBBF9E]/50"
             >
-              {/* 🔥 메시지가 없을 때: 중앙 안내 UI */}
               {messages.length === 0 && (
                 <div className="w-full h-full flex flex-col items-center justify-center opacity-80 select-none">
                   <img
@@ -182,11 +182,9 @@ export default function RAGSearchPageInner() {
                 </div>
               )}
 
-              {/* 🔥 메시지가 있을 때만 기존 채팅+카드 렌더 */}
               {messages.length > 0 &&
                 messages.map((msg, i) => (
                   <div key={i} className="mb-10">
-                    {/* 메시지 */}
                     <div
                       className={`flex mb-4 ${
                         msg.role === "user" ? "justify-end" : "justify-start"
@@ -212,7 +210,6 @@ export default function RAGSearchPageInner() {
                       </div>
                     </div>
 
-                    {/* 카드 그룹 */}
                     {cardGroups
                       .filter((g) => g.answerIndex === i)
                       .map((group, gi) => (
@@ -274,7 +271,7 @@ export default function RAGSearchPageInner() {
                 placeholder="상담포아에게 질문해보세요..."
                 className="flex-grow bg-white border border-[#D8D5CC] rounded-full px-4 py-3 outline-none"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={handleQueryChange} // ⭐ 변경
                 onKeyDown={(e) => e.key === "Enter" && handleSend()}
               />
 
