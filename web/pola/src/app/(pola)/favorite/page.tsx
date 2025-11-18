@@ -19,8 +19,10 @@ import { CSS } from "@dnd-kit/utilities";
 
 import PolaroidCard from "@/app/(pola)/home/components/PolaroidCard";
 import PolaroidDetail from "../categories/[id]/components/PolaroidDetail";
+
 import { getFavoriteFiles } from "@/services/favoriteService";
 import { getFileDetail } from "@/services/categoryService";
+import { removeFileFavorite, addFileFavorite } from "@/services/fileService";
 
 interface SelectedFile {
   id: number;
@@ -39,10 +41,14 @@ interface SortableItemProps {
   file: any;
   selectedId: number | null;
   onSelect: (file: any) => void;
+  onUnfavorite: (id: number) => void; // ⭐ 리스트에서 해제 기능
 }
 
+/* ============================================================
+    SortableItem — CategoryPage 방식 그대로 ⭐ 적용!
+============================================================ */
 const SortableItem = memo(
-  ({ file, selectedId, onSelect }: SortableItemProps) => {
+  ({ file, selectedId, onSelect, onUnfavorite }: SortableItemProps) => {
     const {
       attributes,
       listeners,
@@ -64,35 +70,44 @@ const SortableItem = memo(
     return (
       <div
         ref={setNodeRef}
+        className="flex justify-center w-full overflow-visible relative"
         style={style}
-        className="flex justify-center w-full overflow-visible"
       >
         <button
           {...attributes}
           {...listeners}
           onClick={() => onSelect(file)}
-          className={`
-            relative transition-transform
-            ${isSelected ? "scale-110 z-20" : "hover:scale-[1.07]"}
-          `}
+          className={`relative transition-transform ${
+            isSelected ? "scale-110 z-20" : "hover:scale-[1.07]"
+          }`}
           style={{
             transform: `${file.rotation} ${isSelected ? "scale(1.1)" : ""}`,
             transformOrigin: "center bottom",
           }}
         >
+          {/* ⭐ 버튼이 아닌 div (CategoryPage와 동일) */}
+          {file.favorite && (
+            <div
+              onClick={(e) => {
+                e.stopPropagation();
+                onUnfavorite(file.id);
+              }}
+              className="absolute top-2 right-2 z-20 cursor-pointer"
+            >
+              <Star
+                fill="#FFD700"
+                stroke="#FFD700"
+                strokeWidth={2.5}
+                className="w-6 h-6 drop-shadow-sm"
+              />
+            </div>
+          )}
+
           <PolaroidCard
             src={file.src || "/images/dummy_image_1.png"}
             type={file.type}
             ocr_text={file.ocr_text}
           />
-          {file.favorite && (
-            <Star
-              fill={file.favorite ? "#FFD700" : "transparent"}
-              stroke="#FFD700"
-              strokeWidth={2.5}
-              className="absolute top-2 right-2 drop-shadow-sm w-6 h-6 z-10"
-            />
-          )}
         </button>
       </div>
     );
@@ -100,9 +115,13 @@ const SortableItem = memo(
 );
 SortableItem.displayName = "SortableItem";
 
+/* ============================================================
+                FavoritePage 본문
+============================================================ */
 export default function FavoritePage() {
   const [files, setFiles] = useState<any[]>([]);
   const [selectedFile, setSelectedFile] = useState<SelectedFile | null>(null);
+
   const [page, setPage] = useState(0);
   const [isFetching, setIsFetching] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -115,69 +134,68 @@ export default function FavoritePage() {
     })
   );
 
-  // ⭐ 초기 자동 선택 처리 함수
-  const selectInitialFile = async (file: any) => {
-    await handleSelectFile(file);
+  /* -----------------------------------------------------------
+      ⭐ 즐겨찾기 해제
+      FavoritePage에서는 해제 = 리스트에서 제거
+  ------------------------------------------------------------ */
+  const handleUnfavorite = async (fileId: number) => {
+    try {
+      await removeFileFavorite(fileId);
+
+      // 리스트에서 제거
+      setFiles((prev) => prev.filter((f) => f.id !== fileId));
+
+      // Detail에서도 반영
+      if (selectedFile?.id === fileId) {
+        const remaining = files.filter((f) => f.id !== fileId);
+        setSelectedFile(remaining[0] ?? null);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("즐겨찾기 해제 실패");
+    }
   };
 
-  async function loadMore() {
-    if (isFetching || !hasMore) return;
+  /* -----------------------------------------------------------
+      ⭐ Detail에서 즐겨찾기 등록/해제
+      등록 → FavoritePage에서는 리스트에 추가해야 하지만,
+      FavoritePage는 '즐겨찾기 목록 페이지'라 등록 로직은 없음
+      → 따라서 state만 반영
+  ------------------------------------------------------------ */
+  const handleFavoriteChange = async (state: boolean) => {
+    if (!selectedFile) return;
 
-    try {
-      setIsFetching(true);
-      const newFiles = await getFavoriteFiles(page);
+    const id = selectedFile.id;
 
-      if (newFiles.length === 0) {
-        setHasMore(false);
-        return;
-      }
+    if (!state) {
+      // 해제
+      await handleUnfavorite(id);
+    } else {
+      // 이 페이지에서는 등록해도 리스트에 추가 X
+      await addFileFavorite(id);
 
-      const newFilesWithRotation = newFiles.map((f: any) => ({
-        ...f,
-        rotation: `rotate(${Math.random() * 8 - 4}deg)`,
-      }));
-
-      setFiles((prev) => {
-        const merged = [...prev, ...newFilesWithRotation];
-        return merged.filter(
-          (v, i, a) => a.findIndex((t) => t.id === v.id) === i
-        );
-      });
-
-      // ⭐ 첫 로딩 때만 자동 선택
-      const isFirstLoad = page === 0;
-      if (isFirstLoad && newFilesWithRotation.length > 0) {
-        selectInitialFile(newFilesWithRotation[0]);
-      }
-
-      setPage((prev) => prev + 1);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsFetching(false);
+      setSelectedFile((prev) => prev && { ...prev, favorite: true });
+      setFiles((prev) =>
+        prev.map((f) => (f.id === id ? { ...f, favorite: true } : f))
+      );
     }
-  }
+  };
 
-  useEffect(() => {
-    loadMore();
-  }, []);
+  /* -----------------------------------------------------------
+      삭제 처리
+  ------------------------------------------------------------ */
+  const handleFileDeleted = (fileId: number) => {
+    setFiles((prev) => prev.filter((f) => f.id !== fileId));
 
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    if (selectedFile?.id === fileId) {
+      const remain = files.filter((f) => f.id !== fileId);
+      setSelectedFile(remain[0] ?? null);
+    }
+  };
 
-    const onScroll = () => {
-      if (
-        container.scrollTop + container.clientHeight >=
-        container.scrollHeight - 300
-      ) {
-        loadMore();
-      }
-    };
-    container.addEventListener("scroll", onScroll);
-    return () => container.removeEventListener("scroll", onScroll);
-  }, [files, hasMore, isFetching]);
-
+  /* -----------------------------------------------------------
+      파일 상세 조회
+  ------------------------------------------------------------ */
   const handleSelectFile = async (file: any) => {
     setSelectedFile({
       id: file.id,
@@ -199,14 +217,14 @@ export default function FavoritePage() {
 
       setSelectedFile({
         id: detail.id,
-        src: detail.src ?? file.src ?? "/images/dummy_image_1.png",
+        src: detail.src ?? file.src,
         tags: normalizedTags,
         context: detail.context ?? "",
         created_at: detail.created_at,
         category_id: detail.category_id,
         favorite: detail.favorite,
         type: detail.type,
-        platform: detail.platform ?? file.platform,
+        platform: detail.platform,
         ocr_text: detail.ocr_text,
       });
     } catch (e) {
@@ -214,25 +232,75 @@ export default function FavoritePage() {
     }
   };
 
+  /* -----------------------------------------------------------
+      무한 스크롤 로드
+  ------------------------------------------------------------ */
+  async function loadMore() {
+    if (isFetching || !hasMore) return;
+
+    setIsFetching(true);
+
+    try {
+      const newFiles = await getFavoriteFiles(page);
+
+      if (newFiles.length === 0) {
+        setHasMore(false);
+        return;
+      }
+
+      const rotated = newFiles.map((f: any) => ({
+        ...f,
+        rotation: `rotate(${Math.random() * 8 - 4}deg)`,
+      }));
+
+      setFiles((prev) => {
+        const merged = [...prev, ...rotated];
+
+        // ⭐ 중복 ID 제거 (중요!)
+        return merged.filter(
+          (v, i, arr) => arr.findIndex((t) => t.id === v.id) === i
+        );
+      });
+
+      if (page === 0 && rotated.length > 0) {
+        handleSelectFile(rotated[0]);
+      }
+
+      setPage((p) => p + 1);
+    } finally {
+      setIsFetching(false);
+    }
+  }
+
+  useEffect(() => {
+    loadMore();
+  }, []);
+
+  /* -----------------------------------------------------------
+      드래그 앤 드롭
+  ------------------------------------------------------------ */
   const handleDragEnd = (event: any) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
     const oldIndex = files.findIndex((f) => f.id === active.id);
     const newIndex = files.findIndex((f) => f.id === over.id);
+
     setFiles((prev) => arrayMove(prev, oldIndex, newIndex));
   };
 
+  /* -----------------------------------------------------------
+      렌더링
+  ------------------------------------------------------------ */
   return (
     <div className="w-full h-full flex justify-center bg-[#FFFEF8] text-[#4C3D25]">
       <div className="w-full max-w-[1200px] h-full flex gap-8 p-6">
-        {/* 좌측 리스트 */}
+        {/* LEFT LIST */}
         <div className="flex flex-col flex-1 overflow-hidden">
           <h1 className="text-5xl font-bold mb-6 pl-4">Favorite</h1>
-
-          <div className="text-xl text-[#7A6A48] mb-4 pl-4">
-            즐겨찾기 해둔 파일들을 둘러보세요.
-          </div>
+          <p className="text-xl text-[#7A6A48] mb-4 pl-4">
+            즐겨찾기한 파일들을 정리하고 확인해보세요.
+          </p>
 
           <div
             ref={containerRef}
@@ -247,31 +315,19 @@ export default function FavoritePage() {
                 <div
                   className="
                     grid gap-6 pt-12 px-10 pb-10
-                    grid-cols-1
-                    sm:grid-cols-2
-                    md:grid-cols-3
-                    lg:grid-cols-4
-                    xl:grid-cols-5
+                    grid-cols-1 sm:grid-cols-2 md:grid-cols-3
+                    lg:grid-cols-4 xl:grid-cols-5
                     place-items-center
-                    overflow-x-hidden
                   "
                 >
                   {files.map((file) => (
-                    <div
+                    <SortableItem
                       key={file.id}
-                      className="w-full flex justify-center"
-                      style={{
-                        transform: file.rotation,
-                        transition: "transform 0.2s ease",
-                        transformOrigin: "center bottom",
-                      }}
-                    >
-                      <SortableItem
-                        file={file}
-                        selectedId={selectedFile?.id ?? null}
-                        onSelect={handleSelectFile}
-                      />
-                    </div>
+                      file={file}
+                      selectedId={selectedFile?.id ?? null}
+                      onSelect={handleSelectFile}
+                      onUnfavorite={handleUnfavorite} // ⭐ 여기서 해제
+                    />
                   ))}
                 </div>
               </SortableContext>
@@ -290,31 +346,22 @@ export default function FavoritePage() {
           </div>
         </div>
 
-        {/* 우측 상세 영역 — ⭐ selectedFile 있을 때만 표시 ⭐ */}
+        {/* RIGHT DETAIL */}
         {selectedFile && (
-          <div
-            className="
-              w-[400px] 
-              flex-shrink-0 
-              border-l border-[#E3DCC8]
-              pl-6 
-              flex 
-              flex-col
-              items-center
-              justify-center
-            "
-          >
+          <div className="w-[400px] flex-shrink-0 border-l pl-6 flex flex-col items-center justify-center">
             <PolaroidDetail
-              id={selectedFile?.id}
-              src={selectedFile?.src}
-              tags={selectedFile?.tags ?? []}
-              contexts={selectedFile?.context ?? ""}
-              date={selectedFile?.created_at}
-              categoryId={selectedFile?.category_id}
-              favorite={selectedFile?.favorite}
-              type={selectedFile?.type}
-              platform={selectedFile?.platform}
-              ocr_text={selectedFile?.ocr_text}
+              id={selectedFile.id}
+              src={selectedFile.src}
+              tags={selectedFile.tags}
+              contexts={selectedFile.context}
+              date={selectedFile.created_at}
+              categoryId={selectedFile.category_id}
+              favorite={selectedFile.favorite}
+              type={selectedFile.type}
+              platform={selectedFile.platform}
+              ocr_text={selectedFile.ocr_text}
+              onFavoriteChange={handleFavoriteChange}
+              onFileDeleted={handleFileDeleted}
             />
           </div>
         )}
