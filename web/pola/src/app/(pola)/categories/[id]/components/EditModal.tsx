@@ -12,7 +12,11 @@ interface EditModalProps {
   defaultCategoryId: number;
   categories: { id: number; categoryName: string }[];
   onClose: () => void;
-  onSave: () => void;
+  onSave: (
+    newTags: string[],
+    newContext: string,
+    newCategoryId: number
+  ) => void | Promise<void>;
 }
 
 export default function EditModal({
@@ -30,7 +34,7 @@ export default function EditModal({
 
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>(
-    defaultTags.map((t) => t.replace(/^#/, "")) // 초기 태그에서 '#' 제거
+    defaultTags.map((t) => t.replace(/^#/, ""))
   );
   const [saving, setSaving] = useState(false);
   const tagInputRef = useRef<HTMLInputElement>(null);
@@ -41,7 +45,6 @@ export default function EditModal({
     setSelectedCategory(defaultCategoryId);
   }, [defaultContext, defaultTags, defaultCategoryId]);
 
-  /** 태그 추가 */
   const handleAddTag = (val: string) => {
     const parts = val
       .split(" ")
@@ -59,41 +62,39 @@ export default function EditModal({
     setTagInput("");
   };
 
-  /** 태그 삭제 */
   const handleRemoveTag = (tag: string) => {
     setTags(tags.filter((t) => t !== tag));
   };
 
-  /** 저장 */
   const handleSave = async () => {
     if (!fileId || saving) return;
     setSaving(true);
 
     try {
-      /** 1️⃣ 카테고리 변경 */
+      // 1) 카테고리 변경
       await updateFileCategory(fileId, selectedCategory);
 
-      /** 2️⃣ context(내용) 수정 */
+      // 2) 내용 수정
       await fileEditService.updateFileContext(fileId, context);
 
-      /** 3️⃣ 태그 수정 로직 */
+      // 3) 태그 동기화
       const existing = await fileEditService.getFileTags(fileId);
       const existingNames = existing.map((t: any) => t.tagName);
 
-      // 추가할 태그
       const toAdd = tags.filter((t) => !existingNames.includes(t));
       if (toAdd.length > 0) {
         await fileEditService.addFileTags(fileId, toAdd);
       }
 
-      // 삭제할 태그
       const toDelete = existing.filter((t: any) => !tags.includes(t.tagName));
       for (const del of toDelete) {
         await fileEditService.removeFileTag(fileId, del.id);
       }
 
       alert("파일 정보가 수정되었습니다.");
-      onSave();
+
+      await onSave(tags, context, selectedCategory);
+
       onClose();
     } catch (err) {
       console.error("수정 중 오류:", err);

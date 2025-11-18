@@ -10,12 +10,8 @@ import {
   getCategoryInfo,
   getCategoryFiles,
   getFileDetail,
-} from "@/services/categoryService";
-
-// 새 API 서비스
-import {
-  updateCategoryName,
   fetchCategoryTags,
+  updateCategoryName,
   addCategoryTags,
   removeCategoryTag,
 } from "@/services/categoryService";
@@ -47,19 +43,12 @@ const PolaroidItem = memo(
     const isSelected = selectedId === file.id;
 
     return (
-      <div
-        className="
-          flex justify-center
-          w-full
-          overflow-visible
-        "
-      >
+      <div className="flex justify-center w-full overflow-visible">
         <button
           onClick={() => onSelect(file)}
-          className={`
-            relative transition-transform
-            ${isSelected ? "scale-110 z-20" : "hover:scale-[1.07]"}
-          `}
+          className={`relative transition-transform ${
+            isSelected ? "scale-110 z-20" : "hover:scale-[1.07]"
+          }`}
           style={{
             transform: `${file.rotation} ${isSelected ? "scale(1.1)" : ""}`,
             transformOrigin: "center bottom",
@@ -73,7 +62,7 @@ const PolaroidItem = memo(
 
           {file.favorite && (
             <Star
-              fill={file.favorite ? "#FFD700" : "transparent"}
+              fill="#FFD700"
               stroke="#FFD700"
               strokeWidth={2.5}
               className="absolute top-2 right-2 drop-shadow-sm w-6 h-6 z-10"
@@ -108,16 +97,17 @@ export default function CategoryPage() {
   const [isFetching, setIsFetching] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-
   const containerRef = useRef<HTMLDivElement>(null);
+
   const refreshCategories = useCategoryStore((s) => s.refreshCategories);
 
-  /* Metadata 로딩 */
+  /* ================================
+     카테고리 메타데이터 로드
+     ================================ */
   useEffect(() => {
     async function loadMeta() {
       try {
         const info = await getCategoryInfo(id);
-
         setCategoryName(info.categoryName ?? "");
 
         const tagList = await fetchCategoryTags(id);
@@ -129,15 +119,19 @@ export default function CategoryPage() {
     loadMeta();
   }, [id]);
 
-  /* Infinite Files Loading */
-  async function loadMoreFiles() {
+  /* ================================
+     파일 무한 스크롤 로딩
+     ================================ */
+  async function loadMoreFiles(targetPage?: number) {
     if (isFetching || !hasMore) return;
+
+    const currentPage = targetPage ?? page;
 
     try {
       setIsFetching(true);
-      const newFiles = await getCategoryFiles(id, page);
+      const newFiles = await getCategoryFiles(id, currentPage);
 
-      if (newFiles.length === 0) {
+      if (!newFiles || newFiles.length === 0) {
         setHasMore(false);
         return;
       }
@@ -150,23 +144,26 @@ export default function CategoryPage() {
       setFiles((prev) => {
         const merged = [...prev, ...rotated];
         return merged.filter(
-          (v, i, a) => a.findIndex((t) => t.id === v.id) === i
+          (v, i, arr) => arr.findIndex((t) => t.id === v.id) === i
         );
       });
 
-      setPage((prev) => prev + 1);
+      setPage(currentPage + 1);
     } finally {
       setIsFetching(false);
     }
   }
 
+  // 카테고리 변경 시 처음부터 다시 로드
   useEffect(() => {
     setFiles([]);
     setPage(0);
     setHasMore(true);
-    loadMoreFiles();
+    loadMoreFiles(0);
+    setSelectedFile(null);
   }, [id]);
 
+  // 스크롤 리스너
   useEffect(() => {
     const box = containerRef.current;
     if (!box) return;
@@ -179,9 +176,11 @@ export default function CategoryPage() {
 
     box.addEventListener("scroll", onScroll);
     return () => box.removeEventListener("scroll", onScroll);
-  }, [files, hasMore]);
+  }, [hasMore, isFetching]);
 
-  /* File Detail */
+  /* ================================
+     파일 선택 및 상세 정보 로딩
+     ================================ */
   const handleSelectFile = async (file: any) => {
     setSelectedFile({
       id: file.id,
@@ -197,7 +196,6 @@ export default function CategoryPage() {
 
     try {
       const detail = await getFileDetail(file.id);
-
       setSelectedFile({
         id: detail.id,
         src: detail.src,
@@ -205,20 +203,26 @@ export default function CategoryPage() {
         context: detail.context ?? "",
         created_at: detail.created_at,
         category_id: detail.category_id,
-        favorite: file.favorite,
+        favorite: detail.favorite ?? file.favorite,
         type: detail.type,
-        platform: detail.platform ?? file.platform,
+        platform: detail.platform,
         ocr_text: detail.ocr_text,
       });
-    } catch {}
+    } catch {
+      // 무시
+    }
   };
 
   useEffect(() => {
     if (files.length > 0 && !selectedFile) {
       handleSelectFile(files[0]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [files]);
 
+  /* ================================
+     Detail → CategoryPage 반영
+     ================================ */
   const handleFavoriteChange = (state: boolean) => {
     if (!selectedFile) return;
 
@@ -230,8 +234,52 @@ export default function CategoryPage() {
     );
   };
 
-  /* --- ⭐ 모달에서 저장 눌렀을 때 API 로직 ⭐ --- */
-  const handleSaveModal = async (newName: string, newTags: string[]) => {
+  // 삭제 후 리스트에서 제거 + 다음 파일 선택
+  const handleFileDeleted = (fileId: number) => {
+    setFiles((prev) => {
+      const filtered = prev.filter((f) => f.id !== fileId);
+
+      if (selectedFile?.id === fileId) {
+        const next = filtered[0];
+        if (next) {
+          handleSelectFile(next);
+        } else {
+          setSelectedFile(null);
+        }
+      }
+
+      return filtered;
+    });
+  };
+
+  // 카테고리/태그/파일 편집 후 전체 재로드
+  const handleCategoryUpdated = async () => {
+    try {
+      // 카테고리 이름/태그 메타 갱신
+      const info = await getCategoryInfo(id);
+      setCategoryName(info.categoryName ?? "");
+
+      const tagList = await fetchCategoryTags(id);
+      setTags(tagList.map((t: any) => t.tagName));
+
+      // 파일 목록 처음부터 다시 로드
+      setFiles([]);
+      setPage(0);
+      setHasMore(true);
+      setSelectedFile(null);
+      await loadMoreFiles(0);
+
+      await refreshCategories();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // 카테고리 모달 저장 (이름/태그 수정)
+  const handleCategoryModalSave = async (
+    newName: string,
+    newTags: string[]
+  ) => {
     try {
       // 1) 이름 변경
       if (newName !== categoryName) {
@@ -239,30 +287,24 @@ export default function CategoryPage() {
         setCategoryName(newName);
       }
 
-      // 2) 최신 태그 목록 조회 (id + tagId 필요)
+      // 2) 태그 동기화
       const currentTagList = await fetchCategoryTags(id); // [{id, tagName}]
       const currentTagNames = currentTagList.map((t: any) => t.tagName);
 
-      // 3) 추가된 태그 찾기
-      const tagsToAdd = newTags.filter((t) => !currentTagNames.includes(t));
-      if (tagsToAdd.length > 0) {
-        await addCategoryTags(id, tagsToAdd);
+      const toAdd = newTags.filter((t) => !currentTagNames.includes(t));
+      if (toAdd.length > 0) {
+        await addCategoryTags(id, toAdd);
       }
 
-      // 4) 삭제된 태그 찾기
-      const tagsToRemove = currentTagList.filter(
+      const toRemove = currentTagList.filter(
         (t: any) => !newTags.includes(t.tagName)
       );
-
-      for (const removed of tagsToRemove) {
-        await removeCategoryTag(id, removed.id);
+      for (const r of toRemove) {
+        await removeCategoryTag(id, r.id);
       }
 
-      // 화면 반영
       setTags(newTags);
-
       await refreshCategories();
-
       alert("카테고리가 성공적으로 수정되었습니다!");
     } catch (e) {
       console.error(e);
@@ -270,19 +312,18 @@ export default function CategoryPage() {
     }
   };
 
+  /* ================================
+     렌더링
+     ================================ */
   return (
     <>
-      {/* 전체 화면 중앙 정렬 + 최대 너비 1300px */}
       <div className="w-full h-full flex justify-center bg-[#FFFEF8] text-[#4C3D25]">
         <div className="w-full max-w-[1200px] h-full flex gap-8 p-6">
-          {/* ---------------- LEFT CONTENT AREA ---------------- */}
+          {/* LEFT LIST */}
           <div className="w-full flex-1 flex flex-col overflow-hidden">
-            {/* 상단 타이틀 */}
             <div className="w-full mb-2 pl-4">
-              {/* 타이틀 + 버튼: 한 줄 전체 차지 */}
               <div className="flex w-full items-center justify-between mb-6">
                 <h2 className="text-5xl font-bold">{categoryName}</h2>
-
                 <button
                   className="p-2 rounded-full hover:bg-[#EDE6D8]"
                   onClick={() => setIsModalOpen(true)}
@@ -291,7 +332,6 @@ export default function CategoryPage() {
                 </button>
               </div>
 
-              {/* 태그 */}
               <div className="text-2xl text-[#7A6A48] flex flex-wrap gap-x-2">
                 {tags.map((t, index) => (
                   <span key={index} className="whitespace-nowrap">
@@ -301,12 +341,10 @@ export default function CategoryPage() {
               </div>
             </div>
 
-            {/* 리스트 스크롤 영역 */}
             <div
               ref={containerRef}
               className="flex-1 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-[#CBBF9E]/50"
             >
-              {/* 비어있는 경우 */}
               {files.length === 0 && !isFetching ? (
                 <div className="flex flex-col items-center justify-center py-20 opacity-80">
                   <img
@@ -321,15 +359,11 @@ export default function CategoryPage() {
               ) : (
                 <div
                   className="
-                    grid gap-6 pt-12 px-10 pb-10
-                    grid-cols-1
-                    sm:grid-cols-2
-                    md:grid-cols-3
-                    lg:grid-cols-4
-                    xl:grid-cols-5
-                    place-items-center
-                    overflow-x-hidden
-                  "
+                      grid gap-6 pt-12 px-10 pb-10
+                      grid-cols-1 sm:grid-cols-2 md:grid-cols-3
+                      lg:grid-cols-4 xl:grid-cols-5
+                      place-items-center
+                    "
                 >
                   {files.map((file) => (
                     <PolaroidItem
@@ -342,14 +376,12 @@ export default function CategoryPage() {
                 </div>
               )}
 
-              {/* 로딩 */}
               {isFetching && (
                 <div className="text-center text-[#7A6A48] py-4 animate-pulse">
                   불러오는 중...
                 </div>
               )}
 
-              {/* 더 이상 없음 */}
               {!isFetching && !hasMore && files.length > 0 && (
                 <div className="text-center text-[#7A6A48] py-4">
                   더 이상 데이터가 없습니다.
@@ -358,7 +390,7 @@ export default function CategoryPage() {
             </div>
           </div>
 
-          {/* ---------------- RIGHT DETAIL PANEL ---------------- */}
+          {/* RIGHT PANEL */}
           {selectedFile && (
             <div
               className="
@@ -375,28 +407,30 @@ export default function CategoryPage() {
               "
             >
               <PolaroidDetail
-                id={selectedFile?.id}
-                src={selectedFile?.src}
-                tags={selectedFile?.tags ?? []}
-                contexts={selectedFile?.context ?? ""}
-                date={selectedFile?.created_at}
-                categoryId={selectedFile?.category_id}
-                favorite={selectedFile?.favorite}
-                type={selectedFile?.type}
-                platform={selectedFile?.platform}
-                ocr_text={selectedFile?.ocr_text}
+                id={selectedFile.id}
+                src={selectedFile.src}
+                type={selectedFile.type}
+                platform={selectedFile.platform}
+                ocr_text={selectedFile.ocr_text}
+                tags={selectedFile.tags}
+                date={selectedFile.created_at}
+                contexts={selectedFile.context}
+                categoryId={selectedFile.category_id}
+                favorite={selectedFile.favorite}
                 onFavoriteChange={handleFavoriteChange}
+                onCategoryUpdated={handleCategoryUpdated}
+                onFileDeleted={handleFileDeleted}
               />
             </div>
           )}
         </div>
       </div>
 
-      {/* EDIT MODAL */}
+      {/* EDIT CATEGORY MODAL */}
       <CategoryModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onSave={handleSaveModal}
+        onSave={handleCategoryModalSave}
         onDelete={() => {}}
         defaultName={categoryName}
         defaultTags={tags}
