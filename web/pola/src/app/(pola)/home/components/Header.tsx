@@ -25,6 +25,43 @@ type SearchMode = "INTEGRATED" | "TAG";
 
 const SEARCH_HISTORY_KEY = "pola_search_history";
 
+// 허용 확장자 / MIME
+const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".txt"];
+const ALLOWED_MIME_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  "text/plain",
+];
+
+// 이미지 URL인지 판단 (간단히 확장자 기준)
+function isImageUrl(text: string) {
+  try {
+    const url = new URL(text);
+    const lower = url.pathname.toLowerCase();
+    return (
+      lower.endsWith(".jpg") ||
+      lower.endsWith(".jpeg") ||
+      lower.endsWith(".png") ||
+      lower.endsWith(".gif") ||
+      lower.endsWith(".webp")
+    );
+  } catch {
+    return false;
+  }
+}
+
+// MIME → 확장자 추론
+function getExtFromMime(mime: string): string {
+  if (mime === "image/jpeg") return "jpg";
+  if (mime === "image/png") return "png";
+  if (mime === "image/gif") return "gif";
+  if (mime === "image/webp") return "webp";
+  if (mime === "text/plain") return "txt";
+  return "bin";
+}
+
 export default function Header() {
   const { user } = useAuthStore();
   const router = useRouter();
@@ -49,6 +86,7 @@ export default function Header() {
   const profileRef = useRef<HTMLDivElement>(null);
   const modeDropdownRef = useRef<HTMLDivElement>(null);
   const searchWrapperRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   /* -------------------- 최근 검색어 -------------------- */
   const getSearchHistory = () => {
@@ -176,8 +214,26 @@ export default function Header() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  /* -------------------- 업로드 -------------------- */
+  /* -------------------- 업로드 공통 처리 -------------------- */
+  function isAllowedFile(file: File): boolean {
+    const name = file.name.toLowerCase();
+    const ext =
+      name.lastIndexOf(".") >= 0 ? name.slice(name.lastIndexOf(".")) : "";
+    const type = file.type;
+
+    const byExt = ALLOWED_EXTENSIONS.includes(ext);
+    const byMime = ALLOWED_MIME_TYPES.includes(type);
+
+    if (!byExt && !byMime) return false;
+    return true;
+  }
+
   async function handleUploadProcess(file: File) {
+    if (!isAllowedFile(file)) {
+      alert("jpg/jpeg, png, gif, webp, txt 형식만 업로드할 수 있습니다.");
+      return;
+    }
+
     try {
       setUploading(true);
       setUploadedFile(false);
@@ -204,6 +260,83 @@ export default function Header() {
       setUploading(false);
     }
   }
+
+  /* -------------------- URL에서 이미지 가져와 업로드 -------------------- */
+  async function handleUploadFromImageUrl(text: string) {
+    try {
+      const response = await fetch(text);
+      if (!response.ok) {
+        alert("이미지 URL을 불러오는 중 오류가 발생했습니다.");
+        return;
+      }
+
+      const contentType = response.headers.get("content-type") || "";
+      if (!ALLOWED_MIME_TYPES.includes(contentType)) {
+        alert("허용되지 않는 이미지 형식입니다.");
+        return;
+      }
+
+      const blob = await response.blob();
+      const ext = getExtFromMime(contentType);
+      const file = new File([blob], `pasted-image.${ext}`, {
+        type: contentType,
+      });
+
+      await handleUploadProcess(file);
+    } catch (err) {
+      console.error(err);
+      alert("이미지 URL 업로드 중 오류가 발생했습니다.");
+    }
+  }
+
+  /* -------------------- 클립보드 붙여넣기 처리 -------------------- */
+  useEffect(() => {
+    if (!showUploadModal) return;
+
+    const handlePaste = async (e: ClipboardEvent) => {
+      if (uploading) return;
+
+      const clipboardData = e.clipboardData;
+      if (!clipboardData) return;
+
+      const items = clipboardData.items;
+      let handled = false;
+
+      // 1) 파일이 있으면 파일부터 처리
+      for (const item of items as any) {
+        if (item.kind === "file") {
+          const file = item.getAsFile();
+          if (file) {
+            e.preventDefault();
+            handled = true;
+            await handleUploadProcess(file);
+            return;
+          }
+        }
+      }
+
+      // 2) 파일이 없으면 텍스트 처리
+      const text = clipboardData.getData("text/plain")?.trim();
+      if (!handled && text) {
+        e.preventDefault();
+
+        if (isImageUrl(text)) {
+          // C: 이미지 URL 업로드
+          await handleUploadFromImageUrl(text);
+        } else {
+          // B: 일반 텍스트 → txt 파일로 업로드
+          const blob = new Blob([text], { type: "text/plain" });
+          const file = new File([blob], "pasted.txt", {
+            type: "text/plain",
+          });
+          await handleUploadProcess(file);
+        }
+      }
+    };
+
+    document.addEventListener("paste", handlePaste as any);
+    return () => document.removeEventListener("paste", handlePaste as any);
+  }, [showUploadModal, uploading]);
 
   /* -------------------- 로그인 전 헤더 -------------------- */
   if (!user) {
@@ -324,15 +457,15 @@ export default function Header() {
             {/* Tooltip */}
             <div
               className="
-    absolute top-1/2 -translate-y-1/2 left-[115%]
-    bg-white text-[#4C3D25] text-sm font-medium
-    px-4 py-2 rounded-2xl shadow-lg border border-[#E5E2DA]
-    whitespace-nowrap
-    opacity-0 group-hover:opacity-100
-    pointer-events-none
-    transition-all duration-200
-    z-50
-  "
+                absolute top-1/2 -translate-y-1/2 left-[115%]
+                bg-white text-[#4C3D25] text-sm font-medium
+                px-4 py-2 rounded-2xl shadow-lg border border-[#E5E2DA]
+                whitespace-nowrap
+                opacity-0 group-hover:opacity-100
+                pointer-events-none
+                transition-all duration-200
+                z-50
+              "
             >
               AI 도우미 상담포아가 검색을 도와줘요
             </div>
@@ -396,6 +529,7 @@ export default function Header() {
                   text="업로드"
                   onClick={() => {
                     setShowUploadModal(true);
+                    setUploadedFile(false);
                     setShowProfileModal(false);
                   }}
                 />
@@ -456,7 +590,10 @@ export default function Header() {
                 파일 업로드
               </h3>
               <button
-                onClick={() => setShowUploadModal(false)}
+                onClick={() => {
+                  setShowUploadModal(false);
+                  setUploadedFile(false);
+                }}
                 className="text-gray-500 hover:text-black"
               >
                 <X className="w-5 h-5" />
@@ -477,10 +614,14 @@ export default function Header() {
               <p className="font-medium mb-1">
                 여기로 파일을 드래그하거나 클릭하세요
               </p>
-              <p className="text-sm text-gray-500">이미지/텍스트 업로드 가능</p>
+              <p className="text-sm text-gray-500">
+                이미지(jpg, jpeg, png, gif, webp) / 텍스트(txt) 업로드 가능
+              </p>
 
               <input
+                ref={fileInputRef}
                 type="file"
+                accept=".jpg,.jpeg,.png,.gif,.webp,.txt,image/jpeg,image/png,image/gif,image/webp,text/plain"
                 onChange={(e) => {
                   const f = e.target.files?.[0];
                   if (f) handleUploadProcess(f);
@@ -492,7 +633,7 @@ export default function Header() {
             {uploading && (
               <div className="text-center text-sm mt-3">업로드 중입니다...</div>
             )}
-            {uploadedFile && (
+            {uploadedFile && !uploading && (
               <div className="text-center text-green-600 font-semibold mt-3">
                 업로드 완료!
               </div>
