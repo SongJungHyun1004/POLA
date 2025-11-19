@@ -156,7 +156,7 @@ export default function RAGSearchPageInner() {
   return (
     <div className="w-full h-full flex justify-center bg-[#FFFEF8] text-[#4C3D25] overflow-hidden">
       <div
-        className="h-full flex flex-row gap-6 pb-6 pl-6 transition-all duration-500"
+        className="h-full min-h-0 flex flex-row gap-6 pb-6 pl-6 transition-all duration-500"
         style={{ width: layoutExpanded ? "1200px" : "1200px" }}
       >
         {/* LEFT */}
@@ -287,27 +287,31 @@ export default function RAGSearchPageInner() {
 
         {/* RIGHT DETAIL */}
         <div
-          className="flex-shrink-0 border-l border-[#E3DCC8] flex justify-center pt-8 overflow-y-auto pl-4 transition-all duration-500"
+          className="flex-shrink-0 border-l border-[#E3DCC8] 
+             h-full min-h-0 flex flex-col
+             pl-4 pt-8 transition-all duration-500"
           style={{
             width: layoutExpanded ? "400px" : "0px",
             opacity: layoutExpanded ? 1 : 0,
             pointerEvents: layoutExpanded ? "auto" : "none",
           }}
         >
-          {detail && (
-            <PolaroidDetail
-              id={detail.id}
-              src={detail.src}
-              tags={detail.tags}
-              contexts={detail.contexts}
-              date={detail.date}
-              favorite={detail.favorite}
-              type={detail.type}
-              platform={detail.platform}
-              ocr_text={detail.ocr_text}
-              onFavoriteChange={handleFavoriteChange}
-            />
-          )}
+          <div className="flex-1 min-h-0 overflow-y-auto pr-2">
+            {detail && (
+              <PolaroidDetail
+                id={detail.id}
+                src={detail.src}
+                tags={detail.tags}
+                contexts={detail.contexts}
+                date={detail.date}
+                favorite={detail.favorite}
+                type={detail.type}
+                platform={detail.platform}
+                ocr_text={detail.ocr_text}
+                onFavoriteChange={handleFavoriteChange}
+              />
+            )}
+          </div>
         </div>
       </div>
     </div>
