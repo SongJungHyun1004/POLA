@@ -9,6 +9,7 @@ import {
   removeFileFavorite,
   addFileFavorite,
 } from "@/services/fileService";
+import { getFileDetail } from "@/services/categoryService";
 import { Star } from "lucide-react";
 import PolaroidDetail from "../categories/[id]/components/PolaroidDetail";
 
@@ -36,10 +37,11 @@ export default function FilesPage() {
   const TEXT_PLACEHOLDER = "/images/text_placeholder.png";
 
   /* ---------------------------------------
-      선택 파일 구성 함수
+      선택 파일 (단건조회 포함)
   --------------------------------------- */
-  const selectFile = (file: any) => {
-    const mapped = {
+  const selectFile = async (file: any) => {
+    // 1) 임시 데이터로 Detail 렌더링
+    const temp = {
       id: file.fileId,
       src: file.fileType?.startsWith("text") ? TEXT_PLACEHOLDER : file.imageUrl,
       tags: file.tags
@@ -57,11 +59,35 @@ export default function FilesPage() {
       ocr_text: file.fileType?.startsWith("text") ? file.ocrText : undefined,
     };
 
-    setSelectedFile(mapped);
+    setSelectedFile(temp);
+
+    // 2) 단건 상세 조회 요청
+    try {
+      const detail = await getFileDetail(file.fileId);
+
+      const full = {
+        id: detail.id,
+        src: detail.src ?? temp.src,
+        tags: (detail.tags ?? []).map((t: any) =>
+          t.tagName.startsWith("#") ? t.tagName : `#${t.tagName}`
+        ),
+        context: detail.context ?? "",
+        created_at: detail.created_at ?? temp.created_at,
+        favorite: detail.favorite,
+        type: detail.type,
+        platform: detail.platform,
+        ocr_text: detail.ocr_text,
+      };
+
+      setSelectedFile(full);
+    } catch (err) {
+      console.error("단건 상세 조회 실패:", err);
+      // 실패하더라도 temp 데이터 유지
+    }
   };
 
   /* ---------------------------------------
-      ⭐ 즐겨찾기 토글 (등록 + 해제)
+      ⭐ 즐겨찾기 토글
   --------------------------------------- */
   const handleFavoriteToggle = async (fileId: number, nextState: boolean) => {
     try {
@@ -120,7 +146,7 @@ export default function FilesPage() {
         setFiles(mapped);
 
         if (mapped.length > 0) {
-          selectFile(mapped[0]);
+          await selectFile(mapped[0]); // ⭐ 단건조회 포함된 selectFile 사용
         }
       } catch (err) {
         console.error(err);
@@ -149,7 +175,6 @@ export default function FilesPage() {
           </div>
 
           <div className="flex-1 overflow-y-auto pr-2 scrollbar-thin">
-            {/* EMPTY UI */}
             {!loading && files.length === 0 && (
               <div className="flex flex-col items-center justify-center py-20 opacity-80">
                 <img
@@ -160,7 +185,6 @@ export default function FilesPage() {
               </div>
             )}
 
-            {/* FILE LIST */}
             {files.length > 0 && (
               <div className="grid gap-6 p-10 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 place-items-center">
                 {files.map((f, i) => {
@@ -175,8 +199,6 @@ export default function FilesPage() {
                         transform: rotations[i],
                         transition: "transform .25s ease",
                         transformOrigin: "center bottom",
-
-                        /* ⭐ 선택된 카드 앞으로 */
                         zIndex: isSelected ? 30 : 1,
                       }}
                     >
@@ -192,7 +214,6 @@ export default function FilesPage() {
                           transformOrigin: "center bottom",
                         }}
                       >
-                        {/* ⭐ 즐겨찾기 버튼 */}
                         {f.favorite && (
                           <div
                             onClick={(e) => {

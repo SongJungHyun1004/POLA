@@ -7,6 +7,7 @@ import { Send } from "lucide-react";
 import { ragSearch } from "@/services/ragService";
 import { Star } from "lucide-react";
 import PolaroidCard from "../home/components/PolaroidCard";
+import { getFileDetail } from "@/services/categoryService";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -43,10 +44,12 @@ export default function RAGSearchPageInner() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasRun = useRef(false);
 
+  /* DETAIL 열리면 오른쪽 패널 활성화 */
   useEffect(() => {
     if (detail && !layoutExpanded) setLayoutExpanded(true);
   }, [detail]);
 
+  /* 채팅 자동 스크롤 */
   useEffect(() => {
     scrollRef.current?.scrollTo({
       top: scrollRef.current.scrollHeight,
@@ -54,17 +57,57 @@ export default function RAGSearchPageInner() {
     });
   }, [messages, cardGroups]);
 
+  /* 최초 URL query 수행 */
   useEffect(() => {
     if (hasRun.current) return;
     hasRun.current = true;
-
     if (!initialQuery) return;
 
     setMessages([{ role: "user", content: initialQuery }]);
     performSearch(initialQuery);
   }, [initialQuery]);
 
-  /** 검색 실행 */
+  /* ----------------------------------------------
+      단건 상세 조회 + Detail 설정
+  ---------------------------------------------- */
+  const loadDetail = async (cardData: any) => {
+    // 1) 임시 Detail 적용 (빠른 UI 반응)
+    setDetail({
+      id: cardData.id,
+      src: cardData.src,
+      tags: cardData.tags.map((t: string) => `#${t}`),
+      contexts: cardData.context,
+      favorite: cardData.favorite,
+      type: cardData.type,
+      platform: cardData.platform,
+      ocr_text: cardData.ocr_text,
+      date: cardData.createdAt,
+    });
+
+    // 2) 서버 단건 조회 요청
+    try {
+      const detail = await getFileDetail(cardData.id);
+
+      setDetail({
+        id: detail.id,
+        src: detail.src,
+        tags: (detail.tags ?? []).map((t: any) => `#${t.tagName}`),
+        contexts: detail.context,
+        favorite: detail.favorite,
+        type: detail.type,
+        platform: detail.platform,
+        ocr_text: detail.ocr_text,
+        date: detail.created_at,
+      });
+    } catch (err) {
+      console.error("단건조회 실패:", err);
+      // 실패해도 임시 데이터 유지
+    }
+  };
+
+  /* ----------------------------------------------
+      RAG 검색 실행
+  ---------------------------------------------- */
   const performSearch = async (text: string) => {
     setLoading(true);
 
@@ -74,7 +117,6 @@ export default function RAGSearchPageInner() {
       const sources = response.data.sources;
 
       setMessages((prev) => [...prev, { role: "assistant", content: answer }]);
-
       const answerIndex = messages.length;
 
       const newCards = (sources || []).map((s: any) => ({
@@ -93,18 +135,7 @@ export default function RAGSearchPageInner() {
       setCardGroups((prev) => [...prev, { answerIndex, cards: newCards }]);
 
       if (newCards.length > 0) {
-        const c = newCards[0];
-        setDetail({
-          id: c.id,
-          src: c.src,
-          tags: c.tags.map((t: string) => `#${t}`),
-          contexts: c.context,
-          favorite: c.favorite,
-          type: c.type,
-          platform: c.platform,
-          ocr_text: c.ocr_text,
-          date: c.createdAt,
-        });
+        await loadDetail(newCards[0]);
       }
     } catch (err) {
       console.error(err);
@@ -117,31 +148,16 @@ export default function RAGSearchPageInner() {
     }
   };
 
+  /* 질문 입력 처리 */
   const MAX_QUERY_LENGTH = 1000;
 
   const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-
     if (value.length > MAX_QUERY_LENGTH) {
       alert(`질문은 최대 ${MAX_QUERY_LENGTH}자까지 입력할 수 있습니다.`);
       return;
     }
     setQuery(value);
-  };
-
-  const handleFavoriteChange = (newState: boolean) => {
-    if (!detail) return;
-
-    setDetail((prev: any) => ({ ...prev, favorite: newState }));
-
-    setCardGroups((prev) =>
-      prev.map((group) => ({
-        ...group,
-        cards: group.cards.map((c) =>
-          c.id === detail.id ? { ...c, favorite: newState } : c
-        ),
-      }))
-    );
   };
 
   const handleSend = () => {
@@ -157,14 +173,20 @@ export default function RAGSearchPageInner() {
     <div className="w-full h-full flex justify-center bg-[#FFFEF8] text-[#4C3D25] overflow-hidden">
       <div
         className="h-full min-h-0 flex flex-row gap-6 pb-6 pl-6 transition-all duration-500"
-        style={{ width: layoutExpanded ? "1200px" : "1200px" }}
+        style={{
+          width: layoutExpanded ? "100%" : "100%",
+          maxWidth: "1200px",
+        }}
       >
-        {/* LEFT */}
+        {/* LEFT (채팅 영역) */}
         <div
           className="flex-1 h-full flex flex-col transition-all duration-500"
-          style={{ width: "720px" }}
+          style={{
+            minWidth: "400px",
+          }}
         >
           <div className="flex flex-col bg-[#F4EFE2] rounded-2xl shadow-sm flex-1 overflow-hidden">
+            {/* 메시지 영역 */}
             <div
               ref={scrollRef}
               className="flex-1 overflow-y-auto p-6 pr-2 scrollbar-thin scrollbar-thumb-[#CBBF9E]/50"
@@ -210,6 +232,7 @@ export default function RAGSearchPageInner() {
                       </div>
                     </div>
 
+                    {/* 검색된 카드 리스트 */}
                     {cardGroups
                       .filter((g) => g.answerIndex === i)
                       .map((group, gi) => (
@@ -220,25 +243,13 @@ export default function RAGSearchPageInner() {
                           {group.cards.map((c, idx) => (
                             <div
                               key={idx}
-                              onClick={() =>
-                                setDetail({
-                                  id: c.id,
-                                  src: c.src,
-                                  tags: c.tags.map((t: string) => `#${t}`),
-                                  contexts: c.context,
-                                  favorite: c.favorite,
-                                  type: c.type,
-                                  platform: c.platform,
-                                  ocr_text: c.ocr_text,
-                                  date: c.createdAt,
-                                })
-                              }
+                              onClick={() => loadDetail(c)}
                               className="relative cursor-pointer transition-transform duration-200 hover:scale-105"
                               style={{ transform: `rotate(${c.rotate}deg)` }}
                             >
                               {c.favorite && (
                                 <Star
-                                  fill={c.favorite ? "#FFD700" : "transparent"}
+                                  fill="#FFD700"
                                   stroke="#FFD700"
                                   strokeWidth={2.5}
                                   className="absolute top-2 right-4 drop-shadow-sm w-6 h-6 z-10"
@@ -271,7 +282,7 @@ export default function RAGSearchPageInner() {
                 placeholder="상담포아에게 질문해보세요..."
                 className="flex-grow bg-white border border-[#D8D5CC] rounded-full px-4 py-3 outline-none"
                 value={query}
-                onChange={handleQueryChange} // ⭐ 변경
+                onChange={handleQueryChange}
                 onKeyDown={(e) => e.key === "Enter" && handleSend()}
               />
 
@@ -285,11 +296,9 @@ export default function RAGSearchPageInner() {
           </div>
         </div>
 
-        {/* RIGHT DETAIL */}
+        {/* RIGHT DETAIL (400px 고정) */}
         <div
-          className="flex-shrink-0 border-l border-[#E3DCC8] 
-             h-full min-h-0 flex flex-col
-             pl-4 pt-8 transition-all duration-500"
+          className="flex-shrink-0 border-l border-[#E3DCC8] h-full min-h-0 flex flex-col pl-4 pt-8 transition-all duration-500"
           style={{
             width: layoutExpanded ? "400px" : "0px",
             opacity: layoutExpanded ? 1 : 0,
@@ -308,7 +317,6 @@ export default function RAGSearchPageInner() {
                 type={detail.type}
                 platform={detail.platform}
                 ocr_text={detail.ocr_text}
-                onFavoriteChange={handleFavoriteChange}
               />
             )}
           </div>
