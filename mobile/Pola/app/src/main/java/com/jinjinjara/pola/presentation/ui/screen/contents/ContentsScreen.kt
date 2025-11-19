@@ -64,6 +64,7 @@ fun ContentsScreen(
     onShareClick: () -> Unit = {},
     onEditClick: () -> Unit = {},
     onDeleteClick: () -> Unit = {},
+    onTagClick: (String) -> Unit = {},
     navController: NavHostController,
     viewModel: ContentsViewModel = hiltViewModel()
 ) {
@@ -157,7 +158,8 @@ fun ContentsScreen(
                     onMenuDismiss = { showMenu = false },
                     onExpandToggle = { isExpanded = !isExpanded },
                     onBookmarkToggle = { viewModel.toggleBookmark() },
-                    onImageClick = { showFullImage = !showFullImage }
+                    onImageClick = { showFullImage = !showFullImage },
+                    onTagClick = onTagClick
                 )
             }
         }
@@ -385,7 +387,8 @@ private fun ContentsScreenContent(
     onMenuDismiss: () -> Unit,
     onExpandToggle: () -> Unit,
     onBookmarkToggle: () -> Unit,
-    onImageClick: () -> Unit
+    onImageClick: () -> Unit,
+    onTagClick: (String) -> Unit
 ) {
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -641,7 +644,10 @@ private fun ContentsScreenContent(
                         overflow = FlowRowOverflow.Clip
                     ) {
                         hashtags.forEach { tag ->
-                            TagChip(tag.name)
+                            TagChip(
+                                text = tag.name,
+                                onClick = { onTagClick(tag.name) }
+                            )
                         }
                     }
 
@@ -780,9 +786,14 @@ fun getTimeAgo(createdAtMillis: Long): String {
 @Composable
 private fun TagChip(
     text: String,
+    onClick: () -> Unit = {}
 ) {
     Box(
         modifier = Modifier
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onClick() }
             .shadow(
                 elevation = 2.dp,
                 shape = RoundedCornerShape(20.dp)
