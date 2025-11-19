@@ -41,6 +41,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.jinjinjara.pola.R
 import com.jinjinjara.pola.presentation.ui.component.PolaCard
+import com.jinjinjara.pola.presentation.ui.component.PolaCard2
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
@@ -652,11 +653,11 @@ private fun RemindPolaCard(
 ) {
     val context = LocalContext.current
 
-    PolaCard(
+    PolaCard2(
         imageUrl = imageUrl,
         type = type,
         textList = tags.map { it.removePrefix("#") },
-        textSize = 24.sp,
+        textSize = 20.sp,
         textSpacing = 8.dp,
         clipTags = true,
         modifier = Modifier

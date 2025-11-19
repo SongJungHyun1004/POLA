@@ -545,11 +545,11 @@ async function handleTextCapture(info, tab) {
       console.log('텍스트 Blob 생성 완료, 크기:', fileSize, 'bytes');
 
       // 토큰 가져오기
-      const { accessToken } = await chrome.storage.local.get(['accessToken']);
+      // const { accessToken } = await chrome.storage.local.get(['accessToken']);
 
-      if (!accessToken) {
-        throw new Error('로그인이 필요합니다.');
-      }
+      // if (!accessToken) {
+      //   throw new Error('로그인이 필요합니다.');
+      // }
 
       // 1단계: S3 Presigned URL 생성
       console.log('1단계: S3 업로드 URL 생성 중...');
@@ -600,12 +600,8 @@ async function handleTextCapture(info, tab) {
       // originUrl 추출 (? 앞부분까지)
       const originUrl = uploadUrl.split('?')[0];
 
-      const completeResponse = await fetch(`${API_BASE_URL}files/complete`, {
+      const completeResponse = await apiRequest('files/complete', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify({
           key: fileKey,
           type: 'text/plain',
@@ -639,7 +635,7 @@ async function handleTextCapture(info, tab) {
       console.log('저장 URL:', completeData.data.originUrl);
 
       // 4단계: 파일 분류 (백그라운드에서 실행)
-      triggerPostProcess(completeData.data.id, accessToken);
+      triggerPostProcess(completeData.data.id);
 
     } catch (uploadError) {
       console.error('❌ 저장 실패:', uploadError);
@@ -715,24 +711,21 @@ async function handleAreaCapture(area, tab) {
         console.log('이미지 Blob 생성 완료, 크기:', fileSize, 'bytes');
 
         // 토큰 가져오기
-        const { accessToken } = await chrome.storage.local.get(['accessToken']);
+        // const { accessToken } = await chrome.storage.local.get(['accessToken']);
 
-        if (!accessToken) {
-          throw new Error('로그인이 필요합니다.');
-        }
+        // if (!accessToken) {
+        //   throw new Error('로그인이 필요합니다.');
+        // }
 
         // 1단계: S3 Presigned URL 생성
         console.log('1단계: S3 업로드 URL 생성 중...');
         const timestamp = Date.now();
         const fileName = `capture_${timestamp}.png`;
 
-        const presignedResponse = await fetch(
-          `${API_BASE_URL}s3/presigned/upload?fileName=${encodeURIComponent(fileName)}`,
+        const presignedResponse = await apiRequest(
+          `s3/presigned/upload?fileName=${encodeURIComponent(fileName)}`,
           {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${accessToken}`
-            }
+            method: 'GET'
           }
         );
 
@@ -773,12 +766,9 @@ async function handleAreaCapture(area, tab) {
         // originUrl 추출 (? 앞부분까지)
         const originUrl = uploadUrl.split('?')[0];
 
-        const completeResponse = await fetch(`${API_BASE_URL}files/complete`, {
+
+        const completeResponse = await apiRequest('files/complete', {
           method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json'
-          },
           body: JSON.stringify({
             key: fileKey,
             type: 'image/png',
@@ -808,7 +798,7 @@ async function handleAreaCapture(area, tab) {
         console.log('저장 URL:', completeData.data.originUrl);
 
         // 4단계: 파일 분류 (백그라운드에서 실행)
-        triggerPostProcess(completeData.data.id, accessToken);
+        triggerPostProcess(completeData.data.id);
 
       } catch (uploadError) {
         console.error('❌ 업로드 실패:', uploadError);
@@ -828,17 +818,14 @@ async function handleAreaCapture(area, tab) {
 /**
  * 파일 분류 처리 (백그라운드 실행)
  */
-async function triggerPostProcess(fileId, accessToken) {
+async function triggerPostProcess(fileId) {
   try {
     console.log(`4단계: 파일 분류 시작 (File ID: ${fileId})...`);
 
-    const postProcessResponse = await fetch(
-      `${API_BASE_URL}files/${fileId}/post-process`,
+    const postProcessResponse = await apiRequest(
+      `files/${fileId}/post-process`,
       {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        }
+        method: 'POST'
       }
     );
 
@@ -910,11 +897,11 @@ async function handleImageUpload(info, tab) {
 
     console.log('✅ 이미지 타입 검증 통과:', contentType);
     // 토큰 가져오기
-    const { accessToken } = await chrome.storage.local.get(['accessToken']);
+    // const { accessToken } = await chrome.storage.local.get(['accessToken']);
 
-    if (!accessToken) {
-      throw new Error('로그인이 필요합니다.');
-    }
+    // if (!accessToken) {
+    //   throw new Error('로그인이 필요합니다.');
+    // }
 
     // 2단계: S3 Presigned URL 생성
     console.log('2단계: S3 업로드 URL 생성 중...');
@@ -922,13 +909,10 @@ async function handleImageUpload(info, tab) {
     const extension = contentType.split('/')[1] || 'png';
     const fileName = `image_${timestamp}.${extension}`;
 
-    const presignedResponse = await fetch(
-      `${API_BASE_URL}s3/presigned/upload?fileName=${encodeURIComponent(fileName)}`,
+    const presignedResponse = await apiRequest(
+      `s3/presigned/upload?fileName=${encodeURIComponent(fileName)}`,
       {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        }
+        method: 'GET'
       }
     );
 
@@ -967,12 +951,8 @@ async function handleImageUpload(info, tab) {
 
     const originUrl = uploadUrl.split('?')[0];
 
-    const completeResponse = await fetch(`${API_BASE_URL}files/complete`, {
+    const completeResponse = await apiRequest('files/complete', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
-      },
       body: JSON.stringify({
         key: fileKey,
         type: contentType,
@@ -1002,7 +982,7 @@ async function handleImageUpload(info, tab) {
     console.log('저장 URL:', completeData.data.originUrl);
 
     // 5단계: 파일 분류 (백그라운드에서 실행)
-    triggerPostProcess(completeData.data.id, accessToken);
+    triggerPostProcess(completeData.data.id);
 
   } catch (error) {
     console.error('이미지 업로드 실패:', error);
@@ -1123,11 +1103,11 @@ async function handleDragDropTextUpload(request, sendResponse) {
     console.log('텍스트 미리보기:', request.text?.substring(0, 100) + '...');
 
     // 토큰 가져오기
-    const { accessToken } = await chrome.storage.local.get(['accessToken']);
+    // const { accessToken } = await chrome.storage.local.get(['accessToken']);
 
-    if (!accessToken) {
-      throw new Error('로그인이 필요합니다.');
-    }
+    // if (!accessToken) {
+    //   throw new Error('로그인이 필요합니다.');
+    // }
 
     // 텍스트를 Blob으로 변환
     const textBlob = new Blob([request.text], { type: 'text/plain; charset=utf-8' });
@@ -1140,13 +1120,10 @@ async function handleDragDropTextUpload(request, sendResponse) {
     const timestamp = Date.now();
     const fileName = `text_${timestamp}.txt`;
 
-    const presignedResponse = await fetch(
-      `${API_BASE_URL}s3/presigned/upload?fileName=${encodeURIComponent(fileName)}`,
+    const presignedResponse = await apiRequest(
+      `s3/presigned/upload?fileName=${encodeURIComponent(fileName)}`,
       {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        }
+        method: 'GET'
       }
     );
 
@@ -1182,12 +1159,8 @@ async function handleDragDropTextUpload(request, sendResponse) {
 
     const originUrl = uploadUrl.split('?')[0];
 
-    const completeResponse = await fetch(`${API_BASE_URL}files/complete`, {
+    const completeResponse = await apiRequest('files/complete', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
-      },
       body: JSON.stringify({
         key: fileKey,
         type: 'text/plain',
@@ -1205,7 +1178,7 @@ async function handleDragDropTextUpload(request, sendResponse) {
     console.log('✅ 3단계 완료 - 파일 등록 성공');
 
     // 4단계: 파일 분류 (백그라운드)
-    triggerPostProcess(completeData.data.id, accessToken);
+    triggerPostProcess(completeData.data.id);
 
     console.log('✅ 드래그앤드롭 텍스트 업로드 성공:', completeData);
 

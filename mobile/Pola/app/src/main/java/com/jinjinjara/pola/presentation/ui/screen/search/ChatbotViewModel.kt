@@ -92,6 +92,7 @@ class ChatbotViewModel @Inject constructor(
                         // 1개면 단일 이미지로 표시
                         val source = result.data.sources.first()
                         val imageMessage = ChatMessage.BotImage(
+                            fileId = source.id,
                             imageUrl = source.src,
                             tags = source.tags
                         )
@@ -101,6 +102,7 @@ class ChatbotViewModel @Inject constructor(
                         // 2개 이상이면 그리드로 표시
                         val imageDataList = result.data.sources.map { source ->
                             ImageData(
+                                fileId = source.id,
                                 imageUrl = source.src,
                                 tags = source.tags
                             )
@@ -149,11 +151,12 @@ sealed class ChatMessage {
     data class User(val text: String) : ChatMessage()
     data class Bot(val text: String) : ChatMessage()
     object BotLoading : ChatMessage()
-    data class BotImage(val imageUrl: String, val tags: List<String>) : ChatMessage()
+    data class BotImage(val fileId: Long, val imageUrl: String, val tags: List<String>) : ChatMessage()
     data class BotImageGrid(val images: List<ImageData>) : ChatMessage()
 }
 
 data class ImageData(
+    val fileId: Long,
     val imageUrl: String,
     val tags: List<String>
 )

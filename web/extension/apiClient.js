@@ -201,13 +201,10 @@ async function uploadImage(imageData, metadata = {}) {
     console.log('Access Token (앞 30자):', tokens.accessToken.substring(0, 30) + '...');
 
 
-    const presignedResponse = await fetch(
-      `${CONFIG.API_BASE_URL}s3/presigned/upload?fileName=${encodeURIComponent(fileName)}`,
+    const presignedResponse = await apiRequest(
+      `s3/presigned/upload?fileName=${encodeURIComponent(fileName)}`,
       {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${tokens.accessToken}`
-        }
+        method: 'GET'
       }
     );
 
@@ -272,15 +269,11 @@ async function uploadImage(imageData, metadata = {}) {
 
     const originUrl = uploadUrl.split('?')[0];
 
-    const completeResponse = await fetch(`${CONFIG.API_BASE_URL}files/complete`, {
+    const completeResponse = await apiRequest('files/complete', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${tokens.accessToken}`,
-        'Content-Type': 'application/json'
-      },
       body: JSON.stringify({
         key: fileKey,
-        type: 'image/png',
+        type: mimeType,
         fileSize: fileSize,
         originUrl: originUrl,
         platform: 'WEB'
@@ -297,7 +290,7 @@ async function uploadImage(imageData, metadata = {}) {
     console.log('✅ 3단계 완료 - 파일 등록 성공');
 
     // 4단계: 파일 분류 (백그라운드)
-    triggerPostProcessInBackground(completeData.data.id, tokens.accessToken);
+    triggerPostProcessInBackground(completeData.data.id);
 
     return completeData;
 
@@ -310,19 +303,13 @@ async function uploadImage(imageData, metadata = {}) {
 /**
  * 파일 분류 백그라운드 처리
  */
-async function triggerPostProcessInBackground(fileId, accessToken) {
+async function triggerPostProcessInBackground(fileId) {
   try {
     console.log(`파일 분류 시작 (File ID: ${fileId})...`);
 
-    const response = await fetch(
-      `${CONFIG.API_BASE_URL}files/${fileId}/post-process`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        }
-      }
-    );
+    const response = await apiRequest(`files/${fileId}/post-process`, {
+      method: 'POST'
+    });
 
     if (response.ok) {
       console.log('✅ 파일 분류 성공');

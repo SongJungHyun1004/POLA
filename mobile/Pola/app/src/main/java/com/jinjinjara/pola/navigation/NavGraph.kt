@@ -232,7 +232,10 @@ fun NavGraphBuilder.homeTabGraph(navController: NavHostController) {
 
         composable(Screen.Chatbot.route) {
             ChatbotScreen(
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStack() },
+                onNavigateToContents = { fileId, imageUrl ->
+                    navController.navigate(Screen.Contents.createRoute(fileId, imageUrl))
+                }
             )
         }
 
@@ -540,7 +543,7 @@ fun NavGraphBuilder.myTabGraph(navController: NavHostController) {
 
         composable(Screen.TermsOfService.route) {
             TermsOfServiceScreen(
-
+                onBackClick = { navController.popBackStack() }
             )
         }
 
