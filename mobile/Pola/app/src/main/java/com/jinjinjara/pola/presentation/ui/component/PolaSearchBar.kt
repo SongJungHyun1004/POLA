@@ -34,11 +34,16 @@ fun PolaSearchBar(
     onSearchClick: () -> Unit = {},
     focusRequester: FocusRequester? = null,
     iconRes: Int = R.drawable.search,
-    placeholder: String = "검색어를 입력하세요."
+    placeholder: String = "검색어를 입력하세요.",
+    maxLength: Int = 1000
 ) {
     BasicTextField(
         value = searchText,
-        onValueChange = onValueChange,
+        onValueChange = { newValue ->
+            if (newValue.length <= maxLength) {
+                onValueChange(newValue)
+            }
+        },
         modifier = modifier
             .height(48.dp)
             .then(

@@ -356,6 +356,7 @@ fun AddTagDialog(
     var text by remember { mutableStateOf("") }
     var addedTags by remember { mutableStateOf(listOf<String>()) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    val maxLength = 8
 
     AlertDialog(
         modifier = Modifier.width(250.dp),
@@ -404,7 +405,9 @@ fun AddTagDialog(
                                 }
                             }
                         } else {
-                            text = newValue
+                            if (newValue.length <= maxLength) {
+                                text = newValue
+                            }
                             if (errorMessage != null) {
                                 errorMessage = null
                             }
@@ -415,6 +418,14 @@ fun AddTagDialog(
                             text = "태그 입력 후 스페이스바 입력",
                             fontSize = 12.sp,
                             color = Color.Gray
+                        )
+                    },
+                    supportingText = {
+                        Text(
+                            text = "${text.length}/$maxLength",
+                            fontSize = 12.sp,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.End
                         )
                     },
                     modifier = Modifier
