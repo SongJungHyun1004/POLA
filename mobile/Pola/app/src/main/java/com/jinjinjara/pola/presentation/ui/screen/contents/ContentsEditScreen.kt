@@ -197,27 +197,41 @@ fun ContentsEditScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // 내용 입력 필드
-                OutlinedTextField(
-                    value = uiState.contentText,
-                    onValueChange = { viewModel.updateContentText(it) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.tertiary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.tertiary,
-                        focusedTextColor = MaterialTheme.colorScheme.tertiary,
-                        unfocusedTextColor = MaterialTheme.colorScheme.tertiary,
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                    textStyle = LocalTextStyle.current.copy(
-                        fontSize = 14.sp,
-                        lineHeight = 20.sp
+                Column {
+                    // 내용 입력 필드
+                    OutlinedTextField(
+                        value = uiState.contentText,
+                        onValueChange = { newText ->
+                            if (newText.length <= 1000) {
+                                viewModel.updateContentText(newText)
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.tertiary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.tertiary,
+                            focusedTextColor = MaterialTheme.colorScheme.tertiary,
+                            unfocusedTextColor = MaterialTheme.colorScheme.tertiary,
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        textStyle = LocalTextStyle.current.copy(
+                            fontSize = 18.sp,
+                            lineHeight = 20.sp
+                        )
                     )
-                )
+                    Text(
+                        text = "${uiState.contentText.length} / 1000",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier
+                            .align(Alignment.End)
+                            .padding(top = 4.dp)
+                    )
+                }
 
                 Spacer(modifier = Modifier.weight(1f))
 
