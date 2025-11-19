@@ -276,5 +276,36 @@ class ContentRepositoryImpl @Inject constructor(
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
+    override suspend fun updateFileCategory(fileId: Long, categoryId: Long): Result<Unit> {
+        return withContext(ioDispatcher) {
+            try {
+                Log.d("File:Repo", "Updating category for fileId: $fileId to categoryId: $categoryId")
+                val response = contentApi.updateFileCategory(
+                    fileId = fileId,
+                    categoryId = categoryId
+                )
+
+                if (response.isSuccessful && response.body() != null) {
+                    Log.d("File:Repo", "Category successfully updated")
+                    Result.Success(Unit)
+                } else {
+                    val errorBody = response.errorBody()?.string()
+                    Log.e("File:Repo", "Failed to update category: $errorBody")
+                    Result.Error(
+                        message = "카테고리 변경에 실패했습니다",
+                        errorType = ErrorType.SERVER
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("File:Repo", "Exception while updating category", e)
+                Result.Error(
+                    exception = e,
+                    message = e.message ?: "알 수 없는 오류가 발생했습니다",
+                    errorType = ErrorType.NETWORK
+                )
+            }
+        }
+    }
 
 }

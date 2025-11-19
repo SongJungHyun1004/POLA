@@ -6,7 +6,9 @@ import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jinjinjara.pola.data.remote.dto.response.FileTag
+import com.jinjinjara.pola.domain.model.Category
 import com.jinjinjara.pola.domain.repository.ContentRepository
+import com.jinjinjara.pola.domain.usecase.category.GetCategoriesUseCase
 import com.jinjinjara.pola.util.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +22,9 @@ data class ContentsEditUiState(
     val isLoading: Boolean = false,
     val tags: List<FileTag> = emptyList(),
     val contentText: String = "",
+    val selectedCategoryId: Long = 0,
+    val initialCategoryId: Long = 0,
+    val categories: List<Category> = emptyList(),
     val initialTags: List<FileTag> = emptyList(),
     val initialContentText: String = "",
     val error: String? = null,
@@ -28,7 +33,8 @@ data class ContentsEditUiState(
 
 @HiltViewModel
 class ContentsEditViewModel @Inject constructor(
-    private val contentRepository: ContentRepository
+    private val contentRepository: ContentRepository,
+    private val getCategoriesUseCase: GetCategoriesUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ContentsEditUiState())
@@ -39,10 +45,22 @@ class ContentsEditViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
 
+            // 카테고리 목록 로드
+            when (val categoriesResult = getCategoriesUseCase()) {
+                is Result.Success -> {
+                    _uiState.update { it.copy(categories = categoriesResult.data) }
+                }
+                is Result.Error -> {
+                    Log.e("ContentsEdit", "Failed to load categories: ${categoriesResult.message}")
+                }
+                is Result.Loading -> {}
+            }
+
             // 파일 상세 정보 로드
             when (val fileResult = contentRepository.getFileDetail(fileId)) {
                 is Result.Success -> {
                     val contentText = fileResult.data.context ?: ""
+                    val categoryId = fileResult.data.categoryId
 
                     // 태그 정보 로드
                     when (val tagsResult = contentRepository.getFileTags(fileId)) {
@@ -52,6 +70,8 @@ class ContentsEditViewModel @Inject constructor(
                                     isLoading = false,
                                     tags = tagsResult.data,
                                     contentText = contentText,
+                                    selectedCategoryId = categoryId,
+                                    initialCategoryId = categoryId,
                                     initialTags = tagsResult.data,
                                     initialContentText = contentText
                                 )
@@ -88,6 +108,10 @@ class ContentsEditViewModel @Inject constructor(
         }
     }
 
+    fun updateCategory(categoryId: Long) {
+        _uiState.update { it.copy(selectedCategoryId = categoryId) }
+    }
+
     fun updateContentText(text: String) {
         _uiState.update { it.copy(contentText = text) }
     }
@@ -115,6 +139,7 @@ class ContentsEditViewModel @Inject constructor(
 
             val currentState = _uiState.value
             val hasContentChanged = currentState.contentText != currentState.initialContentText
+            val hasCategoryChanged = currentState.selectedCategoryId != currentState.initialCategoryId
             val initialTagNames = currentState.initialTags.map { it.tagName }.toSet()
             val currentTagNames = currentState.tags.map { it.tagName }.toSet()
 
@@ -139,6 +164,20 @@ class ContentsEditViewModel @Inject constructor(
                     is Result.Loading -> {
                         // 이미 isLoading = true 상태
                     }
+                }
+            }
+
+            if (hasCategoryChanged) {
+                when (val result = contentRepository.updateFileCategory(fileId, currentState.selectedCategoryId)) {
+                    is Result.Success -> {
+                        Log.d("ContentsEdit", "Category updated successfully")
+                    }
+                    is Result.Error -> {
+                        _uiState.update { it.copy(error = result.message, isLoading = false) }
+                        hasError = true
+                        return@launch
+                    }
+                    is Result.Loading -> {}
                 }
             }
 

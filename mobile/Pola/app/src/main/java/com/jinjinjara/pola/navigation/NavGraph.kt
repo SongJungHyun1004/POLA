@@ -540,7 +540,7 @@ fun NavGraphBuilder.myTabGraph(navController: NavHostController) {
 
         composable(Screen.TermsOfService.route) {
             TermsOfServiceScreen(
-
+                onBackClick = { navController.popBackStack() }
             )
         }
 
