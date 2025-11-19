@@ -31,11 +31,11 @@ export default function HomeLayout({ children }: { children: ReactNode }) {
             문의하기
           </a>{" "}
           |
-          <a
-            className="underline ml-1"
-            href="https://k13d204.p.ssafy.io/privacy-policy"
-            target="_blank"
-          >
+          <a className="underline ml-1" href="/terms-of-use">
+            이용약관
+          </a>{" "}
+          |
+          <a className="underline ml-1" href="/privacy-policy">
             개인정보처리방침
           </a>
         </small>
