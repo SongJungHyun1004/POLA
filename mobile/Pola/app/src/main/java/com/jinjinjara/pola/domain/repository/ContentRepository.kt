@@ -18,4 +18,5 @@ interface ContentRepository {
     suspend fun addFileTags(fileId: Long, tagNames: List<String>): Result<Unit>
     suspend fun removeFileTag(fileId: Long, tagId: Long): Result<Unit>
     suspend fun updateFileContext(fileId: Long, context: String): Result<Unit>
+    suspend fun updateFileCategory(fileId: Long, categoryId: Long): Result<Unit>
 }

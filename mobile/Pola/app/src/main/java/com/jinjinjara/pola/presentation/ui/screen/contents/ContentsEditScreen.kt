@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Category
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -75,6 +76,7 @@ fun ContentsEditScreen(
             viewModel.clearError()
         }
     }
+    var expandedCategory by remember { mutableStateOf(false) }
 
     var showAddDialog by remember { mutableStateOf(false) }
 
@@ -131,6 +133,70 @@ fun ContentsEditScreen(
                     .padding(horizontal = 24.dp)
             ) {
                 Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Category,
+                        contentDescription = "카테고리",
+                        tint = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text(
+                        text = "카테고리",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                ExposedDropdownMenuBox(
+                    expanded = expandedCategory,
+                    onExpandedChange = { expandedCategory = it }
+                ) {
+                    OutlinedTextField(
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.tertiary,
+                            focusedTextColor = MaterialTheme.colorScheme.tertiary,
+                            unfocusedTextColor = MaterialTheme.colorScheme.tertiary,
+                            focusedTrailingIconColor = MaterialTheme.colorScheme.tertiary,
+                            unfocusedTrailingIconColor = MaterialTheme.colorScheme.tertiary,
+                            focusedContainerColor = MaterialTheme.colorScheme.background,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.background,
+                        ),
+
+                        value = uiState.categories.find { it.id == uiState.selectedCategoryId }?.name
+                            ?: "선택",
+                        onValueChange = {},
+                        readOnly = true,
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCategory) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor()
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = expandedCategory,
+                        onDismissRequest = { expandedCategory = false },
+                        containerColor = MaterialTheme.colorScheme.background
+                    ) {
+                        uiState.categories.forEach { category ->
+                            DropdownMenuItem(
+                                text = { Text(category.name, color = MaterialTheme.colorScheme.tertiary) },
+                                onClick = {
+                                    viewModel.updateCategory(category.id)
+                                    expandedCategory = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
 
                 // 태그 섹션
                 Row(

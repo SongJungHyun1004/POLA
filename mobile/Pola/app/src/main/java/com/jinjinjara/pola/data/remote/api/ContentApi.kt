@@ -13,6 +13,7 @@ import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.PUT
+import retrofit2.http.Query
 import retrofit2.http.Path
 
 interface ContentApi {
@@ -46,6 +47,15 @@ interface ContentApi {
     suspend fun getFileTags(
         @Path("fileId") fileId: Long
     ): Response<FileTagsResponse>
+
+    /**
+     * 파일의 카테고리 변경
+     */
+    @PUT("files/{fileId}/category")
+    suspend fun updateFileCategory(
+        @Path("fileId") fileId: Long,
+        @Query("categoryId") categoryId: Long
+    ): Response<Unit>
 
     /**
      * 파일에 태그 추가
