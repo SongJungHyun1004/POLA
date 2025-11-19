@@ -635,7 +635,7 @@ async function handleTextCapture(info, tab) {
       console.log('저장 URL:', completeData.data.originUrl);
 
       // 4단계: 파일 분류 (백그라운드에서 실행)
-      triggerPostProcess(completeData.data.id, accessToken);
+      triggerPostProcess(completeData.data.id);
 
     } catch (uploadError) {
       console.error('❌ 저장 실패:', uploadError);
@@ -798,7 +798,7 @@ async function handleAreaCapture(area, tab) {
         console.log('저장 URL:', completeData.data.originUrl);
 
         // 4단계: 파일 분류 (백그라운드에서 실행)
-        triggerPostProcess(completeData.data.id, accessToken);
+        triggerPostProcess(completeData.data.id);
 
       } catch (uploadError) {
         console.error('❌ 업로드 실패:', uploadError);
@@ -982,7 +982,7 @@ async function handleImageUpload(info, tab) {
     console.log('저장 URL:', completeData.data.originUrl);
 
     // 5단계: 파일 분류 (백그라운드에서 실행)
-    triggerPostProcess(completeData.data.id, accessToken);
+    triggerPostProcess(completeData.data.id);
 
   } catch (error) {
     console.error('이미지 업로드 실패:', error);
@@ -1178,7 +1178,7 @@ async function handleDragDropTextUpload(request, sendResponse) {
     console.log('✅ 3단계 완료 - 파일 등록 성공');
 
     // 4단계: 파일 분류 (백그라운드)
-    triggerPostProcess(completeData.data.id, accessToken);
+    triggerPostProcess(completeData.data.id);
 
     console.log('✅ 드래그앤드롭 텍스트 업로드 성공:', completeData);
 
