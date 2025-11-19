@@ -8,6 +8,7 @@ import { ragSearch } from "@/services/ragService";
 import { Star } from "lucide-react";
 import PolaroidCard from "../home/components/PolaroidCard";
 import { getFileDetail } from "@/services/categoryService";
+import { addFileFavorite, removeFileFavorite } from "@/services/fileService"; // ⭐ 추가
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -47,7 +48,7 @@ export default function RAGSearchPageInner() {
   /* DETAIL 열리면 오른쪽 패널 활성화 */
   useEffect(() => {
     if (detail && !layoutExpanded) setLayoutExpanded(true);
-  }, [detail]);
+  }, [detail, layoutExpanded]);
 
   /* 채팅 자동 스크롤 */
   useEffect(() => {
@@ -66,6 +67,35 @@ export default function RAGSearchPageInner() {
     setMessages([{ role: "user", content: initialQuery }]);
     performSearch(initialQuery);
   }, [initialQuery]);
+
+  /* ----------------------------------------------
+      공용 즐겨찾기 토글 함수
+      - Detail / 카드 리스트 모두 이걸 사용
+  ---------------------------------------------- */
+  const handleFavoriteToggle = async (fileId: number, nextState: boolean) => {
+    try {
+      if (nextState) await addFileFavorite(fileId);
+      else await removeFileFavorite(fileId);
+
+      // cardGroups 내 카드들의 favorite 동기화
+      setCardGroups((prev) =>
+        prev.map((group) => ({
+          ...group,
+          cards: group.cards.map((c) =>
+            c.id === fileId ? { ...c, favorite: nextState } : c
+          ),
+        }))
+      );
+
+      // 현재 열린 Detail도 favorite 동기화
+      setDetail((prev: any) =>
+        prev && prev.id === fileId ? { ...prev, favorite: nextState } : prev
+      );
+    } catch (err) {
+      console.error(err);
+      alert("즐겨찾기 변경에 실패했습니다.");
+    }
+  };
 
   /* ----------------------------------------------
       단건 상세 조회 + Detail 설정
@@ -248,12 +278,20 @@ export default function RAGSearchPageInner() {
                               style={{ transform: `rotate(${c.rotate}deg)` }}
                             >
                               {c.favorite && (
-                                <Star
-                                  fill="#FFD700"
-                                  stroke="#FFD700"
-                                  strokeWidth={2.5}
-                                  className="absolute top-2 right-4 drop-shadow-sm w-6 h-6 z-10"
-                                />
+                                <div
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleFavoriteToggle(c.id, false);
+                                  }}
+                                  className="absolute top-2 right-4 z-20 cursor-pointer"
+                                >
+                                  <Star
+                                    fill="#FFD700"
+                                    stroke="#FFD700"
+                                    strokeWidth={2.5}
+                                    className="w-6 h-6 drop-shadow-sm"
+                                  />
+                                </div>
                               )}
 
                               <PolaroidCard
@@ -317,6 +355,9 @@ export default function RAGSearchPageInner() {
                 type={detail.type}
                 platform={detail.platform}
                 ocr_text={detail.ocr_text}
+                onFavoriteChange={(state) =>
+                  handleFavoriteToggle(detail.id, state)
+                }
               />
             )}
           </div>
