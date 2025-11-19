@@ -336,7 +336,10 @@ export default function FavoritePage() {
 
         {/* RIGHT DETAIL */}
         {selectedFile && (
-          <div className="w-[400px] flex-shrink-0 border-l pl-6 flex flex-col items-center justify-center">
+          <div
+            className="w-[400px] flex-shrink-0 border-l pl-6 pt-4
+              overflow-y-auto scrollbar-thin"
+          >
             <PolaroidDetail
               id={selectedFile.id}
               src={selectedFile.src}

@@ -141,7 +141,7 @@ export default function FilesPage() {
     <div className="w-full h-full flex justify-center bg-[#FFFEF8] text-[#4C3D25]">
       <div className="w-full max-w-[1200px] h-full flex gap-8 p-6">
         {/* LEFT LIST */}
-        <div className="flex flex-col flex-1 overflow-hidden">
+        <div className="w-full flex flex-col flex-1 overflow-hidden">
           <div className="mb-2 pl-4">
             <h1 className="text-5xl font-bold mb-6">
               {tag ? `#${tag} 검색 결과` : `"${search}" 검색 결과`}
@@ -232,7 +232,10 @@ export default function FilesPage() {
 
         {/* RIGHT DETAIL */}
         {selectedFile && (
-          <div className="w-[400px] flex-shrink-0 border-l border-[#E3DCC8] pl-6 flex flex-col items-center pt-4">
+          <div
+            className="w-[400px] flex-shrink-0 border-l pl-6 pt-4
+              overflow-y-auto scrollbar-thin"
+          >
             <PolaroidDetail
               id={selectedFile.id}
               src={selectedFile.src}
