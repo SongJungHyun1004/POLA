@@ -567,16 +567,19 @@ public class FileSearchController {
                 .map(search -> {
                     try {
                         if (search.getImageUrl() != null && !search.getImageUrl().startsWith("http")) {
-                            // S3 키를 presigned URL로 변환
-                            URL presignedUrl = s3Service.generateDownloadUrl(search.getImageUrl());
-                            search.setImageUrl(presignedUrl.toString());
+                            URL previewUrl = s3Service.generatePreviewUrl(
+                                    search.getImageUrl(),
+                                    search.getFileType()
+                            );
+                            search.setImageUrl(previewUrl.toString());
                         }
                     } catch (Exception e) {
-                        log.warn("Presigned URL 생성 실패: fileId={}, key={}",
+                        log.warn("Preview URL 생성 실패: fileId={}, key={}",
                                 search.getFileId(), search.getImageUrl(), e);
                     }
                     return search;
                 })
                 .collect(Collectors.toList());
     }
+
 }

@@ -74,7 +74,7 @@ public class RagSearchService {
 
                     return RagSearchSource.builder()
                             .id(r.getId())
-                            .src(s3Service.generateDownloadUrl(r.getSrc()))
+                            .src(s3Service.generatePreviewUrl(r.getSrc(),r.getType()))
                             .type(r.getType())
                             .context(r.getContext())
                             .favorite(r.getFavorite())
