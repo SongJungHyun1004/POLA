@@ -318,12 +318,26 @@ async function handleImageUpload(file) {
   const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
   if (!allowedTypes.includes(file.type)) {
     showUploadStatus('PNG, JPEG, WebP 파일만 업로드 가능합니다.', 'error');
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icons/icon48.png',
+      title: 'POLA - 파일 형식 오류',
+      message: errorMsg,
+      priority: 1
+    });
     return;
   }
 
   // 파일 크기 확인 (10MB 제한)
   if (file.size > 10 * 1024 * 1024) {
     showUploadStatus('파일 크기는 10MB 이하여야 합니다.', 'error');
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icons/icon48.png',
+      title: 'POLA - 파일 크기 초과',
+      message: errorMsg,
+      priority: 1
+    });
     return;
   }
 
@@ -345,6 +359,14 @@ async function handleImageUpload(file) {
 
     if (response.success) {
       showUploadStatus('업로드 완료!', 'success');
+
+      chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'icons/icon48.png',
+        title: '✨ POLA - 업로드 완료!',
+        message: `${file.name} 이미지가 성공적으로 저장되었습니다.`,
+        priority: 2
+      });
       // 3초 후 상태 메시지 숨김
       setTimeout(() => {
         uploadStatus.style.display = 'none';
@@ -356,6 +378,13 @@ async function handleImageUpload(file) {
   } catch (error) {
     console.error('업로드 오류:', error);
     showUploadStatus('업로드 실패: ' + error.message, 'error');
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icons/icon48.png',
+      title: '❌ POLA - 업로드 실패',
+      message: errorMsg,
+      priority: 2
+    });
   }
 }
 
