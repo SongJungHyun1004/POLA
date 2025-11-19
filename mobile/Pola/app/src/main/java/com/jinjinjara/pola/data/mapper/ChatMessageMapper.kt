@@ -29,6 +29,7 @@ fun ChatMessage.toEntity(): ChatMessageEntity? {
         is ChatMessage.BotImage -> ChatMessageEntity(
             timestamp = timestamp,
             messageType = "BOT_IMAGE",
+            fileId = this.fileId,
             imageUrl = this.imageUrl,
             tags = converters.fromStringList(this.tags)
         )
@@ -56,9 +57,10 @@ fun ChatMessageEntity.toChatMessage(): ChatMessage? {
         "BOT" -> text?.let { ChatMessage.Bot(it) }
 
         "BOT_IMAGE" -> {
+            val id = fileId ?: 0L
             val url = imageUrl ?: return null
             val tagsList = converters.toStringList(tags) ?: emptyList()
-            ChatMessage.BotImage(url, tagsList)
+            ChatMessage.BotImage(id, url, tagsList)
         }
 
         "BOT_IMAGE_GRID" -> {
