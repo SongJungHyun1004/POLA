@@ -546,6 +546,11 @@ export default function Header() {
                 />
                 <MenuItem
                   icon={<FileText />}
+                  text="이용 약관"
+                  onClick={() => router.push("/terms-of-use")}
+                />
+                <MenuItem
+                  icon={<FileText />}
                   text="개인정보 처리방침"
                   onClick={() => router.push("/privacy-policy")}
                 />
