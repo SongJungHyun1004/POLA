@@ -86,15 +86,19 @@ public class S3Service {
     /* 최적화된 Preview URL 생성 */
     public URL generatePreviewUrl(String key, String contentType) {
 
-        // preview 경로 변환
+        if (isTextType(contentType)) {
+            return presignedInlineUrl(key, contentType);
+        }
+
         String previewKey = key.replace("home/original/", "home/preview/");
 
         try {
             return presignedInlineUrl(previewKey, contentType);
         } catch (Exception e) {
-            return presignedInlineUrl(key, contentType);
+            return presignedInlineUrl(key, contentType); // preview 미존재 → original fallback
         }
     }
+
 
     /* 실제 presigned URL 생성 (inline 보기) */
     private URL presignedInlineUrl(String key, String contentType) {
