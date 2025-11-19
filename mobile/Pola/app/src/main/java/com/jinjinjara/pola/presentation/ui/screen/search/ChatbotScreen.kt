@@ -40,7 +40,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun ChatbotScreen(
     viewModel: ChatbotViewModel = hiltViewModel(),
-    onBackClick: () -> Unit = {}
+    onBackClick: () -> Unit = {},
+    onNavigateToContents: (Long, String?) -> Unit = { _, _ -> }
 ) {
     var userInput by remember { mutableStateOf("") }
     val messages by viewModel.messages.collectAsState()
@@ -204,7 +205,13 @@ fun ChatbotScreen(
                             PolaCard(
                                 modifier = Modifier
                                     .padding(end = 30.dp)
-                                    .shadow(4.dp, RoundedCornerShape(5.dp)),
+                                    .shadow(4.dp, RoundedCornerShape(5.dp))
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null
+                                    ) {
+                                        onNavigateToContents(message.fileId, message.imageUrl)
+                                    },
                                 imageUrl = message.imageUrl,
                                 textList = message.tags,
                                 textSize = 20.sp,
@@ -245,7 +252,13 @@ fun ChatbotScreen(
                                             PolaCard(
                                                 modifier = Modifier
                                                     .weight(1f)
-                                                    .shadow(4.dp, RoundedCornerShape(5.dp)),
+                                                    .shadow(4.dp, RoundedCornerShape(5.dp))
+                                                    .clickable(
+                                                        interactionSource = remember { MutableInteractionSource() },
+                                                        indication = null
+                                                    ) {
+                                                        onNavigateToContents(imageData.fileId, imageData.imageUrl)
+                                                    },
                                                 imageUrl = imageData.imageUrl,
                                                 textList = imageData.tags,
                                                 textSize = 14.sp,

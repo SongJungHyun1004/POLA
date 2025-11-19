@@ -680,7 +680,7 @@ private fun ContentsScreenContent(
 
                 Text(
                     text = fileDetail.context ?: "내용이 없습니다.",
-                    fontSize = 14.sp,
+                    fontSize = 18.sp,
                     lineHeight = 20.sp,
                     color = MaterialTheme.colorScheme.tertiary
                 )

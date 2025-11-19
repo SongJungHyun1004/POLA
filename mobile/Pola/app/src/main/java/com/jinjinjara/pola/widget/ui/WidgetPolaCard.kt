@@ -99,7 +99,7 @@ fun WidgetPolaCardContent(
                         Text(
                             text = "#$tag",
                             style = TextStyle(
-                                fontSize = 28.sp,
+                                fontSize = 24.sp,
                                 color = ColorProvider(Color(0xFF4C3D25))
                             )
                         )

@@ -27,7 +27,7 @@ internal data class DummyEntity(
         ChatMessageEntity::class,
         // UserEntity::class, // TODO: 주석 해제
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(ChatMessageConverters::class)
