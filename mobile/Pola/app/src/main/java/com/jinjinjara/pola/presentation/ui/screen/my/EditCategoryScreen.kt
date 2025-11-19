@@ -90,6 +90,7 @@ private fun getCategoryIcon(categoryName: String): ImageVector {
 
         // 업무/금융
         "일", "업무", "work", "비즈니스" -> Icons.Default.Work
+        "취업", "employment", "job", "커리어", "career" -> Icons.Default.Work
         "금융", "돈", "money", "finance" -> Icons.Default.AccountBalance
 
         // 기술/IT
@@ -105,6 +106,7 @@ private fun getCategoryIcon(categoryName: String): ImageVector {
         // 기타
         "정보", "info" -> Icons.Outlined.Info
         "이벤트", "event" -> Icons.Default.Event
+        "행사", "occasion", "occasions", "파티", "party" -> Icons.Default.Celebration
         "선물", "gift" -> Icons.Default.CardGiftcard
         "스포츠", "sport" -> Icons.Default.SportsSoccer
         "예술", "art" -> Icons.Default.Brush

@@ -15,6 +15,7 @@ data class ChatMessageEntity(
     // Content fields (nullable based on type)
     val text: String? = null,
     val imageUrl: String? = null,
+    val fileId: Long? = null, // For BOT_IMAGE and images in BOT_IMAGE_GRID
     val tags: String? = null, // JSON string of List<String>
     val images: String? = null // JSON string of List<ImageData>
 )

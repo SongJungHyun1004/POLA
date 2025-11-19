@@ -657,7 +657,7 @@ private fun RemindPolaCard(
         imageUrl = imageUrl,
         type = type,
         textList = tags.map { it.removePrefix("#") },
-        textSize = 24.sp,
+        textSize = 20.sp,
         textSpacing = 8.dp,
         clipTags = true,
         modifier = Modifier
