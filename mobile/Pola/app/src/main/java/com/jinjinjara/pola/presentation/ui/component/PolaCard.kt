@@ -127,9 +127,6 @@ fun PolaCard(
                 shape = RoundedCornerShape(5.dp),
                 clip = false
             )
-            .graphicsLayer {
-                clip = false
-            }
             .aspectRatio(ratio),
         colors = CardDefaults.cardColors(containerColor = backgroundColor)
     ) {
@@ -153,9 +150,6 @@ fun PolaCard(
                     }
                     .aspectRatio(imageRatio)
                     .clip(RoundedCornerShape(5.dp))
-                    .graphicsLayer {
-                        clip = false
-                    }
                     .drawWithContent {
                         drawContent()
 
