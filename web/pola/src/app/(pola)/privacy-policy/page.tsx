@@ -4,7 +4,7 @@ export default function PrivacyPolicyPage() {
   return (
     <div className="h-full overflow-y-auto bg-[#FFFEF8] text-[#4C3D25] flex flex-col">
       {/* 콘텐츠 영역 */}
-      <div className="px-8 py-10 max-w-4xl mx-auto leading-relaxed pb-32">
+      <div className="px-8 py-10 max-w-4xl mx-auto leading-relaxed pb-12">
         <h1 className="text-4xl font-bold mb-6">POLA 개인정보처리방침</h1>
         <p className="text-sm text-[#7A6A48] mb-10">
           최종 수정일: 2025년 11월 13일
