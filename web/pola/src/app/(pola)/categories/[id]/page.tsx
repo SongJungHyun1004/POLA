@@ -11,9 +11,11 @@ import {
   getCategoryInfo,
   getCategoryFiles,
   getFileDetail,
+  updateCategoryName,
+  fetchCategoryTags,
+  addCategoryTags,
+  removeCategoryTag,
 } from "@/services/categoryService";
-
-import { fetchCategoryTags } from "@/services/categoryService";
 
 import { removeFileFavorite } from "@/services/fileService";
 
@@ -265,6 +267,56 @@ export default function CategoryPage() {
     await refreshCategories();
   };
 
+  const handleCategorySave = async (newName: string, newTags: string[]) => {
+    try {
+      /* -----------------------------------------
+       * 1) 현재 카테고리 데이터 불러오기
+       * ----------------------------------------- */
+      const current = await getCategoryInfo(id);
+      const currentTags = await fetchCategoryTags(id);
+      const currentTagNames = currentTags.map((t: any) => t.tagName);
+
+      /* -----------------------------------------
+       * 2) 카테고리 이름 변경
+       * ----------------------------------------- */
+      if (current.categoryName !== newName) {
+        await updateCategoryName(id, newName);
+        setCategoryName(newName); // UI 즉시 반영
+      }
+
+      /* -----------------------------------------
+       * 3) 태그 추가 / 삭제 적용
+       * ----------------------------------------- */
+
+      // 추가해야 하는 태그
+      const toAdd = newTags.filter((t) => !currentTagNames.includes(t));
+      if (toAdd.length > 0) {
+        await addCategoryTags(id, toAdd);
+      }
+
+      // 삭제해야 하는 태그
+      const toRemove = currentTags.filter(
+        (t: any) => !newTags.includes(t.tagName)
+      );
+      for (const r of toRemove) {
+        await removeCategoryTag(id, r.id);
+      }
+
+      /* -----------------------------------------
+       * 4) 화면 갱신
+       * ----------------------------------------- */
+      setTags(newTags);
+
+      await loadMoreFiles(true);
+      await refreshCategories();
+
+      alert("카테고리가 수정되었습니다.");
+    } catch (error) {
+      console.error(error);
+      alert("카테고리 수정 중 오류가 발생했습니다.");
+    }
+  };
+
   /* ---------------------------- Render ---------------------------- */
   return (
     <>
@@ -369,7 +421,7 @@ export default function CategoryPage() {
       <CategoryModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onSave={handleCategoryUpdated}
+        onSave={handleCategorySave}
         onDelete={() => {}}
         defaultName={categoryName}
         defaultTags={tags}
