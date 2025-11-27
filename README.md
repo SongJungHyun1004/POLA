@@ -172,7 +172,7 @@ POLA/
 
 ## 5. 아키텍처
 
-![Pola_아키텍처.png](Pola_%EC%95%84%ED%82%A4%ED%85%8D%EC%B2%98.png)
+![Pola_아키텍처.png](/image/Pola_아키텍처.png)
 
 ---
 
@@ -235,7 +235,7 @@ POLA/
 
 ## 7. ERD
 
-![POLA ERD.png](POLA_ERD.png)
+![POLA ERD.png](/image/POLA_ERD.png)
 
 ---
 
@@ -476,4 +476,4 @@ POLA/
 
 ## 10. 팀원 소개
 
-![13기_자율PJT_최종발표_D204_POLA_No_Animation.png](13%EA%B8%B0_%EC%9E%90%EC%9C%A8PJT_%EC%B5%9C%EC%A2%85%EB%B0%9C%ED%91%9C_D204_POLA_No_Animation.png)
+![13기_자율PJT_최종발표_D204_POLA_No_Animation.png](/image/13기_자율PJT_최종발표_D204_POLA_No_Animation.png)
