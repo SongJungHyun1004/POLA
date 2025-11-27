@@ -186,6 +186,8 @@ POLA/
     - 우클릭 업로드
     - 캡처 업로드
     - 이미지/텍스트를 드래그하여 업로드
+
+![드래그 저장](/image/드래그 저장.mp4)
     
 <img src="/image/수집1.gif" height="500"/> | <img src="/image/수집2.gif" height="500"/> | <img src="/image/업로드.gif" height="500"/> | 
 ---|---|---|
