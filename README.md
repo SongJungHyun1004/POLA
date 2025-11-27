@@ -1,6 +1,6 @@
 # README.md
 
-![13기_자율PJT_최종발표_D204_POLA.pptx.jpg](/image/3기_자율PJT_최종발표_D204_POLA.pptx.jpg
+![13기_자율PJT_최종발표_D204_POLA.pptx.jpg](/image/13기_자율PJT_최종발표_D204_POLA.pptx.jpg
 )
 
 # POLA - AI 기반 크로스 플랫폼 개인 데이터 관리 서비스
