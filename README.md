@@ -233,7 +233,7 @@ POLA/
 - 만료되는 공유링크 생성
 - PresignedURL 기반 접근 제어
 
-<img src="/image/상세 컨텐츠.gif" height="500"/>
+<img src="/image/상세_컨텐츠.gif" height="500"/>
 
 ---
 
