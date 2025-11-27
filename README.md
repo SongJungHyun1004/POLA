@@ -199,6 +199,9 @@ POLA/
 - 태그 생성
 - 카테고리 자동 분류
 
+<img src="/image/홈.gif" height="500"/> | <img src="/image/카테고리.gif" height="500"/> |
+---|---|
+
 ---
 
 ### 6-3. RAG 챗봇
@@ -206,6 +209,8 @@ POLA/
 - 개인 데이터 기반 챗봇 시스템
 - 질문 의도에 따라 질의, 추천, 비교, 리포트 가능
 - 응답과 함께 근거가 되는 자료 제출
+
+<img src="/image/RAG.gif" height="500"/>
 
 ---
 
@@ -217,6 +222,8 @@ POLA/
     - 자동 완성
 - 통합 검색
     - 태그 + 설명 + OCR 결과 종합 검색
+
+<img src="/image/검색.gif" height="500"/>
     
 
 ---
@@ -226,12 +233,27 @@ POLA/
 - 만료되는 공유링크 생성
 - PresignedURL 기반 접근 제어
 
+<img src="/image/상세 컨텐츠.gif" height="500"/>
+
 ---
 
 ### 6-6. 리마인드
 
 - 사용자가 오랫동안 보지않은 데이터를 리마인드
 - 모바일에서는 위젯으로도 조회 가능
+
+<img src="/image/리마인드.gif" height="500"/> | <img src="/image/위젯.gif" height="500"/> |
+---|---|
+
+---
+
+### 6-7. 기타
+
+- 타임라인
+- 수집타입
+
+<img src="/image/타임라인.gif" height="500"/> | <img src="/image/수집타입.gif" height="500"/> |
+---|---|
 
 ---
 
