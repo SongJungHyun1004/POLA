@@ -187,17 +187,17 @@ POLA/
     - 캡처 업로드
     - 이미지/텍스트를 드래그하여 업로드
 
-![드래그 저장](/image/드래그 저장.mp4)
+![드래그 저장](/image/드래그_저장.gif)
 
-![영역캡쳐](/image/영역캡쳐.mp4)
+![영역캡쳐](/image/영역캡쳐.gif)
 
-![우클릭 이미지 저장](/image/우클릭 이미지 저장.mp4)
+![우클릭 이미지 저장](/image/우클릭_이미지_저장.gif)
 
-![폴라 익스텐션](/image/폴라 익스텐션.mp4)
+![폴라 익스텐션](/image/폴라_익스텐션.gif)
 
-![웹 파일첨부](/image/웹 파일첨부.mp4)
+![웹 파일첨부](/image/웹_파일첨부.gif)
 
-![웹 드래그 첨부](/image/웹 드래그 첨부.mp4)
+![웹 드래그 첨부](/image/웹_드래그_첨부.gif)
     
 <img src="/image/수집1.gif" height="500"/> | <img src="/image/수집2.gif" height="500"/> | <img src="/image/업로드.gif" height="500"/> | 
 ---|---|---|
@@ -211,7 +211,7 @@ POLA/
 - 태그 생성
 - 카테고리 자동 분류
 
-![웹 분류화면](/image/웹 분류화면.mp4)
+![웹 분류화면](/image/웹_분류화면.gif)
 
 <img src="/image/홈.gif" height="500"/> | <img src="/image/카테고리.gif" height="500"/> |
 ---|---|
@@ -224,7 +224,7 @@ POLA/
 - 질문 의도에 따라 질의, 추천, 비교, 리포트 가능
 - 응답과 함께 근거가 되는 자료 제출
 
-![웹 RAG화면](/image/웹 RAG화면.mp4)
+![웹 RAG화면](/image/웹_RAG화면.gif)
 
 <img src="/image/RAG.gif" height="500"/>
 
@@ -239,7 +239,7 @@ POLA/
 - 통합 검색
     - 태그 + 설명 + OCR 결과 종합 검색
 
-![웹 서치화면](/image/웹 서치화면.mp4)
+![웹 서치화면](/image/웹_서치화면.gif)
 
 <img src="/image/검색.gif" height="500"/>
     
@@ -251,7 +251,7 @@ POLA/
 - 만료되는 공유링크 생성
 - PresignedURL 기반 접근 제어
 
-![웹 디테일](/image/웹 디테일.mp4)
+![웹 디테일](/image/웹_디테일.gif)
 
 <img src="/image/상세_컨텐츠.gif" height="500"/>
 
@@ -262,7 +262,7 @@ POLA/
 - 사용자가 오랫동안 보지않은 데이터를 리마인드
 - 모바일에서는 위젯으로도 조회 가능
 
-![웹 리마인드](/image/웹 리마인드.mp4)
+![웹 리마인드](/image/웹_리마인드.gif)
 
 <img src="/image/리마인드.gif" height="500"/> | <img src="/image/위젯.gif" height="500"/> |
 ---|---|
@@ -274,7 +274,7 @@ POLA/
 - 타임라인
 - 수집타입
 
-![웹 타임라인](/image/웹 타임라인.mp4)
+![웹 타임라인](/image/웹_타임라인.gif)
 
 <img src="/image/타임라인.gif" height="500"/> | <img src="/image/수집타입.gif" height="500"/> |
 ---|---|
