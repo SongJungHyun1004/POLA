@@ -195,9 +195,9 @@ POLA/
 
 ![폴라 익스텐션](/image/폴라_익스텐션.gif)
 
-![웹 파일첨부](/image/웹_파일첨부.gif)
+<!--![웹 파일첨부](/image/웹_파일첨부.gif)-->
 
-![웹 드래그 첨부](/image/웹_드래그_첨부.gif)
+<!--![웹 드래그 첨부](/image/웹_드래그_첨부.gif)-->
     
 <img src="/image/수집1.gif" height="500"/> | <img src="/image/수집2.gif" height="500"/> | <img src="/image/업로드.gif" height="500"/> | 
 ---|---|---|
@@ -211,7 +211,7 @@ POLA/
 - 태그 생성
 - 카테고리 자동 분류
 
-![웹 분류화면](/image/웹_분류화면.gif)
+<!--![웹 분류화면](/image/웹_분류화면.gif)-->
 
 <img src="/image/홈.gif" height="500"/> | <img src="/image/카테고리.gif" height="500"/> |
 ---|---|
@@ -239,7 +239,7 @@ POLA/
 - 통합 검색
     - 태그 + 설명 + OCR 결과 종합 검색
 
-![웹 서치화면](/image/웹_서치화면.gif)
+<!--![웹 서치화면](/image/웹_서치화면.gif)-->
 
 <img src="/image/검색.gif" height="500"/>
     
